@@ -120,9 +120,9 @@ export default function App() {
   const [selectedRoutine, setSelectedRoutine] = useState(null);
   const [subView, setSubView] = useState(null); // "workoutlog" | "foodlog" | "analytics"
 
-  const today = todayKey();
-  const todayLogs = logs[today] || {};
-
+  const [selectedDate, setSelectedDate] = useState(todayKey());
+const today = selectedDate;
+const todayLogs = logs[today] || {};
   function toggleHabit(id) {
     setLogs(p => { const d = { ...(p[today] || {}) }; d[id] = { ...d[id], done: !d[id]?.done }; return { ...p, [today]: d }; });
   }
