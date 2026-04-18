@@ -154,7 +154,7 @@ export default function App() {
   if (subView === "analytics") return <AnalyticsView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} nofapStreak={getNofapStreak()} onBack={() => setSubView(null)} />;
 
   return (
-    minHeight:"-webkit-fill-available", minHeight:"100dvh", background:C.bg, color:C.text, fontFamily:"'DM Mono',monospace", width:"100vw", maxWidth:480, margin:"0 auto", paddingBottom:80, overflowX:"hidden"
+    minHeight:"-webkit-fill-available", minHeight:"100dvh", background:C.bg, color:C.text, fontFamily:"'DM Mono',monospace", width:"100vw", maxWidth:"100%", margin:"0 auto", paddingBottom:80, overflowX:"hidden"
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:wght@600;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
