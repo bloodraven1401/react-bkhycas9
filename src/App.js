@@ -174,7 +174,7 @@ const todayLogs = logs[today] || {};
       `}</style>
 
       {/* Header */}
-      <div style={{ padding:"28px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+      <div style={{ padding:"60px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
           <div style={{ fontSize:10, letterSpacing:4, color:C.muted, textTransform:"uppercase" }}>Self System</div>
           <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:30, fontWeight:700, lineHeight:1, marginTop:4 }}>Anant</div>
