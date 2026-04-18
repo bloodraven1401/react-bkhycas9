@@ -9,7 +9,11 @@ const C = {
 };
 const COLORS = { workout: C.workout, skincare: C.skincare, diet: C.diet, nofap: C.nofap, haircare: C.haircare };
 
-function todayKey() { return new Date().toISOString().split("T")[0]; }
+function todayKey() {
+  const now = new Date();
+  const ist = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+  return ist.toISOString().split("T")[0];
+}
 function dateKey(offset = 0) { const d = new Date(); d.setDate(d.getDate() + offset); return d.toISOString().split("T")[0]; }
 function last7() { return Array.from({ length: 7 }, (_, i) => dateKey(-(6 - i))); }
 function last30() { return Array.from({ length: 30 }, (_, i) => dateKey(-(29 - i))); }
@@ -176,7 +180,22 @@ export default function App() {
           <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:30, fontWeight:700, lineHeight:1, marginTop:4 }}>Anant</div>
         </div>
         <div style={{ textAlign:"right" }}>
-          <div style={{ fontSize:10, color:C.muted }}>{new Date().toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}</div>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+  <button onClick={() => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - 1);
+    setSelectedDate(d.toISOString().split("T")[0]);
+  }} style={{ background:"none", border:"none", color:C.muted, fontSize:16, cursor:"pointer" }}>‹</button>
+  <div style={{ fontSize:10, color: selectedDate === todayKey() ? C.muted : C.nofap, letterSpacing:1 }}>
+    {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}
+  </div>
+  <button onClick={() => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + 1);
+    const next = d.toISOString().split("T")[0];
+    if (next <= todayKey()) setSelectedDate(next);
+  }} style={{ background:"none", border:"none", color:C.muted, fontSize:16, cursor:"pointer" }}>›</button>
+</div>
           <div style={{ fontSize:24, color:C.skincare, fontFamily:"'Cormorant Garamond',serif", fontWeight:700, marginTop:4 }}>{getTodayPct()}%</div>
           <div style={{ fontSize:9, color:C.muted, letterSpacing:2 }}>TODAY</div>
         </div>
