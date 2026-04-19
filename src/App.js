@@ -116,6 +116,7 @@ export default function App() {
   const [logs, setLogs] = useLS("anant_v3_logs", {});
   const [workoutLogs, setWorkoutLogs] = useLS("anant_v3_workout", {});
   const [foodLogs, setFoodLogs] = useLS("anant_v3_food", {});
+  const [weightLogs, setWeightLogs] = useLS("anant_v3_weight", {});
   const [nofapStart, setNofapStart] = useLS("anant_v3_nofap", todayKey());
   const [selectedRoutine, setSelectedRoutine] = useState(null);
   const [subView, setSubView] = useState(null); // "workoutlog" | "foodlog" | "analytics"
@@ -205,7 +206,7 @@ const todayLogs = logs[today] || {};
         {view==="dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
         {view==="habits" && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
         {view==="routines" && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} />}
-        {view==="log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} />}
+        {view==="log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} foodLogs={foodLogs} nofapStreak={getNofapStreak()} />}
       </div>
 
       <nav style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:"rgba(7,7,10,0.97)", backdropFilter:"blur(16px)", borderTop:`1px solid ${C.border}`, display:"flex", padding:"12px 0 22px" }}>
