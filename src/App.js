@@ -395,7 +395,7 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
   const loggedCount = allExercises.filter(ex => getExLog(ex).sets.length > 0).length;
 
   return (
-    <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'DM Mono',monospace", maxWidth:480, margin:"0 auto", padding:"24px 20px 100px" }}>
+    <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'DM Mono',monospace", maxWidth:480, margin:"0 auto", padding:"60px 20px 100px" }}>
       {/* Header */}
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
         <button onClick={onBack} style={{ background:"none", border:"none", color:C.muted, fontSize:12, letterSpacing:1 }}>← Back</button>
@@ -565,7 +565,7 @@ function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
   const macroTargets = { calories:3030, protein:178, carbs:300, fat:80, fibre:30 };
 
   return (
-    <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'DM Mono',monospace", maxWidth:480, margin:"0 auto", padding:"24px 20px 100px" }}>
+    <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'DM Mono',monospace", maxWidth:480, margin:"0 auto", padding:"60px 20px 100px" }}>
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
         <button onClick={onBack} style={{ background:"none", border:"none", color:C.muted, fontSize:12 }}>← Back</button>
         <div style={{ flex:1 }}>
@@ -752,7 +752,7 @@ function AnalyticsView({ logs, workoutLogs, foodLogs, nofapStreak, onBack }) {
   const totalVolume = workoutData.reduce((a,d)=>a+d.volume,0);
 
   return (
-    <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'DM Mono',monospace", maxWidth:480, margin:"0 auto", padding:"24px 20px 100px" }}>
+    <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'DM Mono',monospace", maxWidth:480, margin:"0 auto", padding:"60px 20px 100px" }}>
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
         <button onClick={onBack} style={{ background:"none", border:"none", color:C.muted, fontSize:12 }}>← Back</button>
         <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700 }}>Analytics</div>
@@ -848,6 +848,137 @@ function ChartCard({ title, color, data, valueKey, unit, maxVal, target }) {
 }
 
 function BestLifts({ workoutLogs }) {
+  const [selected, setSelected] = useState(null);
+  const [period, setPeriod] = useState("weekly");
+
+  const allExercises = [...new Set(Object.values(workoutLogs).flatMap(d => Object.keys(d)))];
+
+  function getExerciseHistory(exName) {
+    return Object.entries(workoutLogs)
+      .filter(([_, d]) => d[exName]?.sets?.length > 0)
+      .map(([date, d]) => {
+        const sets = d[exName].sets;
+        const maxWeight = Math.max(...sets.map(s => s.weight || 0));
+        const volume = sets.reduce((a, s) => a + ((s.weight || 0) * (s.reps || 0)), 0);
+        return { date, maxWeight, volume, sets: sets.length };
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function getPeriodData(history) {
+    if (period === "weekly") return history.slice(-7);
+    if (period === "monthly") return history.slice(-30);
+    return history;
+  }
+
+  function getWeekComparison(exName) {
+    const history = getExerciseHistory(exName);
+    const thisWeek = history.filter(h => h.date >= dateKey(-7));
+    const lastWeek = history.filter(h => h.date >= dateKey(-14) && h.date < dateKey(-7));
+    const thisMax = thisWeek.length ? Math.max(...thisWeek.map(h => h.maxWeight)) : 0;
+    const lastMax = lastWeek.length ? Math.max(...lastWeek.map(h => h.maxWeight)) : 0;
+    return { thisMax, lastMax, diff: thisMax - lastMax };
+  }
+
+  const bests = {};
+  Object.values(workoutLogs).forEach(dayLog => {
+    Object.entries(dayLog).forEach(([exName, exData]) => {
+      (exData.sets || []).forEach(s => {
+        if (!bests[exName] || s.weight > bests[exName].weight) bests[exName] = s;
+      });
+    });
+  });
+
+  const entries = Object.entries(bests).sort((a, b) => b[1].weight - a[1].weight);
+  if (!entries.length) return null;
+
+  const selectedHistory = selected ? getPeriodData(getExerciseHistory(selected)) : [];
+  const maxVol = selectedHistory.length ? Math.max(...selectedHistory.map(h => h.volume), 1) : 1;
+  const maxWt = selectedHistory.length ? Math.max(...selectedHistory.map(h => h.maxWeight), 1) : 1;
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      {/* Period selector */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {["weekly", "monthly", "yearly"].map(p => (
+          <button key={p} className="press" onClick={() => setPeriod(p)} style={{ flex: 1, background: period === p ? C.workout : C.surface, border: `1px solid ${period === p ? C.workout : C.border}`, borderRadius: 7, padding: "7px 4px", color: period === p ? "#000" : C.muted, fontSize: 10, textTransform: "capitalize", fontFamily: "inherit" }}>
+            {p}
+          </button>
+        ))}
+      </div>
+
+      {/* Exercise list */}
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+        <div style={{ fontSize: 9, color: C.workout, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>Personal Bests — Tap to see progress</div>
+        {entries.map(([name, set], i) => {
+          const comp = getWeekComparison(name);
+          const isSelected = selected === name;
+          return (
+            <div key={name}>
+              <div className="press" onClick={() => setSelected(isSelected ? null : name)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < entries.length - 1 ? `1px solid ${C.border}` : "none", background: isSelected ? `${C.workout}08` : "transparent" }}>
+                <div>
+                  <div style={{ fontSize: 12, color: "#AAA" }}>{name}</div>
+                  {comp.diff !== 0 && (
+                    <div style={{ fontSize: 10, color: comp.diff > 0 ? C.haircare : C.nofap, marginTop: 2 }}>
+                      {comp.diff > 0 ? "↑" : "↓"} {Math.abs(comp.diff)}kg vs last week
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 13, color: C.workout }}>{set.weight}kg × {set.reps}</div>
+                  <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>all time best</div>
+                </div>
+              </div>
+
+              {/* Expanded chart */}
+              {isSelected && selectedHistory.length > 0 && (
+                <div style={{ padding: "12px 0 8px" }}>
+                  {/* Max weight chart */}
+                  <div style={{ fontSize: 9, color: C.workout, letterSpacing: 2, marginBottom: 8, textTransform: "uppercase" }}>Max Weight (kg)</div>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 60, marginBottom: 14 }}>
+                    {selectedHistory.map((h, idx) => (
+                      <div key={idx} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                        <div style={{ fontSize: 8, color: C.workout }}>{h.maxWeight > 0 ? h.maxWeight : ""}</div>
+                        <div style={{ width: "100%", background: `${C.workout}70`, borderRadius: "3px 3px 0 0", height: `${Math.max(3, (h.maxWeight / maxWt) * 50)}px`, transition: "height 0.5s ease" }} />
+                        <div style={{ fontSize: 7, color: C.muted }}>{new Date(h.date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Volume chart */}
+                  <div style={{ fontSize: 9, color: C.skincare, letterSpacing: 2, marginBottom: 8, textTransform: "uppercase" }}>Volume (kg × reps)</div>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 60, marginBottom: 8 }}>
+                    {selectedHistory.map((h, idx) => (
+                      <div key={idx} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                        <div style={{ fontSize: 8, color: C.skincare }}>{h.volume > 0 ? h.volume : ""}</div>
+                        <div style={{ width: "100%", background: `${C.skincare}70`, borderRadius: "3px 3px 0 0", height: `${Math.max(3, (h.volume / maxVol) * 50)}px`, transition: "height 0.5s ease" }} />
+                        <div style={{ fontSize: 7, color: C.muted }}>{new Date(h.date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Week summary */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginTop: 8 }}>
+                    {[
+                      ["This Week Max", `${comp.thisMax}kg`, C.workout],
+                      ["Last Week Max", `${comp.lastMax}kg`, C.muted],
+                      ["Progress", `${comp.diff >= 0 ? "+" : ""}${comp.diff}kg`, comp.diff > 0 ? C.haircare : comp.diff < 0 ? C.nofap : C.muted]
+                    ].map(([label, val, color]) => (
+                      <div key={label} style={{ background: C.faint, borderRadius: 8, padding: "8px 6px", textAlign: "center" }}>
+                        <div style={{ fontSize: 13, color, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{val}</div>
+                        <div style={{ fontSize: 8, color: C.muted, marginTop: 2, lineHeight: 1.3 }}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
   const bests = {};
   Object.values(workoutLogs).forEach(dayLog => {
     Object.entries(dayLog).forEach(([exName, exData]) => {
