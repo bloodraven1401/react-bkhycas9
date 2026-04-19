@@ -979,29 +979,6 @@ function BestLifts({ workoutLogs }) {
     </div>
   );
 }
-  const bests = {};
-  Object.values(workoutLogs).forEach(dayLog => {
-    Object.entries(dayLog).forEach(([exName, exData]) => {
-      (exData.sets||[]).forEach(s => {
-        if (!bests[exName] || s.weight > bests[exName].weight) bests[exName] = s;
-      });
-    });
-  });
-  const entries = Object.entries(bests).sort((a,b) => b[1].weight-a[1].weight).slice(0,8);
-  if (!entries.length) return null;
-
-  return (
-    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:14, marginTop:10 }}>
-      <div style={{ fontSize:9, color:C.workout, letterSpacing:3, textTransform:"uppercase", marginBottom:12 }}>Personal Bests</div>
-      {entries.map(([name, set],i) => (
-        <div key={name} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:i<entries.length-1?`1px solid ${C.border}`:"none" }}>
-          <span style={{ fontSize:12, color:"#AAA" }}>{name}</span>
-          <span style={{ fontSize:12, color:C.workout }}>{set.weight}kg × {set.reps}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ─── HABITS VIEW ──────────────────────────────────────────────────────────────
 function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
