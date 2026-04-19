@@ -156,8 +156,7 @@ const todayLogs = logs[today] || {};
   // Show sub-views fullscreen
   if (subView === "workoutlog") return <WorkoutLogger workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} onBack={() => setSubView(null)} />;
   if (subView === "foodlog") return <FoodLogger foodLogs={foodLogs} setFoodLogs={setFoodLogs} onBack={() => setSubView(null)} />;
-  if (subView === "analytics") return <AnalyticsView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} nofapStreak={getNofapStreak()} onBack={() => setSubView(null)} />;
-
+  if (subView === "analytics") return <AnalyticsView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} nofapStreak={getNofapStreak()} weightLogs={weightLogs} onBack={() => setSubView(null)} />;
   return (
     <div style={{minHeight:"-webkit-fill-available", minHeight:"100dvh", background:C.bg, color:C.text, fontFamily:"'DM Mono',monospace", width:"100vw", maxWidth:"100%", margin:"0 auto", paddingBottom:80, overflowX:"hidden"}}>
       <style>{`
@@ -287,19 +286,139 @@ function Dashboard({ logs, nofapStreak, weeklyPct, todayPct, getStreak, setView,
 }
 
 // ─── LOG HUB ──────────────────────────────────────────────────────────────────
-function LogHub({ setSubView, todayMacros, workoutLogs }) {
-  const todayW = workoutLogs[todayKey()] || {};
-  const totalSets = Object.values(todayW).reduce((a,ex) => a + (ex.sets?.length || 0), 0);
+function LogHub({ setSubView, todayMacros, workoutLogs, weightLogs, setWeightLogs, logs, foodLogs, nofapStreak }) {
+  const today = todayKey();
+  const todayW = workoutLogs[today] || {};
+  const totalSets = Object.values(todayW).reduce((a,ex) => a+(ex.sets?.length||0), 0);
+  const [weightInput, setWeightInput] = useState("");
+  const [showWeightInput, setShowWeightInput] = useState(false);
+
+  const weights = Object.entries(weightLogs).sort((a,b) => a[0].localeCompare(b[0]));
+  const latestWeight = weights.length ? weights[weights.length-1][1] : null;
+  const startWeight = weights.length ? weights[0][1] : 40;
+  const targetWeight = 65;
+  const progress = latestWeight ? Math.min(100, ((latestWeight - startWeight) / (targetWeight - startWeight)) * 100) : 0;
+
+  function logWeight() {
+    if (!weightInput) return;
+    setWeightLogs(p => ({ ...p, [today]: parseFloat(weightInput) }));
+    setWeightInput("");
+    setShowWeightInput(false);
+  }
+
+  // Weekly review data
+  const days = last7();
+  const weekHabitPct = Math.round((days.reduce((a,d) => a + HABITS.filter(h => logs[d]?.[h.id]?.done).length, 0) / (HABITS.length * 7)) * 100);
+  const weekProtein = Math.round(days.reduce((a,d) => {
+    const entries = foodLogs[d] || [];
+    if (Array.isArray(entries)) return a + entries.reduce((b,e) => b+(e.protein||0), 0);
+    return a;
+  }, 0) / 7);
+  const weekWorkouts = days.filter(d => Object.values(workoutLogs[d]||{}).some(ex => ex.sets?.length > 0)).length;
+  const weightChange = weights.length >= 2 ? (weights[weights.length-1][1] - weights[weights.length-2][1]).toFixed(1) : null;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
       <div style={{ fontSize:10, color:C.muted, letterSpacing:3, textTransform:"uppercase", marginBottom:4 }}>Log</div>
 
-      <button className="press" onClick={() => setSubView("workoutlog")} style={{ background:C.surface, border:`1px solid ${C.workout}25`, borderRadius:14, padding:18, display:"flex", alignItems:"center", gap:14, color:C.text, textAlign:"left" }}>
-        <span style={{ color:C.workout, fontSize:24 }}>◆</span>
+      {/* Body Weight Card */}
+      <div style={{ background:C.surface, border:`1px solid ${C.haircare}25`, borderRadius:14, padding:16 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+          <div>
+            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontWeight:700 }}>Body Weight</div>
+            <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>Goal: 65kg</div>
+          </div>
+          <div style={{ textAlign:"right" }}>
+            <div style={{ fontSize:24, color:C.haircare, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{latestWeight || "—"}<span style={{ fontSize:12 }}>kg</span></div>
+            {weightChange && <div style={{ fontSize:10, color:parseFloat(weightChange)>=0?C.haircare:C.nofap }}>{parseFloat(weightChange)>=0?"+":""}{weightChange}kg last log</div>}
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ marginBottom:12 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:C.muted, marginBottom:4 }}>
+            <span>{startWeight}kg start</span>
+            <span>{latestWeight ? `${(targetWeight - latestWeight).toFixed(1)}kg to go` : "Log your weight"}</span>
+            <span>65kg</span>
+          </div>
+          <div style={{ background:C.faint, borderRadius:4, height:6 }}>
+            <div style={{ width:`${Math.max(0,progress)}%`, height:"100%", background:C.haircare, borderRadius:4, transition:"width 0.6s ease" }} />
+          </div>
+        </div>
+
+        {/* Weight graph */}
+        {weights.length > 1 && (
+          <div style={{ display:"flex", alignItems:"flex-end", gap:4, height:50, marginBottom:12 }}>
+            {weights.slice(-10).map(([date, w], i) => {
+              const max = Math.max(...weights.slice(-10).map(x=>x[1]));
+              const min = Math.min(...weights.slice(-10).map(x=>x[1]));
+              const h = min===max ? 30 : Math.max(8, ((w-min)/(max-min))*45);
+              return (
+                <div key={date} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+                  <div style={{ fontSize:8, color:C.haircare }}>{w}</div>
+                  <div style={{ width:"100%", background:`${C.haircare}70`, borderRadius:"3px 3px 0 0", height:`${h}px`, transition:"height 0.5s ease" }} />
+                  <div style={{ fontSize:7, color:C.muted }}>{new Date(date+"T12:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short"})}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Log weight input */}
+        {showWeightInput ? (
+          <div style={{ display:"flex", gap:8 }}>
+            <input type="number" step="0.1" value={weightInput} onChange={e=>setWeightInput(e.target.value)} placeholder="e.g. 41.5" style={{ flex:1 }} autoFocus />
+            <button onClick={logWeight} style={{ background:C.haircare, border:"none", borderRadius:7, padding:"8px 14px", color:"#000", fontSize:12 }}>Save</button>
+            <button onClick={()=>setShowWeightInput(false)} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:7, padding:"8px 10px", color:C.muted, fontSize:12 }}>✕</button>
+          </div>
+        ) : (
+          <button className="press" onClick={()=>setShowWeightInput(true)} style={{ width:"100%", background:C.faint, border:`1px dashed ${C.haircare}40`, borderRadius:8, padding:"9px", color:C.haircare, fontSize:11, fontFamily:"inherit" }}>
+            + Log today's weight
+          </button>
+        )}
+      </div>
+
+      {/* Weekly Review Card */}
+      <div style={{ background:C.surface, border:`1px solid ${C.skincare}25`, borderRadius:14, padding:16 }}>
+        <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontWeight:700, marginBottom:4 }}>Weekly Review</div>
+        <div style={{ fontSize:10, color:C.muted, marginBottom:14 }}>Last 7 days</div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
+          {[
+            ["Habits", `${weekHabitPct}%`, C.skincare],
+            ["Avg Protein", `${weekProtein}g`, C.diet],
+            ["Workouts", `${weekWorkouts}/6`, C.workout],
+            ["NoFap", `${nofapStreak}d`, C.nofap],
+          ].map(([label,val,color]) => (
+            <div key={label} style={{ background:C.faint, borderRadius:10, padding:"12px 10px", textAlign:"center" }}>
+              <div style={{ fontSize:20, color, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{val}</div>
+              <div style={{ fontSize:9, color:C.muted, marginTop:3 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+        {/* Day by day habit completion */}
+        <div style={{ fontSize:9, color:C.muted, letterSpacing:2, textTransform:"uppercase", marginBottom:8 }}>Daily completion</div>
+        <div style={{ display:"flex", gap:4 }}>
+          {days.map(d => {
+            const pct = Math.round((HABITS.filter(h => logs[d]?.[h.id]?.done).length / HABITS.length) * 100);
+            const isToday = d === todayKey();
+            return (
+              <div key={d} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+                <div style={{ width:"100%", background:pct>0?`${C.skincare}${Math.round(40+(pct/100)*180).toString(16)}`:C.faint, borderRadius:4, height:30, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <span style={{ fontSize:9, color:pct>50?"#000":C.muted }}>{pct>0?`${pct}%`:""}</span>
+                </div>
+                <div style={{ fontSize:8, color:isToday?C.skincare:C.muted }}>{new Date(d+"T12:00:00").toLocaleDateString("en-IN",{weekday:"short"})}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Log buttons */}
+      <button className="press" onClick={() => setSubView("workoutlog")} style={{ background:C.surface, border:`1px solid ${C.workout}25`, borderRadius:14, padding:16, display:"flex", alignItems:"center", gap:14, color:C.text, textAlign:"left" }}>
+        <span style={{ color:C.workout, fontSize:22 }}>◆</span>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:14, fontFamily:"'Cormorant Garamond',serif", fontWeight:600 }}>Workout Logger</div>
-          <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>Log sets, reps & weights per exercise</div>
+          <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>Log sets, reps & weights</div>
         </div>
         <div style={{ textAlign:"right" }}>
           <div style={{ fontSize:14, color:C.workout, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{totalSets}</div>
@@ -307,20 +426,17 @@ function LogHub({ setSubView, todayMacros, workoutLogs }) {
         </div>
       </button>
 
-      <button className="press" onClick={() => setSubView("foodlog")} style={{ background:C.surface, border:`1px solid ${C.diet}25`, borderRadius:14, padding:18, display:"flex", alignItems:"center", gap:14, color:C.text, textAlign:"left" }}>
-        <span style={{ color:C.diet, fontSize:24 }}>◉</span>
+      <button className="press" onClick={() => setSubView("foodlog")} style={{ background:C.surface, border:`1px solid ${C.diet}25`, borderRadius:14, padding:16, display:"flex", alignItems:"center", gap:14, color:C.text, textAlign:"left" }}>
+        <span style={{ color:C.diet, fontSize:22 }}>◉</span>
         <div style={{ flex:1 }}>
-          <div style={{ fontSize:14, fontFamily:"'Cormorant Garamond',serif", fontWeight:600 }}>Food Logger</div>
-          <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>Search foods, track macros & calories</div>
+          <div style={{ fontSize:14, fontFamily:"'Cormorant Garamond',serif", fontWeight:600 }}>Meal Log</div>
+          <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>Track your 6 meals</div>
         </div>
-        <div style={{ textAlign:"right" }}>
-          <div style={{ fontSize:14, color:C.diet, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{Math.round(todayMacros.protein)}g</div>
-          <div style={{ fontSize:9, color:C.muted }}>protein today</div>
-        </div>
+        <span style={{ color:C.muted, fontSize:14 }}>›</span>
       </button>
 
-      <button className="press" onClick={() => setSubView("analytics")} style={{ background:C.surface, border:`1px solid ${C.skincare}25`, borderRadius:14, padding:18, display:"flex", alignItems:"center", gap:14, color:C.text, textAlign:"left" }}>
-        <span style={{ color:C.skincare, fontSize:24 }}>◎</span>
+      <button className="press" onClick={() => setSubView("analytics")} style={{ background:C.surface, border:`1px solid ${C.skincare}25`, borderRadius:14, padding:16, display:"flex", alignItems:"center", gap:14, color:C.text, textAlign:"left" }}>
+        <span style={{ color:C.skincare, fontSize:22 }}>◎</span>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:14, fontFamily:"'Cormorant Garamond',serif", fontWeight:600 }}>Analytics</div>
           <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>Daily · Weekly · Monthly · Yearly</div>
