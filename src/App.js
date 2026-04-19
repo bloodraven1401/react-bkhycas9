@@ -519,50 +519,26 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
 // ─── FOOD LOGGER ──────────────────────────────────────────────────────────────
 function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
   const today = todayKey();
-  const entries = foodLogs[today] || [];
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [editQty, setEditQty] = useState({}); // { resultIdx: multiplier }
+  const mealLogs = foodLogs[today] || {};
 
-  const totals = entries.reduce((a,e) => ({
-    calories: a.calories+(e.calories||0), protein: a.protein+(e.protein||0),
-    carbs: a.carbs+(e.carbs||0), fat: a.fat+(e.fat||0), fibre: a.fibre+(e.fibre||0),
-  }), { calories:0, protein:0, carbs:0, fat:0, fibre:0 });
+  const MEALS = [
+    { id: "m1", label: "Meal 1 — Breakfast", time: "9:30 AM", items: ["2 peanut butter sandwiches", "4 whole eggs", "1 glass whole milk", "10 almonds", "Vitamin D3 + Multivitamin"], macros: "~40g P · ~700 kcal" },
+    { id: "m2", label: "Meal 2 — Lunch", time: "1:00 PM", items: ["50g soya chunks (dry)", "1.5 cups cooked rice", "1 glass buttermilk"], macros: "~30g P · ~500 kcal" },
+    { id: "m3", label: "Meal 3 — Pre-Workout", time: "3:00 PM", items: ["1 banana", "2 tbsp peanut butter OR peanuts"], macros: "~8g P · ~280 kcal" },
+    { id: "m4", label: "Meal 4 — Post-Workout", time: "5:30 PM", items: ["1 scoop whey", "1 cup oats", "1 banana", "1 tbsp peanut butter", "1 glass whole milk", "Creatine 5g"], macros: "~50g P · ~650 kcal" },
+    { id: "m5", label: "Meal 5 — Dinner", time: "8:30 PM", items: ["150g chicken OR paneer", "1.5 cups rice OR 2 roti", "Spinach / mixed veg", "1 glass buttermilk", "Ashwagandha here"], macros: "~40g P · ~650 kcal" },
+    { id: "m6", label: "Meal 6 — Before Bed", time: "10:30 PM", items: ["1 glass warm milk", "1 tbsp peanut butter"], macros: "~10g P · ~250 kcal" },
+  ];
 
-  async function search() {
-    if (!query.trim()) return;
-    setLoading(true); setError(""); setResults([]);
-    try {
-      const res = await searchFoodNutrition(query);
-      setResults(res);
-      if (!res.length) setError("No results found. Try a different query.");
-    } catch { setError("Search failed. Check connection."); }
-    setLoading(false);
+  function toggleMeal(id) {
+    setFoodLogs(p => {
+      const day = { ...(p[today] || {}) };
+      day[id] = !day[id];
+      return { ...p, [today]: day };
+    });
   }
 
-  function addEntry(item, multiplier = 1) {
-    const entry = {
-      id: Date.now(),
-      name: item.name,
-      amount: item.amount,
-      calories: Math.round((item.calories||0) * multiplier),
-      protein: Math.round((item.protein||0) * multiplier * 10)/10,
-      carbs: Math.round((item.carbs||0) * multiplier * 10)/10,
-      fat: Math.round((item.fat||0) * multiplier * 10)/10,
-      fibre: Math.round((item.fibre||0) * multiplier * 10)/10,
-      time: new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}),
-    };
-    setFoodLogs(p => ({ ...p, [today]: [...(p[today]||[]), entry] }));
-    setResults([]); setQuery("");
-  }
-
-  function removeEntry(id) {
-    setFoodLogs(p => ({ ...p, [today]: (p[today]||[]).filter(e => e.id !== id) }));
-  }
-
-  const macroTargets = { calories:3030, protein:178, carbs:300, fat:80, fibre:30 };
+  const doneCount = MEALS.filter(m => mealLogs[m.id]).length;
 
   return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'DM Mono',monospace", maxWidth:480, margin:"0 auto", padding:"60px 20px 100px" }}>
@@ -572,97 +548,38 @@ function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
           <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700 }}>Food Log</div>
           <div style={{ fontSize:10, color:C.muted }}>{new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short"})}</div>
         </div>
+        <div style={{ textAlign:"right" }}>
+          <div style={{ fontSize:16, color:C.diet, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{doneCount}/6</div>
+          <div style={{ fontSize:9, color:C.muted }}>meals done</div>
+        </div>
       </div>
 
-      {/* Macro summary */}
-      <div style={{ background:C.surface, border:`1px solid ${C.diet}20`, borderRadius:12, padding:14, marginBottom:14 }}>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:4, marginBottom:12 }}>
-          {[["Cal",totals.calories,macroTargets.calories,""],["Pro",totals.protein,macroTargets.protein,"g"],["Carb",totals.carbs,macroTargets.carbs,"g"],["Fat",totals.fat,macroTargets.fat,"g"],["Fibre",totals.fibre,macroTargets.fibre,"g"]].map(([l,v,t,u]) => (
-            <div key={l} style={{ textAlign:"center" }}>
-              <div style={{ fontSize:15, color:v>=t?C.haircare:C.diet, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{Math.round(v)}{u}</div>
-              <div style={{ fontSize:8, color:C.muted, marginTop:1 }}>{l}/{t}{u}</div>
+      <div style={{ background:`${C.diet}12`, border:`1px solid ${C.diet}30`, borderRadius:10, padding:"11px 14px", fontSize:12, color:C.diet, marginBottom:14 }}>
+        ~3030 kcal/day · ~178g protein/day
+      </div>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {MEALS.map(meal => {
+          const done = mealLogs[meal.id];
+          return (
+            <div key={meal.id} onClick={() => toggleMeal(meal.id)} style={{ background:done?`${C.diet}12`:C.surface, border:`1px solid ${done?C.diet+"40":C.border}`, borderRadius:12, padding:14, cursor:"pointer", transition:"all 0.2s ease" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ width:22, height:22, borderRadius:6, background:done?C.diet:"transparent", border:`2px solid ${done?C.diet:C.muted}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                    {done && <span style={{ color:"#000", fontSize:11, fontWeight:700 }}>✓</span>}
+                  </div>
+                  <span style={{ fontSize:13, color:done?C.text:"#888" }}>{meal.label}</span>
+                </div>
+                <span style={{ fontSize:10, color:C.muted }}>{meal.time}</span>
+              </div>
+              {meal.items.map((item,j) => (
+                <div key={j} style={{ fontSize:12, color:done?"#888":"#555", padding:"3px 0", borderBottom:j<meal.items.length-1?`1px solid ${C.border}`:"none", marginLeft:32 }}>· {item}</div>
+              ))}
+              <div style={{ fontSize:10, color:done?C.diet:C.muted, marginTop:8, marginLeft:32 }}>{meal.macros}</div>
             </div>
-          ))}
-        </div>
-        {/* Protein bar */}
-        <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:C.muted, marginBottom:4 }}>
-          <span>Protein Goal</span><span>{Math.round(totals.protein)}/178g</span>
-        </div>
-        <div style={{ background:C.faint, borderRadius:3, height:4 }}>
-          <div style={{ width:`${Math.min(100,(totals.protein/178)*100)}%`, height:"100%", background:totals.protein>=178?C.haircare:C.diet, borderRadius:3, transition:"width 0.4s" }} />
-        </div>
+          );
+        })}
       </div>
-
-      {/* Search */}
-      <div style={{ marginBottom:14 }}>
-        <div style={{ display:"flex", gap:8 }}>
-          <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key==="Enter" && search()} placeholder='e.g. "4 whole eggs" or "50g soya chunks"' style={{ flex:1 }} />
-          <button className="press" onClick={search} style={{ background:C.diet, border:"none", borderRadius:7, padding:"8px 14px", color:"#000", fontSize:12 }}>
-            {loading ? "..." : "Search"}
-          </button>
-        </div>
-        {error && <div style={{ fontSize:11, color:C.nofap, marginTop:6 }}>{error}</div>}
-      </div>
-
-      {/* Search results */}
-      {results.length > 0 && (
-        <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, marginBottom:14, overflow:"hidden" }}>
-          <div style={{ fontSize:9, color:C.muted, letterSpacing:3, padding:"10px 14px 6px", textTransform:"uppercase" }}>Results</div>
-          {results.map((item, idx) => {
-            const mult = parseFloat(editQty[idx]) || 1;
-            return (
-              <div key={idx} style={{ borderTop:`1px solid ${C.border}`, padding:"12px 14px" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:12, color:C.text }}>{item.name}</div>
-                    <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>
-                      {Math.round((item.calories||0)*mult)} kcal · {Math.round((item.protein||0)*mult*10)/10}g P · {Math.round((item.carbs||0)*mult*10)/10}g C · {Math.round((item.fat||0)*mult*10)/10}g F
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                  <div style={{ fontSize:9, color:C.muted }}>×</div>
-                  <input type="number" step="0.5" min="0.5" value={editQty[idx]||"1"} onChange={e => setEditQty(p=>({...p,[idx]:e.target.value}))} style={{ width:60 }} />
-                  <div style={{ fontSize:9, color:C.muted }}>serving</div>
-                  <button className="press" onClick={() => addEntry(item, mult)} style={{ marginLeft:"auto", background:C.diet, border:"none", borderRadius:6, padding:"6px 14px", color:"#000", fontSize:11 }}>
-                    + Add
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Today's entries */}
-      {entries.length > 0 && (
-        <div>
-          <div style={{ fontSize:9, color:C.muted, letterSpacing:3, textTransform:"uppercase", marginBottom:10 }}>Today's Entries</div>
-          <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-            {entries.map(entry => (
-              <div key={entry.id} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                <div style={{ flex:1 }}>
-                  <div style={{ display:"flex", justifyContent:"space-between" }}>
-                    <span style={{ fontSize:12, color:C.text }}>{entry.name}</span>
-                    <span style={{ fontSize:10, color:C.muted }}>{entry.time}</span>
-                  </div>
-                  <div style={{ fontSize:10, color:C.diet, marginTop:3 }}>
-                    {entry.calories} kcal · {entry.protein}g protein · {entry.carbs}g carbs · {entry.fat}g fat
-                    {entry.fibre > 0 && ` · ${entry.fibre}g fibre`}
-                  </div>
-                </div>
-                <button onClick={() => removeEntry(entry.id)} style={{ background:"none", border:"none", color:C.muted, fontSize:12, marginLeft:10, flexShrink:0 }}>✕</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {entries.length === 0 && results.length === 0 && !loading && (
-        <div style={{ textAlign:"center", padding:"40px 20px", color:C.muted, fontSize:12, lineHeight:1.8 }}>
-          Search for any food above.<br/>Type the amount too for accurate macros.<br/><span style={{ fontSize:10 }}>e.g. "150g chicken breast" or "2 roti"</span>
-        </div>
-      )}
     </div>
   );
 }
