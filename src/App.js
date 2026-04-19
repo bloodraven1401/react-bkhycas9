@@ -239,7 +239,7 @@ function Dashboard({ logs, nofapStreak, weeklyPct, todayPct, getStreak, setView,
 
       {/* Quick Log buttons */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
-        {[["◆","Log Workout","workoutlog",C.workout],["◉","Log Food","foodlog",C.diet],["◎","Analytics","analytics",C.skincare]].map(([icon,label,sub,color]) => (
+        {[["◆","Log Workout","workoutlog",C.workout],["◉","Meal Log","foodlog",C.diet],["◎","Analytics","analytics",C.skincare]].map(([icon,label,sub,color]) => (
           <button key={sub} className="press" onClick={() => setSubView(sub)} style={{ background:C.surface, border:`1px solid ${color}25`, borderRadius:10, padding:"14px 8px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, color:C.text }}>
             <span style={{ color, fontSize:18 }}>{icon}</span>
             <span style={{ fontSize:10, color:C.muted, textAlign:"center", lineHeight:1.3 }}>{label}</span>
