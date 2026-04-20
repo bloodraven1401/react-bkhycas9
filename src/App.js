@@ -143,7 +143,7 @@ const todayLogs = logs[today] || {};
     return Math.round((done / (HABITS.length * 7)) * 100);
   }
   function getTodayMacros() {
-    const entries = foodLogs[today] || [];
+    const entries = Array.isArray(foodLogs[today]) ? foodLogs[today] : [];
     return entries.reduce((acc, e) => ({
       calories: acc.calories + (e.calories || 0),
       protein: acc.protein + (e.protein || 0),
