@@ -1218,7 +1218,9 @@ function NofapPlan({ nofapStreak, setNofapStart, nofapHistory, setNofapHistory }
 
   const TRIGGERS = ["Boredom","Late night on phone","Stress / overthinking","Social media","Loneliness","Lack of structure","Curiosity","Emotional pain"];
 
-  const longestStreak = nofapHistory.length ? Math.max(...nofapHistory.map(h=>h.streak), nofapStreak) : nofapStreak;
+  const deadline = new Date("2027-01-14");
+const today = new Date();
+const daysToDeadline = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
   const totalCleanDays = nofapHistory.reduce((a,h)=>a+h.streak,0) + nofapStreak;
   const avgStreak = nofapHistory.length ? Math.round((nofapHistory.reduce((a,h)=>a+h.streak,0)) / nofapHistory.length) : nofapStreak;
 
@@ -1247,7 +1249,11 @@ function NofapPlan({ nofapStreak, setNofapStart, nofapHistory, setNofapHistory }
 
       <div style={{ background:`${C.nofap}10`, border:`1px solid ${C.nofap}25`, borderRadius:14, padding:20, textAlign:"center" }}>
         <div style={{ fontSize:18, color:C.nofap, fontFamily:"'Cormorant Garamond',serif", fontWeight:700, marginBottom:6 }}>Day 1 Again</div>
-        <div style={{ fontSize:12, color:C.muted, lineHeight:1.7 }}>You had a {nofapStreak} day streak. Log what happened so you can break the pattern next time.</div>
+        <div style={{ fontSize:12, color:C.muted, lineHeight:1.7 }}>You had a {nofapStreak} day streak.</div>
+<div style={{ marginTop:10, background:`${C.nofap}15`, borderRadius:8, padding:"10px 12px" }}>
+  <div style={{ fontSize:20, color:C.nofap, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{daysToDeadline} days remaining</div>
+  <div style={{ fontSize:11, color:`${C.nofap}70`, marginTop:4, lineHeight:1.5 }}>Until January 14, 2027. Time's slipping. Log what happened and get back up.</div>
+</div>
       </div>
 
       <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:14 }}>
@@ -1285,6 +1291,10 @@ function NofapPlan({ nofapStreak, setNofapStart, nofapHistory, setNofapHistory }
           <div style={{ width:`${pct}%`, height:"100%", background:C.nofap, borderRadius:4 }} />
         </div>
         <div style={{ fontSize:10, color:C.muted }}>Next milestone: {next} days</div>
+<div style={{ marginTop:10, background:`${C.nofap}15`, borderRadius:8, padding:"8px 12px" }}>
+  <div style={{ fontSize:18, color:C.nofap, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{daysToDeadline} days</div>
+  <div style={{ fontSize:9, color:`${C.nofap}70`, letterSpacing:2, textTransform:"uppercase", marginTop:2 }}>Until Jan 14, 2027</div>
+</div>
       </div>
 
       {/* Stats row */}
