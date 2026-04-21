@@ -1092,7 +1092,7 @@ function RoutinesView({ selected, setSelected, nofapStreak, setNofapStart, nofap
   return (
     <div>
       <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:C.muted, fontSize:11, marginBottom:20, letterSpacing:1 }}>← Back</button>
-      <RoutineDetail id={selected} nofapStreak={nofapStreak} setNofapStart={setNofapStart} nofapHistory={safenofapHistory} setNofapHistory={setNofapHistory} />
+      <RoutineDetail id={selected} nofapStreak={nofapStreak} setNofapStart={setNofapStart} nofapHistory={safeNofapHistory} setNofapHistory={setNofapHistory} />
     </div>
   );
 }
