@@ -119,7 +119,6 @@ export default function App() {
   const [weightLogs, setWeightLogs] = useLS("anant_v3_weight", {});
   const [nofapStart, setNofapStart] = useLS("anant_v3_nofap", todayKey());
 const [nofapHistory, setNofapHistory] = useLS("anant_v3_nofap_history", []);
-const nofapHistory = Array.isArray(nofapHistory) ? nofapHistory : [];
   const [selectedRoutine, setSelectedRoutine] = useState(null);
   const [subView, setSubView] = useState(null); // "workoutlog" | "foodlog" | "analytics"
 
