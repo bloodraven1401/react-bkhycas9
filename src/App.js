@@ -36,9 +36,9 @@ const HABITS = [
   { id: "h7", label: "All 6 Meals", category: "diet", type: "binary", icon: "◉" },
   { id: "h8", label: "Supplements Taken", category: "diet", type: "binary", icon: "◉" },
   { id: "h9", label: "NoFap", category: "nofap", type: "binary", icon: "⬡" },
-  { id: "h10", label: "Phone Out of Bedroom", category: "nofap", type: "binary", icon: "⬡" },
+
   { id: "h11", label: "Hair Oil Massage", category: "haircare", type: "binary", icon: "◈" },
-  { id: "h12", label: "Scalp Massage", category: "haircare", type: "binary", icon: "◈" },
+  
   { id: "h13", label: "No Junk Food", category: "diet", type: "binary", icon: "◉" },
   { id: "h14", label: "Pooja", category: "spiritual", type: "binary", icon: "✦" },
 ];
