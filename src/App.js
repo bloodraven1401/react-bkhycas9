@@ -7,7 +7,7 @@ const C = {
   workout: "#5B8DEF", skincare: "#C9A96E", diet: "#E07B5A",
   nofap: "#E05A7B", haircare: "#7EB8A4", spiritual: "#C9A96E"
 };
-const COLORS = { workout: C.workout, skincare: C.skincare, diet: C.diet, nofap: C.nofap, haircare: C.haircare };
+const COLORS = { workout: C.workout, skincare: C.skincare, diet: C.diet, nofap: C.nofap, haircare: C.haircare, spiritual: C.skincare };
 
 function todayKey() {
   const now = new Date();
@@ -452,7 +452,8 @@ const mealStorageKey = today;
 
 // ─── WORKOUT LOGGER ───────────────────────────────────────────────────────────
 function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
-  const today = todayKey();
+  const [selectedWorkoutDate, setSelectedWorkoutDate] = useState(todayKey());
+  const today = selectedWorkoutDate;
   const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
   const [dayIdx, setDayIdx] = useState(todayIdx);
   const [activeEx, setActiveEx] = useState(null); // exercise name being logged
@@ -521,7 +522,13 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
         <button onClick={onBack} style={{ background:"none", border:"none", color:C.muted, fontSize:12, letterSpacing:1 }}>← Back</button>
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700 }}>Workout Log</div>
-          <div style={{ fontSize:10, color:C.muted }}>{new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short"})}</div>
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+  <button onClick={() => { const d = new Date(selectedWorkoutDate); d.setDate(d.getDate()-1); setSelectedWorkoutDate(d.toISOString().split("T")[0]); }} style={{ background:"none", border:"none", color:C.muted, fontSize:14, cursor:"pointer" }}>‹</button>
+  <div style={{ fontSize:10, color:selectedWorkoutDate===todayKey()?C.muted:C.nofap }}>
+    {new Date(selectedWorkoutDate+"T12:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short"})}
+  </div>
+  <button onClick={() => { const d = new Date(selectedWorkoutDate); d.setDate(d.getDate()+1); const next=d.toISOString().split("T")[0]; if(next<=todayKey()) setSelectedWorkoutDate(next); }} style={{ background:"none", border:"none", color:C.muted, fontSize:14, cursor:"pointer" }}>›</button>
+</div>
         </div>
         <div style={{ textAlign:"right" }}>
           <div style={{ fontSize:16, color:C.workout, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{loggedCount}/{allExercises.length}</div>
@@ -597,7 +604,7 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
                             {[["Sets",form.sets,"sets"],["Reps",form.reps,"reps"],["Weight",form.weight,"kg"]].map(([label,val,field]) => (
                               <div key={field}>
                                 <div style={{ fontSize:9, color:C.muted, letterSpacing:1, marginBottom:4 }}>{label.toUpperCase()}</div>
-                                <input type="number" inputMode="decimal" value={val} onChange={e => setForm(p=>({...p,[field]:e.target.value}))} placeholder="0" inputMode="decimal" style={{ width:"100%" }} />
+                                <input type="number" inputMode="decimal" value={val} onChange={e => setForm(p=>({...p,[field]:e.target.value}))} placeholder="0" style={{ width:"100%" }} />
                               </div>
                             ))}
                           </div>
@@ -639,7 +646,7 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
 // ─── FOOD LOGGER ──────────────────────────────────────────────────────────────
 function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
   const today = todayKey();
-  const mealLogs = foodLogs[mealStorageKey] || {};
+  const mealLogs = foodLogs[today] || {};
 
   const MEALS = [
     { id: "m1", label: "Meal 1 — Breakfast", time: "9:30 AM", items: ["2 peanut butter sandwiches", "4 whole eggs", "1 glass whole milk", "10 almonds", "Vitamin D3 + Multivitamin"], macros: "~40g P · ~700 kcal" },
@@ -705,7 +712,7 @@ function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
 }
 
 // ─── ANALYTICS ────────────────────────────────────────────────────────────────
-function AnalyticsView({ logs, workoutLogs, foodLogs, nofapStreak, onBack }) {
+function AnalyticsView({ logs, workoutLogs, foodLogs, nofapStreak, weightLogs, onBack }) {
   const [period, setPeriod] = useState("weekly");
 
   function getHabitData(range) {
