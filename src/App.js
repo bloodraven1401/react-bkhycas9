@@ -645,9 +645,9 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
 
 // ─── FOOD LOGGER ──────────────────────────────────────────────────────────────
 function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
-  const today = todayKey();
-  const mealLogs = foodLogs[today] || {};
-
+const [selectedFoodDate, setSelectedFoodDate] = useState(todayKey());
+const today = selectedFoodDate;
+const mealLogs = foodLogs[today] || {};
   const MEALS = [
     { id: "m1", label: "Meal 1 — Breakfast", time: "9:30 AM", items: ["2 peanut butter sandwiches", "4 whole eggs", "1 glass whole milk", "10 almonds", "Vitamin D3 + Multivitamin"], macros: "~40g P · ~700 kcal" },
     { id: "m2", label: "Meal 2 — Lunch", time: "1:00 PM", items: ["50g soya chunks (dry)", "1.5 cups cooked rice", "1 glass buttermilk"], macros: "~30g P · ~500 kcal" },
@@ -673,7 +673,13 @@ function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
         <button onClick={onBack} style={{ background:"none", border:"none", color:C.muted, fontSize:12 }}>← Back</button>
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700 }}>Food Log</div>
-          <div style={{ fontSize:10, color:C.muted }}>{new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short"})}</div>
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+  <button onClick={() => { const d = new Date(selectedFoodDate); d.setDate(d.getDate()-1); setSelectedFoodDate(d.toISOString().split("T")[0]); }} style={{ background:"none", border:"none", color:C.muted, fontSize:14, cursor:"pointer" }}>‹</button>
+  <div style={{ fontSize:10, color:selectedFoodDate===todayKey()?C.muted:C.nofap }}>
+    {new Date(selectedFoodDate+"T12:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short"})}
+  </div>
+  <button onClick={() => { const d = new Date(selectedFoodDate); d.setDate(d.getDate()+1); const next=d.toISOString().split("T")[0]; if(next<=todayKey()) setSelectedFoodDate(next); }} style={{ background:"none", border:"none", color:C.muted, fontSize:14, cursor:"pointer" }}>›</button>
+</div>
         </div>
         <div style={{ textAlign:"right" }}>
           <div style={{ fontSize:16, color:C.diet, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{doneCount}/6</div>
