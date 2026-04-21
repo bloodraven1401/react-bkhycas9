@@ -119,7 +119,7 @@ export default function App() {
   const [weightLogs, setWeightLogs] = useLS("anant_v3_weight", {});
   const [nofapStart, setNofapStart] = useLS("anant_v3_nofap", todayKey());
 const [nofapHistory, setNofapHistory] = useLS("anant_v3_nofap_history", []);
-const safeNofapHistory = Array.isArray(nofapHistory) ? nofapHistory : [];
+const nofapHistory = Array.isArray(nofapHistory) ? nofapHistory : [];
   const [selectedRoutine, setSelectedRoutine] = useState(null);
   const [subView, setSubView] = useState(null); // "workoutlog" | "foodlog" | "analytics"
 
@@ -1092,7 +1092,7 @@ function RoutinesView({ selected, setSelected, nofapStreak, setNofapStart, nofap
   return (
     <div>
       <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:C.muted, fontSize:11, marginBottom:20, letterSpacing:1 }}>← Back</button>
-      <RoutineDetail id={selected} nofapStreak={nofapStreak} setNofapStart={setNofapStart} nofapHistory={safeNofapHistory} setNofapHistory={setNofapHistory} />
+      <RoutineDetail id={selected} nofapStreak={nofapStreak} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} />
     </div>
   );
 }
