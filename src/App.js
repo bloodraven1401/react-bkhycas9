@@ -5,7 +5,7 @@ const C = {
   bg: "#07070A", surface: "#0D0D12", border: "#16161E", faint: "#0F0F16",
   text: "#E8E4DC", muted: "#3A3A48", dim: "#555566",
   workout: "#5B8DEF", skincare: "#C9A96E", diet: "#E07B5A",
-  nofap: "#E05A7B", haircare: "#7EB8A4",
+  nofap: "#E05A7B", haircare: "#7EB8A4", spiritual: "#C9A96E"
 };
 const COLORS = { workout: C.workout, skincare: C.skincare, diet: C.diet, nofap: C.nofap, haircare: C.haircare };
 
@@ -40,6 +40,7 @@ const HABITS = [
   { id: "h11", label: "Hair Oil Massage", category: "haircare", type: "binary", icon: "◈" },
   { id: "h12", label: "Scalp Massage", category: "haircare", type: "binary", icon: "◈" },
   { id: "h13", label: "No Junk Food", category: "diet", type: "binary", icon: "◉" },
+  { id: "h14", label: "Pooja", category: "spiritual", type: "binary", icon: "✦" },
 ];
 
 // ─── WORKOUT DATA ─────────────────────────────────────────────────────────────
@@ -289,6 +290,7 @@ function Dashboard({ logs, nofapStreak, weeklyPct, todayPct, getStreak, setView,
 // ─── LOG HUB ──────────────────────────────────────────────────────────────────
 function LogHub({ setSubView, todayMacros, workoutLogs, weightLogs, setWeightLogs, logs, foodLogs, nofapStreak }) {
   const today = todayKey();
+const mealStorageKey = today;
   const todayW = workoutLogs[today] || {};
   const totalSets = Object.values(todayW).reduce((a,ex) => a+(ex.sets?.length||0), 0);
   const [weightInput, setWeightInput] = useState("");
@@ -595,7 +597,7 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
                             {[["Sets",form.sets,"sets"],["Reps",form.reps,"reps"],["Weight",form.weight,"kg"]].map(([label,val,field]) => (
                               <div key={field}>
                                 <div style={{ fontSize:9, color:C.muted, letterSpacing:1, marginBottom:4 }}>{label.toUpperCase()}</div>
-                                <input type="number" value={val} onChange={e => setForm(p=>({...p,[field]:e.target.value}))} placeholder="0" style={{ width:"100%" }} />
+                                <input type="number" inputMode="decimal" value={val} onChange={e => setForm(p=>({...p,[field]:e.target.value}))} placeholder="0" style={{ width:"100%" }} />
                               </div>
                             ))}
                           </div>
@@ -637,7 +639,7 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
 // ─── FOOD LOGGER ──────────────────────────────────────────────────────────────
 function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
   const today = todayKey();
-  const mealLogs = foodLogs[today] || {};
+  const mealLogs = foodLogs[mealStorageKey] || {};
 
   const MEALS = [
     { id: "m1", label: "Meal 1 — Breakfast", time: "9:30 AM", items: ["2 peanut butter sandwiches", "4 whole eggs", "1 glass whole milk", "10 almonds", "Vitamin D3 + Multivitamin"], macros: "~40g P · ~700 kcal" },
