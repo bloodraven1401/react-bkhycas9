@@ -723,18 +723,16 @@ function AnalyticsView({ logs, workoutLogs, foodLogs, nofapStreak, weightLogs, o
       done: HABITS.filter(h => logs[d]?.[h.id]?.done).length,
     }));
   }
-
-  function getProteinData(range) {
+function getProteinData(range) {
     return range.map(d => {
-      const entries = foodLogs[d] || [];
+      const entries = Array.isArray(foodLogs[d]) ? foodLogs[d] : [];
       const p = entries.reduce((a,e) => a+(e.protein||0), 0);
       return { date:d, label:new Date(d+"T12:00:00").toLocaleDateString("en-IN",{weekday:"short"}), value:Math.round(p) };
     });
   }
-
-  function getCalorieData(range) {
+function getCalorieData(range) {
     return range.map(d => {
-      const entries = foodLogs[d] || [];
+      const entries = Array.isArray(foodLogs[d]) ? foodLogs[d] : [];
       const c = entries.reduce((a,e) => a+(e.calories||0), 0);
       return { date:d, label:new Date(d+"T12:00:00").toLocaleDateString("en-IN",{weekday:"short"}), value:Math.round(c) };
     });
