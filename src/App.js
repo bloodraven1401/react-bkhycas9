@@ -7,7 +7,7 @@ const C = {
   workout: "#5B8DEF", skincare: "#C9A96E", diet: "#E07B5A",
   nofap: "#E05A7B", haircare: "#7EB8A4", spiritual: "#C9A96E"
 };
-const COLORS = { workout: C.workout, skincare: C.skincare, diet: C.diet, nofap: C.nofap, haircare: C.haircare, spiritual: C.skincare };
+const COLORS = { workout: C.workout, skincare: C.skincare, diet: C.diet, nofap: C.nofap, haircare: C.haircare, spiritual: C.skincare, productivity: "#A07EE0" };
 
 function todayKey() {
   const now = new Date();
@@ -38,7 +38,7 @@ const HABITS = [
   { id: "h9", label: "NoFap", category: "nofap", type: "binary", icon: "⬡" },
 
   { id: "h11", label: "Hair Oil Massage", category: "haircare", type: "binary", icon: "◈" },
-  
+  { id: "h12", label: "Guitar Practice", category: "productivity", type: "binary", icon: "♪" },
   { id: "h13", label: "No Junk Food", category: "diet", type: "binary", icon: "◉" },
   { id: "h14", label: "Pooja", category: "spiritual", type: "binary", icon: "✦" },
 ];
