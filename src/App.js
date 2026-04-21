@@ -1207,7 +1207,6 @@ function DietPlan() {
     </div>
   );
 }
-
 function NofapPlan({ nofapStreak, setNofapStart, nofapHistory, setNofapHistory }) {
   const milestones = [3,7,14,21,30,60,90,180,365];
   const next = milestones.find(m=>m>nofapStreak)||365;
@@ -1216,27 +1215,22 @@ function NofapPlan({ nofapStreak, setNofapStart, nofapHistory, setNofapHistory }
   const [selectedTriggers, setSelectedTriggers] = useState([]);
   const [relapseNote, setRelapseNote] = useState("");
 
-  const TRIGGERS = ["Boredom","Late night on phone","Stress / overthinking","Social media","Loneliness","Lack of structure","Curiosity","Emotional pain"];
-
+  const history = Array.isArray(nofapHistory) ? nofapHistory : [];
   const deadline = new Date("2027-01-14");
-const today = new Date();
-const daysToDeadline = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
-  const totalCleanDays = nofapHistory.reduce((a,h)=>a+h.streak,0) + nofapStreak;
-  const avgStreak = nofapHistory.length ? Math.round((nofapHistory.reduce((a,h)=>a+h.streak,0)) / nofapHistory.length) : nofapStreak;
-
-  // Trigger frequency
+  const now = new Date();
+  const daysToDeadline = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+  const longestStreak = history.length ? Math.max(...history.map(h=>h.streak), nofapStreak) : nofapStreak;
+  const totalCleanDays = history.reduce((a,h)=>a+h.streak,0) + nofapStreak;
+  const avgStreak = history.length ? Math.round(history.reduce((a,h)=>a+h.streak,0) / history.length) : nofapStreak;
   const triggerCounts = {};
-  nofapHistory.forEach(h => { (h.triggers||[]).forEach(t => { triggerCounts[t] = (triggerCounts[t]||0)+1; }); });
+  history.forEach(h => { (h.triggers||[]).forEach(t => { triggerCounts[t] = (triggerCounts[t]||0)+1; }); });
   const topTrigger = Object.entries(triggerCounts).sort((a,b)=>b[1]-a[1])[0];
 
+  const TRIGGERS = ["Boredom","Late night on phone","Stress / overthinking","Social media","Loneliness","Lack of structure","Curiosity","Emotional pain"];
+
   function logRelapse() {
-    const entry = {
-      date: todayKey(),
-      streak: nofapStreak,
-      triggers: selectedTriggers,
-      note: relapseNote,
-    };
-    setNofapHistory(p => [...p, entry]);
+    const entry = { date: todayKey(), streak: nofapStreak, triggers: selectedTriggers, note: relapseNote };
+    setNofapHistory(p => [...(Array.isArray(p)?p:[]), entry]);
     setNofapStart(todayKey());
     setShowRelapse(false);
     setSelectedTriggers([]);
@@ -1246,64 +1240,48 @@ const daysToDeadline = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
   if (showRelapse) return (
     <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
       <button onClick={() => setShowRelapse(false)} style={{ background:"none", border:"none", color:C.muted, fontSize:11, letterSpacing:1, alignSelf:"flex-start", fontFamily:"inherit" }}>← Back</button>
-
       <div style={{ background:`${C.nofap}10`, border:`1px solid ${C.nofap}25`, borderRadius:14, padding:20, textAlign:"center" }}>
-        <div style={{ fontSize:18, color:C.nofap, fontFamily:"'Cormorant Garamond',serif", fontWeight:700, marginBottom:6 }}>Day 1 Again</div>
-        <div style={{ fontSize:12, color:C.muted, lineHeight:1.7 }}>You had a {nofapStreak} day streak.</div>
-<div style={{ marginTop:10, background:`${C.nofap}15`, borderRadius:8, padding:"10px 12px" }}>
-  <div style={{ fontSize:20, color:C.nofap, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{daysToDeadline} days remaining</div>
-  <div style={{ fontSize:11, color:`${C.nofap}70`, marginTop:4, lineHeight:1.5 }}>Until January 14, 2027. Time's slipping. Log what happened and get back up.</div>
-</div>
+        <div style={{ fontSize:18, color:C.nofap, fontFamily:"'Cormorant Garamond',serif", fontWeight:700, marginBottom:6 }}>Time's Slipping.</div>
+        <div style={{ fontSize:12, color:C.muted, lineHeight:1.7, marginBottom:10 }}>You had a {nofapStreak} day streak.</div>
+        <div style={{ background:`${C.nofap}15`, borderRadius:8, padding:"10px 12px" }}>
+          <div style={{ fontSize:20, color:C.nofap, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{daysToDeadline} days remaining</div>
+          <div style={{ fontSize:11, color:`${C.nofap}70`, marginTop:4, lineHeight:1.5 }}>Until January 14, 2027. Log what happened and get back up.</div>
+        </div>
       </div>
-
       <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:14 }}>
         <div style={{ fontSize:9, color:C.nofap, letterSpacing:3, textTransform:"uppercase", marginBottom:12 }}>What triggered it?</div>
         <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
           {TRIGGERS.map(t => {
-            const selected = selectedTriggers.includes(t);
-            return (
-              <button key={t} onClick={() => setSelectedTriggers(p => selected ? p.filter(x=>x!==t) : [...p,t])} style={{ background:selected?`${C.nofap}20`:C.faint, border:`1px solid ${selected?C.nofap:C.border}`, borderRadius:20, padding:"6px 12px", color:selected?C.nofap:C.muted, fontSize:11, fontFamily:"inherit" }}>
-                {t}
-              </button>
-            );
+            const sel = selectedTriggers.includes(t);
+            return <button key={t} onClick={() => setSelectedTriggers(p => sel?p.filter(x=>x!==t):[...p,t])} style={{ background:sel?`${C.nofap}20`:C.faint, border:`1px solid ${sel?C.nofap:C.border}`, borderRadius:20, padding:"6px 12px", color:sel?C.nofap:C.muted, fontSize:11, fontFamily:"inherit" }}>{t}</button>;
           })}
         </div>
       </div>
-
       <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:14 }}>
         <div style={{ fontSize:9, color:C.muted, letterSpacing:3, textTransform:"uppercase", marginBottom:8 }}>Notes (optional)</div>
         <textarea value={relapseNote} onChange={e=>setRelapseNote(e.target.value)} placeholder="What was happening? What could you do differently?" style={{ width:"100%", minHeight:80, resize:"none", fontSize:12, lineHeight:1.6 }} />
       </div>
-
-      <button onClick={logRelapse} style={{ background:C.nofap, border:"none", borderRadius:10, padding:"14px", color:"#000", fontSize:13, fontFamily:"inherit", fontWeight:500 }}>
-        Log Relapse & Reset Streak
-      </button>
+      <button onClick={logRelapse} style={{ background:C.nofap, border:"none", borderRadius:10, padding:"14px", color:"#000", fontSize:13, fontFamily:"inherit", fontWeight:500 }}>Log Relapse & Reset Streak</button>
     </div>
   );
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-      {/* Streak card */}
       <div style={{ background:`${C.nofap}10`, border:`1px solid ${C.nofap}25`, borderRadius:14, padding:20, textAlign:"center" }}>
         <div style={{ fontSize:56, fontFamily:"'Cormorant Garamond',serif", fontWeight:700, color:C.nofap, lineHeight:1 }}>{nofapStreak}</div>
         <div style={{ fontSize:10, color:`${C.nofap}80`, letterSpacing:3, textTransform:"uppercase", marginTop:4 }}>Days Clean</div>
         <div style={{ margin:"14px 0 6px", background:C.faint, borderRadius:4, height:4 }}>
           <div style={{ width:`${pct}%`, height:"100%", background:C.nofap, borderRadius:4 }} />
         </div>
-        <div style={{ fontSize:10, color:C.muted }}>Next milestone: {next} days</div>
-<div style={{ marginTop:10, background:`${C.nofap}15`, borderRadius:8, padding:"8px 12px" }}>
-  <div style={{ fontSize:18, color:C.nofap, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{daysToDeadline} days</div>
-  <div style={{ fontSize:9, color:`${C.nofap}70`, letterSpacing:2, textTransform:"uppercase", marginTop:2 }}>Until Jan 14, 2027</div>
-</div>
+        <div style={{ fontSize:10, color:C.muted, marginBottom:10 }}>Next milestone: {next} days</div>
+        <div style={{ background:`${C.nofap}15`, borderRadius:8, padding:"8px 12px" }}>
+          <div style={{ fontSize:18, color:C.nofap, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{daysToDeadline} days</div>
+          <div style={{ fontSize:9, color:`${C.nofap}70`, letterSpacing:2, textTransform:"uppercase", marginTop:2 }}>Until Jan 14, 2027</div>
+        </div>
       </div>
 
-      {/* Stats row */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
-        {[
-          ["Longest", `${longestStreak}d`, C.nofap],
-          ["Total Clean", `${totalCleanDays}d`, C.haircare],
-          ["Avg Streak", `${avgStreak}d`, C.skincare],
-        ].map(([label,val,color]) => (
+        {[["Longest",`${longestStreak}d`,C.nofap],["Total Clean",`${totalCleanDays}d`,C.haircare],["Avg Streak",`${avgStreak}d`,C.skincare]].map(([label,val,color]) => (
           <div key={label} style={{ background:C.surface, border:`1px solid ${color}18`, borderRadius:10, padding:"12px 8px", textAlign:"center" }}>
             <div style={{ fontSize:18, color, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{val}</div>
             <div style={{ fontSize:9, color:C.muted, marginTop:3 }}>{label}</div>
@@ -1311,7 +1289,6 @@ const daysToDeadline = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
         ))}
       </div>
 
-      {/* Top trigger */}
       {topTrigger && (
         <div style={{ background:C.surface, border:`1px solid ${C.nofap}18`, borderRadius:12, padding:14 }}>
           <div style={{ fontSize:9, color:C.nofap, letterSpacing:3, textTransform:"uppercase", marginBottom:6 }}>Most Common Trigger</div>
@@ -1319,7 +1296,6 @@ const daysToDeadline = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
         </div>
       )}
 
-      {/* Milestones */}
       <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
         {milestones.map(m => (
           <div key={m} style={{ padding:"5px 10px", borderRadius:6, fontSize:11, background:nofapStreak>=m?`${C.nofap}18`:C.surface, border:`1px solid ${nofapStreak>=m?C.nofap+"50":C.border}`, color:nofapStreak>=m?C.nofap:C.muted }}>
@@ -1328,31 +1304,28 @@ const daysToDeadline = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
         ))}
       </div>
 
-      {/* Relapse history */}
-      {nofapHistory.length > 0 && (
+      {history.length > 0 && (
         <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:14 }}>
           <div style={{ fontSize:9, color:C.muted, letterSpacing:3, textTransform:"uppercase", marginBottom:12 }}>Streak History</div>
-          {[...nofapHistory].reverse().slice(0,5).map((h,i) => (
-            <div key={i} style={{ padding:"8px 0", borderBottom:i<Math.min(nofapHistory.length,5)-1?`1px solid ${C.border}`:"none" }}>
+          {[...history].reverse().slice(0,5).map((h,i) => (
+            <div key={i} style={{ padding:"8px 0", borderBottom:i<Math.min(history.length,5)-1?`1px solid ${C.border}`:"none" }}>
               <div style={{ display:"flex", justifyContent:"space-between" }}>
                 <span style={{ fontSize:12, color:C.text }}>{h.streak} days</span>
                 <span style={{ fontSize:10, color:C.muted }}>{new Date(h.date+"T12:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short"})}</span>
               </div>
-              {h.triggers?.length > 0 && <div style={{ fontSize:10, color:C.nofap, marginTop:3 }}>{h.triggers.join(", ")}</div>}
+              {h.triggers?.length>0 && <div style={{ fontSize:10, color:C.nofap, marginTop:3 }}>{h.triggers.join(", ")}</div>}
               {h.note && <div style={{ fontSize:11, color:C.muted, marginTop:3, fontStyle:"italic" }}>{h.note}</div>}
             </div>
           ))}
         </div>
       )}
 
-      {/* Reset button */}
       <button onClick={() => setShowRelapse(true)} style={{ background:"none", border:`1px solid ${C.nofap}40`, borderRadius:8, color:C.nofap, padding:12, fontSize:11, fontFamily:"inherit", letterSpacing:1, textTransform:"uppercase" }}>
         I Relapsed — Log & Reset
       </button>
     </div>
   );
 }
-
 function HaircarePlan() {
   const washDay = [
     {step:1,task:"Pre-wash oil (1–2 hrs before)",note:"Coconut oil + 5–6 drops rosemary. Massage 5–7 mins. Work through lengths."},
