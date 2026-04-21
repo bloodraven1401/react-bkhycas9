@@ -207,7 +207,7 @@ const todayLogs = logs[today] || {};
         {view==="dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
         {view==="habits" && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
         {view==="routines" && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} />}
-        {view==="log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} foodLogs={foodLogs} nofapStreak={getNofapStreak()} />}
+        {view==="log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} />}
       </div>
 
       <nav style={{ position:"fixed", bottom:0, left:0, right:0, width:"100%", background:"rgba(7,7,10,0.97)", backdropFilter:"blur(16px)", borderTop:`1px solid ${C.border}`, display:"flex", padding:"12px 0 34px", zIndex:9999 }}>
@@ -288,7 +288,7 @@ function Dashboard({ logs, nofapStreak, weeklyPct, todayPct, getStreak, setView,
 }
 
 // ─── LOG HUB ──────────────────────────────────────────────────────────────────
-function LogHub({ setSubView, todayMacros, workoutLogs, weightLogs, setWeightLogs, logs, foodLogs, nofapStreak }) {
+function LogHub({ setSubView, todayMacros, workoutLogs, weightLogs, setWeightLogs, logs, foodLogs, setFoodLogs, nofapStreak }) {
   const today = todayKey();
 const mealStorageKey = today;
   const todayW = workoutLogs[today] || {};
@@ -597,7 +597,7 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
                             {[["Sets",form.sets,"sets"],["Reps",form.reps,"reps"],["Weight",form.weight,"kg"]].map(([label,val,field]) => (
                               <div key={field}>
                                 <div style={{ fontSize:9, color:C.muted, letterSpacing:1, marginBottom:4 }}>{label.toUpperCase()}</div>
-                                <input type="number" inputMode="decimal" value={val} onChange={e => setForm(p=>({...p,[field]:e.target.value}))} placeholder="0" style={{ width:"100%" }} />
+                                <input type="number" inputMode="decimal" value={val} onChange={e => setForm(p=>({...p,[field]:e.target.value}))} placeholder="0" inputMode="decimal" style={{ width:"100%" }} />
                               </div>
                             ))}
                           </div>
