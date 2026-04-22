@@ -1081,7 +1081,9 @@ function RoutinesView({ selected, setSelected, nofapStreak, setNofapStart, nofap
     { id:"diet", label:"Diet", icon:"◉", color:C.diet, meta:"6 meals · ~3030 kcal · ~178g protein" },
     { id:"nofap", label:"NoFap", icon:"⬡", color:C.nofap, meta:"Full celibacy · Streak + Protocol" },
     { id:"haircare", label:"Hair Care", icon:"◈", color:C.haircare, meta:"Wash days + Daily + Weekly" },
+    { id:"spiritual", label:"Spirituality", icon:"✦", color:C.skincare, meta:"Morning · Day · Night" },
   ];
+
 
   if (!selected) return (
     <div>
@@ -1115,8 +1117,10 @@ function RoutineDetail({ id, nofapStreak, setNofapStart, nofapHistory, setNofapH
   if (id === "diet") return <DietPlan />;
   if (id === "nofap") return <NofapPlan nofapStreak={nofapStreak} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} />;
   if (id === "haircare") return <HaircarePlan />;
+  if (id === "spiritual") return <SpiritualPlan />;
   return null;
 }
+
 
 function WorkoutPlan() {
   const todayIdx = new Date().getDay()===0?6:new Date().getDay()-1;
@@ -1376,6 +1380,105 @@ function HaircarePlan() {
     </div>
   );
 }
+function SpiritualPlan() {
+  const sections = [
+    {
+      time: "MORNING",
+      color: C.skincare,
+      steps: [
+        {
+          title: "Pooja — 3 mins",
+          items: [
+            "Wash hands before approaching mandir",
+            "Light diya and agarbatti",
+            "Ring the bell",
+            "Offer water with right hand",
+            "Hands folded, eyes closed, one slow breath",
+            "Say internally: \"You know what I need. I am showing up every day. Please meet me halfway.\"",
+            "Hold your wish for 20 seconds — then surrender it, leave it there",
+            "One clockwise pradakshina and bow",
+          ]
+        },
+        {
+          title: "Affirmations — 1–2 mins",
+          items: [
+            "After bowing, eyes closed, say slowly:",
+            "\"I am becoming someone who receives what they truly need.\"",
+            "\"I am becoming someone who handles hard days without catastrophising.\"",
+            "\"What is meant for me is already making its way to me.\"",
+          ]
+        }
+      ]
+    },
+    {
+      time: "THROUGHOUT THE DAY",
+      color: C.haircare,
+      steps: [
+        {
+          title: "Thought Interrupt — 30 sec",
+          items: [
+            "When a worst-case thought hits — don't fight it",
+            "Ask: \"That's one possibility. What's another?\"",
+            "Answer: \"Or — it works out. It actually comes through.\"",
+            "You don't need to believe it fully. Just say it.",
+          ]
+        }
+      ]
+    },
+    {
+      time: "NIGHT",
+      color: C.workout,
+      steps: [
+        {
+          title: "Gratitude — 3 mins",
+          items: [
+            "3 specific things from today that were okay or good",
+            "Small and specific beats big and vague",
+            "Then add: \"I am grateful that what I need is already on its way to me.\"",
+          ]
+        },
+        {
+          title: "Visualisation — 1–2 mins",
+          items: [
+            "Last thing before sleep",
+            "Don't visualise the thing — visualise the moment after",
+            "The relief. The exhale. The \"it happened.\"",
+            "Hold that feeling for 60 seconds",
+            "Let sleep take you from that feeling",
+          ]
+        }
+      ]
+    }
+  ];
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+      {sections.map((section, si) => (
+        <div key={si}>
+          <div style={{ fontSize:9, color:section.color, letterSpacing:3, textTransform:"uppercase", marginBottom:10 }}>{section.time}</div>
+          {section.steps.map((step, ti) => (
+            <div key={ti} style={{ background:C.surface, border:`1px solid ${section.color}18`, borderRadius:12, padding:14, marginBottom:8 }}>
+              <div style={{ fontSize:12, color:section.color, marginBottom:10 }}>{step.title}</div>
+              {step.items.map((item, ii) => (
+                <div key={ii} style={{ fontSize:12, color:"#888", padding:"5px 0", borderBottom:ii<step.items.length-1?`1px solid ${C.border}`:"none", lineHeight:1.5 }}>
+                  {ii === 0 && step.items.length > 1 && !item.startsWith('"') ? (
+                    <span style={{ color:section.color, marginRight:6 }}>{ii+1}.</span>
+                  ) : item.startsWith('"') ? (
+                    <span style={{ color:C.text, fontStyle:"italic" }}></span>
+                  ) : (
+                    <span style={{ color:section.color, marginRight:6 }}>{ii+1}.</span>
+                  )}
+                  {item}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 // ─── SHARED ───────────────────────────────────────────────────────────────────
 function Ring({ value, size, color, label, sublabel }) {
