@@ -43,37 +43,144 @@ const HABITS = [
 
 // ─── WORKOUT DATA ─────────────────────────────────────────────────────────────
 const WORKOUT_DAYS = [
-  { day: "Day 1", focus: "ARMS — Heavy", sections: [
-    { title: "Triceps", exercises: ["Close-Grip Bench Press","Rope Overhead Cable Extension","Bar Pressdowns"] },
-    { title: "Biceps", exercises: ["Bayesian Cable Curls","Preacher Curls","Hammer Curls"] },
-    { title: "Forearms", exercises: ["Wrist Curls","Reverse Wrist Curls"] },
+  { day: "Day 1", focus: "ARMS — Heavy Hypertrophy", sections: [
+    { title: "Triceps", exercises: [
+      "Close-Grip Bench Press — 4×5-8 | Rest 2–2.5 min | Grip shoulder-width, elbows tucked 45°",
+      "Overhead Cable Extension (bar) — 3×10-12 | Rest 90 sec | Full stretch at bottom, lean slightly forward",
+      "Cable Pressdowns (single hand) — 3×12-15 each | Rest 60 sec | Wrist neutral, elbow pinned, squeeze at extension",
+    ]},
+    { title: "Biceps", exercises: [
+      "Bayesian Cable Curls — 4×8-12 | Rest 90 sec | Single arm, cable behind you, full shoulder extension",
+      "EZ-Bar Preacher Curl — 3×10-12 | Rest 90 sec | 3 sec eccentric on the way down",
+      "Hammer Curls (DB) — 3×12-15 | Rest 60 sec | Neutral grip, strict form, no swinging",
+    ]},
+    { title: "Forearms — Superset (rest 60 sec)", exercises: [
+      "Reverse EZ-Bar Curl — 3×12-15",
+      "Behind-the-back Barbell Wrist Curl — 3×15-20",
+    ]},
+    { title: "Neck Finisher", exercises: [
+      "Plate Neck Flexion — 3×15-20",
+      "Plate Neck Extension — 3×15-20",
+      "Lateral Neck Flexion — 2×15 each side",
+    ]},
+    { title: "Optional Medial Delt", exercises: [
+      "Cable Lateral Raises — 2×15-20 (light, strict, pause at top)",
+    ]},
   ]},
-  { day: "Day 2", focus: "CHEST + DELTS", sections: [
-    { title: "Chest", exercises: ["Incline Barbell Bench Press","Machine Chest Press","Chest Dips"] },
-    { title: "Delts", exercises: ["Standing Cable Lateral Raises","Machine Shoulder Press"] },
-    { title: "Abs", exercises: ["Cable Crunches","Leg Raises"] },
+  { day: "Day 2", focus: "CHEST + SHOULDERS", sections: [
+    { title: "Chest", exercises: [
+      "Incline Barbell Bench Press — 4×5-8 | Rest 2–2.5 min | 30–45° incline only",
+      "Machine Chest Press — 3×10-12 | Rest 90 sec | Squeeze pecs at full extension",
+      "Pec Deck Fly — 3×12-15 | Rest 60 sec | Full stretch, squeeze 1 sec at peak, slow eccentric",
+      "Chest Dips (lean forward) — 3×8-12 | Rest 90 sec | Body tilted forward, elbows slightly flared",
+    ]},
+    { title: "Shoulders", exercises: [
+      "Machine Shoulder Press — 3×10-12 | Rest 90 sec | Full range, no half reps",
+    ]},
+    { title: "Shoulders — Superset (rest 60 sec)", exercises: [
+      "Standing Cable Lateral Raise — 3×15-20",
+      "Bent-Over DB Rear Delt Fly — 3×15-20",
+    ]},
+    { title: "Abs", exercises: [
+      "Cable Crunches — 3×15-20",
+      "Hanging Leg Raises — 3×12-15",
+    ]},
+    { title: "Optional Medial Delt", exercises: [
+      "Cable Lateral Raises — 2×15-20",
+    ]},
   ]},
-  { day: "Day 3", focus: "BACK", sections: [
-    { title: "Back", exercises: ["Weighted Pull-Ups","Barbell Bent Over Rows","Chest-Supported Machine Row","Rear Delt Machine Fly"] },
-    { title: "Traps", exercises: ["Barbell Shrugs"] },
-    { title: "Forearms", exercises: ["Wrist Curls","Reverse Wrist Curls"] },
+  { day: "Day 3", focus: "BACK + TRAPS — Heavy", sections: [
+    { title: "Back — Width", exercises: [
+      "Weighted Pull-Ups — 4×6-8 | Rest 2.5 min | Full dead hang, chin over bar at top",
+    ]},
+    { title: "Back — Thickness", exercises: [
+      "Barbell Bent-Over Row — 4×6-8 | Rest 2–2.5 min | Overhand grip, 45° torso, pull to lower chest",
+      "Seated Cable Row (close grip) — 3×10-12 | Rest 90 sec | Full stretch, pull elbows past hips",
+      "Straight-Arm Lat Pulldown — 3×12-15 | Rest 60 sec | Arms straight, hinge at shoulder, feel the lats",
+    ]},
+    { title: "Rear Delts", exercises: [
+      "Rear Delt Machine Fly — 3×15-20 | Rest 60 sec | Full range, slow eccentric, pause at stretch",
+    ]},
+    { title: "Traps", exercises: [
+      "Barbell Shrugs — 4×10-12 | Rest 90 sec | Hold 2 sec at top, do not roll shoulders",
+      "Single-Arm DB Shrug (weaker side only) — 2×15 | Rest 60 sec",
+    ]},
+    { title: "Neck Finisher", exercises: [
+      "Plate Neck Flexion — 3×15-20",
+      "Plate Neck Extension — 3×15-20",
+      "Lateral Neck Flexion — 2×15 each side",
+    ]},
+    { title: "Optional Medial Delt", exercises: [
+      "Cable Lateral Raises — 2×15-20",
+    ]},
   ]},
-  { day: "Day 4", focus: "SHOULDERS + ARMS", sections: [
-    { title: "Delts", exercises: ["Seated Dumbbell Lateral Raise","Machine Shoulder Press","Reverse Fly"] },
-    { title: "Arms SS-A", exercises: ["Rope Overhead Extensions","Bayesian Cable Curls"] },
-    { title: "Arms SS-B", exercises: ["Bar Pressdowns","Hammer Curls"] },
-    { title: "Abs", exercises: ["Cable Woodchoppers","Hanging Leg Raises"] },
+  { day: "Day 4", focus: "SHOULDERS + ARMS — Volume", sections: [
+    { title: "Shoulders", exercises: [
+      "Seated DB Overhead Press — 3×10-12 | Rest 90 sec | Lower to ear level, full range",
+      "Cable Lateral Raise — 3×15-20 | Rest 60 sec | Strict form, pause at top, no momentum",
+      "Face Pulls (rope) — 3×15-20 | Rest 60 sec | Pull to forehead, externally rotate at end",
+    ]},
+    { title: "Arms — Superset A (rest 75 sec)", exercises: [
+      "Overhead Cable Extension (bar) — 3×12-15",
+      "Bayesian Cable Curls — 3×12-15",
+    ]},
+    { title: "Arms — Superset B (rest 75 sec)", exercises: [
+      "Cable Pressdowns (bare cable) — 3×12-15 each side",
+      "Hammer Curls (DB or rope) — 3×12-15",
+    ]},
+    { title: "Biceps", exercises: [
+      "Incline DB Curl Dropset — 2 sets | Start 10 reps → drop 30% → 8 reps → drop 30% → 8 reps | Rest 2 min between sets",
+    ]},
+    { title: "Abs", exercises: [
+      "Cable Crunches — 3×15-20",
+      "Hanging Leg Raises — 3×15-20",
+    ]},
+    { title: "Optional Medial Delt", exercises: [
+      "Cable Lateral Raises — 2×15-20 (or skip — already done today)",
+    ]},
   ]},
-  { day: "Day 5", focus: "CHEST + BACK", sections: [
-    { title: "Chest", exercises: ["Incline DB Press","Cable Flyes"] },
-    { title: "Back", exercises: ["Straight-Arm Lat Pulldowns","Assisted Pull-Ups","Chest-Supported Row"] },
-    { title: "Abs", exercises: ["Cable Crunches","Leg Raises"] },
+  { day: "Day 5", focus: "CHEST + BACK — Pump", sections: [
+    { title: "Chest", exercises: [
+      "Incline DB Press — 3×10-12 | Rest 90 sec | 2 sec down, 1 sec up",
+      "Pec Deck Fly — 3×12-15 | Rest 60 sec | Stretch, squeeze, slow eccentric",
+      "Flat DB Fly — 3×12-15 | Rest 60 sec | Full stretch, never heavier than you can control",
+    ]},
+    { title: "Back", exercises: [
+      "Straight-Arm Lat Pulldown — 3×12-15 | Rest 60 sec | Pre-activates lats",
+      "Assisted Pull-Up or Lat Pulldown — 3×10-12 | Rest 90 sec",
+      "Seated Cable Row — 3×12-15 | Rest 75 sec | Full stretch front, squeeze back",
+    ]},
+    { title: "Abs", exercises: [
+      "Cable Crunches — 3×15-20",
+      "Hanging Leg Raises — 3×15",
+    ]},
+    { title: "Neck Finisher", exercises: [
+      "Plate Neck Flexion — 3×15-20",
+      "Plate Neck Extension — 3×15-20",
+      "Lateral Neck Flexion — 2×15 each side",
+    ]},
+    { title: "Optional Medial Delt", exercises: [
+      "Cable Lateral Raises — 2×15-20",
+    ]},
   ]},
-  { day: "Day 6", focus: "ARMS + LEGS", sections: [
-    { title: "Triceps", exercises: ["Weighted Dips","Skullcrushers","Bar Pressdowns"] },
-    { title: "Biceps", exercises: ["Barbell Curl","Incline Dumbbell Curls","Hammer Curl Dropset"] },
-    { title: "Forearms", exercises: ["Wrist Curls","Reverse Wrist Curls"] },
-    { title: "Legs", exercises: ["Leg Press","Lying Leg Curl"] },
+  { day: "Day 6", focus: "ARMS — Compound Power Finish", sections: [
+    { title: "Triceps", exercises: [
+      "Weighted Dips (upright, elbows close) — 4×6-8 | Rest 2.5 min | Add weight every time you hit 4×8",
+      "EZ-Bar Skullcrushers — 3×8-10 | Rest 90 sec | Flat bench, 3 sec down to forehead, explode up",
+      "Cable Pressdowns Dropset — 2 sets | 10 reps → drop 25% → 10 reps → drop 25% → max | Rest 2 min",
+    ]},
+    { title: "Biceps", exercises: [
+      "Barbell Curl — 4×6-8 | Rest 2 min | Strict form, heaviest direct bicep movement of the week",
+      "Incline DB Curl — 3×10-12 | Rest 90 sec | 45° incline, arms hang straight down",
+      "Hammer Curl Dropset — 2 sets | Same structure as pressdown dropset | Builds brachialis",
+    ]},
+    { title: "Forearms — Superset (rest 60 sec)", exercises: [
+      "Reverse EZ-Bar Curl — 3×12-15",
+      "Behind-the-back Barbell Wrist Curl — 3×15-20",
+    ]},
+    { title: "Optional Medial Delt", exercises: [
+      "Cable Lateral Raises — 2×15-20",
+    ]},
   ]},
   { day: "Day 7", focus: "REST", sections: [] },
 ];
@@ -602,7 +709,7 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
                             {[["Sets",form.sets,"sets"],["Reps",form.reps,"reps"],["Weight",form.weight,"kg"]].map(([label,val,field]) => (
                               <div key={field}>
                                 <div style={{ fontSize:9, color:C.muted, letterSpacing:1, marginBottom:4 }}>{label.toUpperCase()}</div>
-                                <input type="number" inputMode="decimal" value={val} onChange={e => setForm(p=>({...p,[field]:e.target.value}))} placeholder="0" style={{ width:"100%" }} />
+                                <input type="number" inputMode="decimal" value={val} onChange={e => setForm(p=>({...p,[field]:e.target.value}))} placeholder="0" style={{ width:"100%", fontSize:16 }} />
                               </div>
                             ))}
                           </div>
