@@ -706,12 +706,19 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
                       {logMode === "grouped" ? (
                         <div>
                           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:10 }}>
-                            {[["Sets",form.sets,"sets"],["Reps",form.reps,"reps"],["Weight",form.weight,"kg"]].map(([label,val,field]) => (
-                              <div key={field}>
-                                <div style={{ fontSize:9, color:C.muted, letterSpacing:1, marginBottom:4 }}>{label.toUpperCase()}</div>
-                                <input type="number" inputMode="decimal" value={val} onChange={e => setForm(p=>({...p,[field]:e.target.value}))} placeholder="0" style={{ width:"100%", fontSize:16 }} />
-                              </div>
-                            ))}
+                          {[["Sets",form.sets,"sets"],["Reps",form.reps,"reps"],["Weight",form.weight,"kg"]].map(([label,val,field]) => (
+  <div key={field}>
+    <div style={{ fontSize:9, color:C.muted, letterSpacing:1, marginBottom:4 }}>{label.toUpperCase()}</div>
+    <input
+      type="text"
+      inputMode="decimal"
+      value={val}
+      onChange={e => setForm(p=>({...p,[field]:e.target.value}))}
+      placeholder="0"
+      style={{ width:"100%", fontSize:16 }}
+    />
+  </div>
+))}
                           </div>
                           <input value={form.notes} onChange={e => setForm(p=>({...p,notes:e.target.value}))} placeholder="Notes (optional)" style={{ width:"100%", marginBottom:10 }} />
                           <button className="press" onClick={() => saveGrouped(exName)} style={{ width:"100%", background:C.workout, border:"none", borderRadius:8, padding:"10px", color:"#000", fontSize:12, fontWeight:500 }}>
