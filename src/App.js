@@ -703,20 +703,26 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
                         ))}
                       </div>
 
-                      {logMode === "grouped" ? (
-                        <div>
-                          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:10 }}>
-                          {[["Sets",form.sets,"sets"],["Reps",form.reps,"reps"],["Weight",form.weight,"kg"]].map(([label,val,field]) => (
-  <div key={field}>
-    <div style={{ fontSize:9, color:C.muted, letterSpacing:1, marginBottom:4 }}>{label.toUpperCase()}</div>
-    <input
-      type="text"
-      inputMode="decimal"
-      value={val}
-      onChange={e => setForm(p=>({...p,[field]:e.target.value}))}
-      placeholder="0"
-      style={{ width:"100%", fontSize:16 }}
-    />
+                    {logMode === "grouped" ? (
+  <div>
+    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:10 }}>
+      <div>
+        <div style={{ fontSize:9, color:C.muted, letterSpacing:1, marginBottom:4 }}>SETS</div>
+        <input type="text" inputMode="numeric" value={form.sets} onInput={e => setForm(p=>({...p,sets:e.target.value}))} placeholder="3" style={{ width:"100%", fontSize:16 }} />
+      </div>
+      <div>
+        <div style={{ fontSize:9, color:C.muted, letterSpacing:1, marginBottom:4 }}>REPS</div>
+        <input type="text" inputMode="numeric" value={form.reps} onInput={e => setForm(p=>({...p,reps:e.target.value}))} placeholder="10" style={{ width:"100%", fontSize:16 }} />
+      </div>
+      <div>
+        <div style={{ fontSize:9, color:C.muted, letterSpacing:1, marginBottom:4 }}>WEIGHT</div>
+        <input type="text" inputMode="decimal" value={form.weight} onInput={e => setForm(p=>({...p,weight:e.target.value}))} placeholder="kg" style={{ width:"100%", fontSize:16 }} />
+      </div>
+    </div>
+    <input value={form.notes} onInput={e => setForm(p=>({...p,notes:e.target.value}))} placeholder="Notes (optional)" style={{ width:"100%", marginBottom:10 }} />
+    <button className="press" onClick={() => saveGrouped(exName)} style={{ width:"100%", background:C.workout, border:"none", borderRadius:8, padding:"10px", color:"#000", fontSize:12, fontWeight:500 }}>
+      Save {form.sets} Sets
+    </button>
   </div>
 ))}
                           </div>
