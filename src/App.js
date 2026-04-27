@@ -881,7 +881,6 @@ function getCalorieData(range) {
   };
 
   const range = ranges[period] || last7();
-  const range = period==="yearly" ? last30() : ranges[period] || last7();
   const habitData = getHabitData(range);
   const proteinData = getProteinData(range);
   const calorieData = getCalorieData(range);
