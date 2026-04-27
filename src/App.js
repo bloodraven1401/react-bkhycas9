@@ -708,7 +708,6 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
       Save {form.sets} Sets
     </button>
   </div>
-}
                       ) : (
                         <div>
                           {indivSets.map((s,idx) => (
