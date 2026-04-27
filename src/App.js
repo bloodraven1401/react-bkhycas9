@@ -989,7 +989,7 @@ function ChartCard({ title, color, data, valueKey, unit, maxVal, target }) {
         <div style={{ fontSize:9, color, letterSpacing:3, textTransform:"uppercase" }}>{title}</div>
         {target && <div style={{ fontSize:9, color:C.muted }}>Target: {target}{unit}</div>}
       </div>
-      <div style={{ display:"flex", alignItems:"flex-end", gap:period==="monthly"?1:3, height:70, overflowX:"auto" }}>
+      <div style={{ display:"flex", alignItems:"flex-end", gap:2, height:70, overflowX:"auto" }}>
         {data.map((d,i) => {
           const val = d[valueKey]||0;
           const h = Math.max(3, (val/Math.max(max,1))*60);
