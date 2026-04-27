@@ -873,13 +873,14 @@ function getCalorieData(range) {
     }).filter(Boolean);
   }
 
-  const ranges = {
+ const ranges = {
     daily: [todayKey()],
     weekly: last7(),
     monthly: last30(),
     yearly: Array.from({length:12},(_,i) => { const d=new Date(); d.setMonth(d.getMonth()-11+i); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; }),
   };
 
+  const range = ranges[period] || last7();
   const range = period==="yearly" ? last30() : ranges[period] || last7();
   const habitData = getHabitData(range);
   const proteinData = getProteinData(range);
@@ -898,11 +899,13 @@ function getCalorieData(range) {
     });
   }
 
-  const dispHabit = aggData(habitData.map(d=>({...d,value:d.pct})));
-  const dispProtein = aggData(proteinData);
-  const dispCalorie = aggData(calorieData);
-  const dispWorkout = aggData(workoutData.map(d=>({...d,value:d.sets})));
+ const dispHabit = period==="monthly" ? habitData.map(d=>({...d,value:d.pct,label:new Date(d.date+"T12:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short"})})) : period==="yearly" ? ranges.yearly.map(ym => { const catH = HABITS; let done=0,total=0; last30().filter(d=>d.startsWith(ym.slice(0,7))).forEach(d=>{ catH.forEach(h=>{total++;if(logs[d]?.[h.id]?.done)done++;}); }); return {value:total?Math.round((done/total)*100):0,label:new Date(ym+"-15").toLocaleDateString("en-IN",{month:"short"})}; }) : aggData(habitData.map(d=>({...d,value:d.pct})));
 
+const dispProtein = period==="monthly" ? proteinData.map(d=>({...d,label:new Date(d.date+"T12:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short"})})) : period==="yearly" ? ranges.yearly.map(ym => { const days=last30().filter(d=>d.startsWith(ym.slice(0,7))); const avg=days.length?Math.round(days.reduce((a,d)=>{const e=Array.isArray(foodLogs[d])?foodLogs[d]:[];return a+e.reduce((b,x)=>b+(x.protein||0),0);},0)/days.length):0; return {value:avg,label:new Date(ym+"-15").toLocaleDateString("en-IN",{month:"short"})}; }) : aggData(proteinData);
+
+const dispCalorie = period==="monthly" ? calorieData.map(d=>({...d,label:new Date(d.date+"T12:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short"})})) : period==="yearly" ? ranges.yearly.map(ym => { const days=last30().filter(d=>d.startsWith(ym.slice(0,7))); const avg=days.length?Math.round(days.reduce((a,d)=>{const e=Array.isArray(foodLogs[d])?foodLogs[d]:[];return a+e.reduce((b,x)=>b+(x.calories||0),0);},0)/days.length):0; return {value:avg,label:new Date(ym+"-15").toLocaleDateString("en-IN",{month:"short"})}; }) : aggData(calorieData);
+
+const dispWorkout = period==="monthly" ? workoutData.map(d=>({...d,value:d.sets,label:new Date(d.date+"T12:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short"})})) : period==="yearly" ? ranges.yearly.map(ym => { const days=last30().filter(d=>d.startsWith(ym.slice(0,7))); const total=days.reduce((a,d)=>a+Object.values(workoutLogs[d]||{}).reduce((b,ex)=>b+(ex.sets?.length||0),0),0); return {value:total,label:new Date(ym+"-15").toLocaleDateString("en-IN",{month:"short"})}; }) : aggData(workoutData.map(d=>({...d,value:d.sets})));
   // Summary stats
   const avgCompletion = habitData.length ? Math.round(habitData.reduce((a,d)=>a+d.pct,0)/habitData.length) : 0;
   const avgProtein = proteinData.length ? Math.round(proteinData.reduce((a,d)=>a+d.value,0)/proteinData.length) : 0;
