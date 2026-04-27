@@ -709,12 +709,6 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
     </button>
   </div>
 ))}
-                          </div>
-                          <input value={form.notes} onChange={e => setForm(p=>({...p,notes:e.target.value}))} placeholder="Notes (optional)" style={{ width:"100%", marginBottom:10 }} />
-                          <button className="press" onClick={() => saveGrouped(exName)} style={{ width:"100%", background:C.workout, border:"none", borderRadius:8, padding:"10px", color:"#000", fontSize:12, fontWeight:500 }}>
-                            Save {form.sets} Sets
-                          </button>
-                        </div>
                       ) : (
                         <div>
                           {indivSets.map((s,idx) => (
