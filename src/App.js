@@ -236,6 +236,36 @@ const WORKOUT_DAYS = [
 function useLS(key, def) {
   const [val, setVal] = useState(() => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } });
   useEffect(() => { localStorage.setItem(key, JSON.stringify(val)); }, [val, key]);
+  useEffect(() => {
+    const startDate = "2026-04-18";
+    const days = [];
+    let d = new Date(startDate);
+    const todayD = new Date(todayKey());
+    while (d <= todayD) {
+      days.push(d.toISOString().split("T")[0]);
+      d.setDate(d.getDate() + 1);
+    }
+    setXpLogs(p => {
+      const updated = { ...p };
+      let changed = false;
+      days.forEach(day => {
+        if (updated[`bf_${day}`]) return;
+        const dayLogs = logs[day] || {};
+        let dayXP = 0;
+        HABITS.forEach(h => {
+          if (dayLogs[h.id]?.done) {
+            dayXP += XP_VALUES[h.id] || 10;
+          }
+        });
+        if (dayXP > 0) {
+          updated[day] = (updated[day] || 0) + dayXP;
+          updated[`bf_${day}`] = true;
+          changed = true;
+        }
+      });
+      return changed ? updated : p;
+    });
+  }, []);
   return [val, setVal];
 }
 
@@ -297,6 +327,36 @@ function toggleHabit(id) {
       const baseXP = XP_VALUES[id] || 10;
       setXpLogs(p => ({ ...p, [today]: Math.max(0, (p[today] || 0) - baseXP) }));
     }
+  }
+
+  function backfillXP() {
+    const startDate = "2026-04-18";
+    const days = [];
+    let d = new Date(startDate);
+    const today = new Date(todayKey());
+    while (d <= today) {
+      days.push(d.toISOString().split("T")[0]);
+      d.setDate(d.getDate() + 1);
+    }
+    const newXpLogs = { ...xpLogs };
+    let backfilled = false;
+    days.forEach(day => {
+      if (newXpLogs[`backfilled_${day}`]) return;
+      const dayLogs = logs[day] || {};
+      let dayXP = 0;
+      HABITS.forEach(h => {
+        if (dayLogs[h.id]?.done) {
+          const baseXP = XP_VALUES[h.id] || 10;
+          dayXP += baseXP;
+        }
+      });
+      if (dayXP > 0) {
+        newXpLogs[day] = (newXpLogs[day] || 0) + dayXP;
+        newXpLogs[`backfilled_${day}`] = true;
+        backfilled = true;
+      }
+    });
+    if (backfilled) setXpLogs(newXpLogs);
   }
 
   function checkAchievements(habitId) {
