@@ -8,7 +8,79 @@ const C = {
   nofap: "#E05A7B", haircare: "#7EB8A4", spiritual: "#C9A96E"
 };
 const COLORS = { workout: C.workout, skincare: C.skincare, diet: C.diet, nofap: C.nofap, haircare: C.haircare, spiritual: C.skincare, productivity: "#A07EE0" };
+// ─── XP SYSTEM ────────────────────────────────────────────────────────────────
+const XP_VALUES = {
+  h1: 15, h2: 15, h3: 10, h4: 50, h5: 20, h6: 15,
+  h7: 20, h8: 10, h9: 40, h11: 15, h14: 25, h15: 25, h13: 20,
+};
 
+const RANKS = [
+  { rank:"E", title:"The Awakened", xpRequired:0, color:"#888888" },
+  { rank:"D", title:"Iron Will", xpRequired:500, color:"#4CAF50" },
+  { rank:"C", title:"Shadow Walker", xpRequired:2000, color:"#2196F3" },
+  { rank:"B", title:"Blood Forged", xpRequired:5000, color:"#9C27B0" },
+  { rank:"A", title:"Sovereign", xpRequired:12000, color:"#FF5722" },
+  { rank:"S", title:"The Ruthless", xpRequired:25000, color:"#FFD700" },
+  { rank:"SS", title:"Monarch", xpRequired:50000, color:"#FF0000" },
+  { rank:"SSS", title:"The Absolute", xpRequired:100000, color:"#C0C0C0" },
+];
+
+const CATEGORY_LEVELS = {
+  workout: { name:"Body", icon:"◆", levels:["Untrained","Novice","Fighter","Warrior","Elite","Champion","Legend"] },
+  diet: { name:"Vitality", icon:"◉", levels:["Malnourished","Fueled","Nourished","Optimized","Peak","Supreme","Godlike"] },
+  nofap: { name:"Discipline", icon:"⬡", levels:["Broken","Awakening","Control","Mastery","Iron","Unbreakable","Transcendent"] },
+  skincare: { name:"Aesthetics", icon:"✦", levels:["Neglected","Basic","Groomed","Refined","Sharp","Pristine","Flawless"] },
+  haircare: { name:"Presence", icon:"◈", levels:["Unkempt","Tended","Styled","Polished","Striking","Dominant","Iconic"] },
+  spiritual: { name:"Mind", icon:"✦", levels:["Asleep","Stirring","Aware","Focused","Centered","Enlightened","Sovereign"] },
+  productivity: { name:"Skill", icon:"♪", levels:["Idle","Practicing","Developing","Proficient","Advanced","Master","Virtuoso"] },
+};
+
+const ACHIEVEMENTS_LIST = [
+  { id:"first_habit", title:"First Step", desc:"Complete your first habit", icon:"⚡", xp:50 },
+  { id:"first_workout", title:"Iron Awakening", desc:"Log your first workout", icon:"◆", xp:100 },
+  { id:"streak_7", title:"Week Warrior", desc:"Any habit 7 day streak", icon:"🔥", xp:150 },
+  { id:"streak_30", title:"Month of Steel", desc:"Any habit 30 day streak", icon:"⚔", xp:500 },
+  { id:"streak_90", title:"Unbreakable", desc:"Any habit 90 day streak", icon:"👑", xp:1000 },
+  { id:"nofap_7", title:"First Battle Won", desc:"7 days NoFap", icon:"⬡", xp:200 },
+  { id:"nofap_30", title:"Sovereign Mind", desc:"30 days NoFap", icon:"⬡", xp:500 },
+  { id:"nofap_90", title:"The Monk", desc:"90 days NoFap", icon:"⬡", xp:1000 },
+  { id:"full_day", title:"Perfect Day", desc:"Complete all habits in a day", icon:"✦", xp:200 },
+  { id:"full_week", title:"Perfect Week", desc:"Complete all habits 7 days in a row", icon:"★", xp:500 },
+  { id:"weight_logged", title:"Know Thyself", desc:"Log your body weight", icon:"◎", xp:50 },
+  { id:"protein_7", title:"Protein Hunter", desc:"Hit protein goal 7 days", icon:"◉", xp:200 },
+];
+
+function getTotalXP(xpLogs) {
+  return Object.values(xpLogs).reduce((a, day) => a + (typeof day === "number" ? day : 0), 0);
+}
+
+function getCurrentRank(totalXP) {
+  let current = RANKS[0];
+  for (const r of RANKS) { if (totalXP >= r.xpRequired) current = r; }
+  return current;
+}
+
+function getNextRank(totalXP) {
+  return RANKS.find(r => r.xpRequired > totalXP) || RANKS[RANKS.length-1];
+}
+
+function getCategoryXP(xpLogs, category) {
+  const catHabits = HABITS.filter(h => h.category === category);
+  let total = 0;
+  Object.values(xpLogs).forEach(day => {
+    if (typeof day === "object") {
+      catHabits.forEach(h => { total += day[h.id] || 0; });
+    }
+  });
+  return total;
+}
+
+function getCategoryLevel(categoryXP) {
+  const thresholds = [0, 200, 600, 1500, 3500, 7000, 15000];
+  let level = 0;
+  thresholds.forEach((t, i) => { if (categoryXP >= t) level = i; });
+  return level;
+}
 function todayKey() {
   const now = new Date();
   const ist = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
@@ -200,14 +272,54 @@ export default function App() {
   const [weightLogs, setWeightLogs] = useLS("anant_v3_weight", {});
   const [nofapStart, setNofapStart] = useLS("anant_v3_nofap", todayKey());
 const [nofapHistory, setNofapHistory] = useLS("anant_v3_nofap_history", []);
+  const [xpLogs, setXpLogs] = useLS("anant_v3_xp", {});
+const [achievements, setAchievements] = useLS("anant_v3_achievements", []);
+const [xpToast, setXpToast] = useState(null);
   const [selectedRoutine, setSelectedRoutine] = useState(null);
   const [subView, setSubView] = useState(null); // "workoutlog" | "foodlog" | "analytics"
 
   const [selectedDate, setSelectedDate] = useState(todayKey());
 const today = selectedDate;
 const todayLogs = logs[today] || {};
-  function toggleHabit(id) {
+function toggleHabit(id) {
+    const currentlyDone = todayLogs[id]?.done;
     setLogs(p => { const d = { ...(p[today] || {}) }; d[id] = { ...d[id], done: !d[id]?.done }; return { ...p, [today]: d }; });
+    if (!currentlyDone) {
+      const baseXP = XP_VALUES[id] || 10;
+      const streak = getStreak(id);
+      const multiplier = streak >= 90 ? 5 : streak >= 30 ? 3 : streak >= 7 ? 2 : 1;
+      const earned = baseXP * multiplier;
+      setXpLogs(p => ({ ...p, [today]: (p[today] || 0) + earned }));
+      setXpToast(`+${earned} XP`);
+      setTimeout(() => setXpToast(null), 2000);
+      checkAchievements(id);
+    } else {
+      const baseXP = XP_VALUES[id] || 10;
+      setXpLogs(p => ({ ...p, [today]: Math.max(0, (p[today] || 0) - baseXP) }));
+    }
+  }
+
+  function checkAchievements(habitId) {
+    const newAchievements = [];
+    const totalDone = HABITS.filter(h => todayLogs[h.id]?.done).length;
+    if (totalDone === 0) newAchievements.push("first_habit");
+    if (habitId === "h4") newAchievements.push("first_workout");
+    if (totalDone + 1 >= HABITS.length) newAchievements.push("full_day");
+    const streak = getStreak(habitId);
+    if (streak >= 6) newAchievements.push("streak_7");
+    if (streak >= 29) newAchievements.push("streak_30");
+    if (streak >= 89) newAchievements.push("streak_90");
+    newAchievements.forEach(achId => {
+      if (!achievements.includes(achId)) {
+        const ach = ACHIEVEMENTS_LIST.find(a => a.id === achId);
+        if (ach) {
+          setAchievements(p => [...p, achId]);
+          setXpLogs(p => ({ ...p, [today]: (p[today] || 0) + ach.xp }));
+          setXpToast(`🏆 ${ach.title} +${ach.xp} XP`);
+          setTimeout(() => setXpToast(null), 3000);
+        }
+      }
+    });
   }
   function setQty(id, val) {
     setLogs(p => { const d = { ...(p[today] || {}) }; d[id] = { done: parseFloat(val) > 0, value: parseFloat(val) }; return { ...p, [today]: d }; });
@@ -289,18 +401,32 @@ const todayLogs = logs[today] || {};
 </div>
           <div style={{ fontSize:24, color:C.skincare, fontFamily:"'Cormorant Garamond',serif", fontWeight:700, marginTop:4 }}>{getTodayPct()}%</div>
           <div style={{ fontSize:9, color:C.muted, letterSpacing:2 }}>TODAY</div>
+    {(() => {
+  const totalXP = getTotalXP(xpLogs);
+  const rank = getCurrentRank(totalXP);
+  return (
+    <div style={{ fontSize:9, color:rank.color, letterSpacing:1, marginTop:2, textShadow:`0 0 8px ${rank.color}` }}>
+      [{rank.rank}] {rank.title}
+    </div>
+  );
+})()}
         </div>
       </div>
-
+{xpToast && (
+  <div style={{ position:"fixed", top:80, left:"50%", transform:"translateX(-50%)", background:"rgba(7,7,10,0.95)", border:"1px solid #FF000060", borderRadius:10, padding:"10px 20px", color:"#FF0000", fontSize:13, fontFamily:"'Cormorant Garamond',serif", fontWeight:700, zIndex:99999, letterSpacing:1, boxShadow:"0 0 20px #FF000040", animation:"fadeIn 0.3s ease" }}>
+    {xpToast}
+  </div>
+)}
       <div className="fade" key={view} style={{ padding:"20px 20px 0" }}>
         {view==="dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
         {view==="habits" && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
         {view==="routines" && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} />}
         {view==="log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} />}
+{view==="stats" && <StatsView xpLogs={xpLogs} achievements={achievements} logs={logs} getStreak={getStreak} nofapStreak={getNofapStreak()} />}
       </div>
 
       <nav style={{ position:"fixed", bottom:0, left:0, right:0, width:"100%", background:"rgba(7,7,10,0.97)", backdropFilter:"blur(16px)", borderTop:`1px solid ${C.border}`, display:"flex", padding:"12px 0 34px", zIndex:9999 }}>
-        {[["dashboard","◎","Home"],["habits","◉","Today"],["log","◈","Log"],["routines","◆","Plans"]].map(([key,icon,label]) => (
+        {[["dashboard","◎","Home"],["habits","◉","Today"],["log","◈","Log"],["routines","◆","Plans"],["stats","★","Rank"]].map(([key,icon,label]) => (
           <button key={key} className="press" onClick={() => setView(key)} style={{ flex:1, background:"none", border:"none", display:"flex", flexDirection:"column", alignItems:"center", gap:5, color:view===key ? C.skincare : C.muted }}>
             <span style={{ fontSize:17 }}>{icon}</span>
             <span style={{ fontSize:9, letterSpacing:1.5, textTransform:"uppercase" }}>{label}</span>
@@ -1593,6 +1719,96 @@ function SpiritualPlan() {
 
 
 // ─── SHARED ───────────────────────────────────────────────────────────────────
+function StatsView({ xpLogs, achievements, logs, getStreak, nofapStreak }) {
+  const totalXP = getTotalXP(xpLogs);
+  const rank = getCurrentRank(totalXP);
+  const nextRank = getNextRank(totalXP);
+  const xpToNext = nextRank.xpRequired - totalXP;
+  const rankProgress = nextRank.xpRequired === rank.xpRequired ? 100 : Math.round(((totalXP - rank.xpRequired) / (nextRank.xpRequired - rank.xpRequired)) * 100);
+
+  const SL_RED = "#FF0000";
+  const SL_SILVER = "#C0C0C0";
+  const SL_BLUE = "#4169E1";
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:12, paddingBottom:20 }}>
+      <div style={{ fontSize:10, color:C.muted, letterSpacing:3, textTransform:"uppercase", marginBottom:4 }}>Player Status</div>
+
+      {/* Main rank card */}
+      <div style={{ background:"linear-gradient(135deg, #0A0A0F 0%, #0D0D1A 100%)", border:`1px solid ${rank.color}40`, borderRadius:16, padding:20, textAlign:"center", boxShadow:`0 0 30px ${rank.color}20` }}>
+        <div style={{ fontSize:11, color:rank.color, letterSpacing:4, textTransform:"uppercase", marginBottom:8, textShadow:`0 0 10px ${rank.color}` }}>RANK</div>
+        <div style={{ fontSize:72, color:rank.color, fontFamily:"'Cormorant Garamond',serif", fontWeight:700, lineHeight:1, textShadow:`0 0 20px ${rank.color}, 0 0 40px ${rank.color}60` }}>{rank.rank}</div>
+        <div style={{ fontSize:16, color:SL_SILVER, fontFamily:"'Cormorant Garamond',serif", marginTop:6, letterSpacing:2 }}>{rank.title}</div>
+        <div style={{ marginTop:16 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:C.muted, marginBottom:6 }}>
+            <span>{totalXP.toLocaleString()} XP</span>
+            <span>{xpToNext > 0 ? `${xpToNext.toLocaleString()} to ${nextRank.rank}` : "MAX RANK"}</span>
+          </div>
+          <div style={{ background:"#1A1A2E", borderRadius:4, height:8, overflow:"hidden" }}>
+            <div style={{ width:`${rankProgress}%`, height:"100%", background:`linear-gradient(90deg, ${rank.color}, ${SL_SILVER})`, borderRadius:4, transition:"width 0.8s ease", boxShadow:`0 0 10px ${rank.color}` }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Category levels */}
+      <div style={{ background:C.surface, border:`1px solid ${SL_BLUE}30`, borderRadius:12, padding:14 }}>
+        <div style={{ fontSize:9, color:SL_BLUE, letterSpacing:3, textTransform:"uppercase", marginBottom:14, textShadow:`0 0 8px ${SL_BLUE}` }}>Category Stats</div>
+        {Object.entries(CATEGORY_LEVELS).map(([cat, data]) => {
+          const catXP = getCategoryXP(xpLogs, cat);
+          const level = getCategoryLevel(catXP);
+          const levelName = data.levels[level];
+          const nextLevelXP = [0,200,600,1500,3500,7000,15000][Math.min(level+1, 6)];
+          const pct = level >= 6 ? 100 : Math.round((catXP / nextLevelXP) * 100);
+          return (
+            <div key={cat} style={{ marginBottom:12 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ color:COLORS[cat]||SL_SILVER, fontSize:11 }}>{data.icon}</span>
+                  <span style={{ fontSize:11, color:C.text }}>{data.name}</span>
+                  <span style={{ fontSize:9, color:COLORS[cat]||SL_SILVER, background:`${COLORS[cat]||SL_SILVER}15`, padding:"2px 6px", borderRadius:4 }}>Lv.{level} {levelName}</span>
+                </div>
+                <span style={{ fontSize:10, color:C.muted }}>{catXP} XP</span>
+              </div>
+              <div style={{ background:"#1A1A2E", borderRadius:3, height:4 }}>
+                <div style={{ width:`${pct}%`, height:"100%", background:COLORS[cat]||SL_SILVER, borderRadius:3, boxShadow:`0 0 6px ${COLORS[cat]||SL_SILVER}80` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Achievements */}
+      <div style={{ background:C.surface, border:`1px solid ${SL_RED}30`, borderRadius:12, padding:14 }}>
+        <div style={{ fontSize:9, color:SL_RED, letterSpacing:3, textTransform:"uppercase", marginBottom:14, textShadow:`0 0 8px ${SL_RED}` }}>
+          Achievements — {achievements.length}/{ACHIEVEMENTS_LIST.length}
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {ACHIEVEMENTS_LIST.map(ach => {
+            const unlocked = achievements.includes(ach.id);
+            return (
+              <div key={ach.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 12px", background:unlocked?"#1A0A0A":"#0D0D12", border:`1px solid ${unlocked?SL_RED+"40":C.border}`, borderRadius:10, opacity:unlocked?1:0.4, transition:"all 0.3s" }}>
+                <div style={{ fontSize:20, filter:unlocked?"none":"grayscale(100%)" }}>{ach.icon}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:12, color:unlocked?SL_SILVER:C.muted }}>{ach.title}</div>
+                  <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>{ach.desc}</div>
+                </div>
+                <div style={{ fontSize:11, color:unlocked?SL_RED:C.muted }}>+{ach.xp} XP</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Today's XP */}
+      <div style={{ background:"linear-gradient(135deg, #0A0A0F, #0D0D1A)", border:`1px solid ${SL_RED}30`, borderRadius:12, padding:14, textAlign:"center" }}>
+        <div style={{ fontSize:9, color:SL_RED, letterSpacing:3, textTransform:"uppercase", marginBottom:8 }}>Today's XP Earned</div>
+        <div style={{ fontSize:36, color:SL_RED, fontFamily:"'Cormorant Garamond',serif", fontWeight:700, textShadow:`0 0 15px ${SL_RED}` }}>{xpLogs[todayKey()] || 0}</div>
+        <div style={{ fontSize:9, color:C.muted, marginTop:4 }}>Total: {totalXP.toLocaleString()} XP</div>
+      </div>
+    </div>
+  );
+}
+
 function Ring({ value, size, color, label, sublabel }) {
   const r=(size-14)/2, circ=2*Math.PI*r, offset=circ-(value/100)*circ;
   return (
