@@ -236,8 +236,7 @@ const WORKOUT_DAYS = [
 function useLS(key, def) {
   const [val, setVal] = useState(() => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } });
   useEffect(() => { localStorage.setItem(key, JSON.stringify(val)); }, [val, key]);
-  useEffect(() => {
-    const startDate = "2026-04-18";
+  
     const days = [];
     let d = new Date(startDate);
     const todayD = new Date(todayKey());
@@ -303,6 +302,36 @@ export default function App() {
   const [nofapStart, setNofapStart] = useLS("anant_v3_nofap", todayKey());
 const [nofapHistory, setNofapHistory] = useLS("anant_v3_nofap_history", []);
   const [xpLogs, setXpLogs] = useLS("anant_v3_xp", {});
+  useEffect(() => {
+    const startDate = "2026-04-18";
+    const days = [];
+    let d = new Date(startDate);
+    const todayD = new Date(todayKey());
+    while (d <= todayD) {
+      days.push(d.toISOString().split("T")[0]);
+      d.setDate(d.getDate() + 1);
+    }
+    setXpLogs(p => {
+      const updated = { ...p };
+      let changed = false;
+      days.forEach(day => {
+        if (updated[`bf_${day}`]) return;
+        const dayLogs = logs[day] || {};
+        let dayXP = 0;
+        HABITS.forEach(h => {
+          if (dayLogs[h.id]?.done) {
+            dayXP += XP_VALUES[h.id] || 10;
+          }
+        });
+        if (dayXP > 0) {
+          updated[day] = (updated[day] || 0) + dayXP;
+          updated[`bf_${day}`] = true;
+          changed = true;
+        }
+      });
+      return changed ? updated : p;
+    });
+  }, []);
 const [achievements, setAchievements] = useLS("anant_v3_achievements", []);
 const [xpToast, setXpToast] = useState(null);
   const [selectedRoutine, setSelectedRoutine] = useState(null);
