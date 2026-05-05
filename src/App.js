@@ -238,37 +238,6 @@ function useLS(key, def) {
   useEffect(() => { localStorage.setItem(key, JSON.stringify(val)); }, [val, key]);
   return [val, setVal];
 }
-  
-    const days = [];
-    let d = new Date(startDate);
-    const todayD = new Date(todayKey());
-    while (d <= todayD) {
-      days.push(d.toISOString().split("T")[0]);
-      d.setDate(d.getDate() + 1);
-    }
-    setXpLogs(p => {
-      const updated = { ...p };
-      let changed = false;
-      days.forEach(day => {
-        if (updated[`bf_${day}`]) return;
-        const dayLogs = logs[day] || {};
-        let dayXP = 0;
-        HABITS.forEach(h => {
-          if (dayLogs[h.id]?.done) {
-            dayXP += XP_VALUES[h.id] || 10;
-          }
-        });
-        if (dayXP > 0) {
-          updated[day] = (updated[day] || 0) + dayXP;
-          updated[`bf_${day}`] = true;
-          changed = true;
-        }
-      });
-      return changed ? updated : p;
-    });
-  }, []);
-  return [val, setVal];
-}
 
 // ─── AI FOOD SEARCH ───────────────────────────────────────────────────────────
 async function searchFoodNutrition(query) {
