@@ -236,6 +236,8 @@ const WORKOUT_DAYS = [
 function useLS(key, def) {
   const [val, setVal] = useState(() => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } });
   useEffect(() => { localStorage.setItem(key, JSON.stringify(val)); }, [val, key]);
+  return [val, setVal];
+}
   
     const days = [];
     let d = new Date(startDate);
