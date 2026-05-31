@@ -115,6 +115,305 @@ const HABITS = [
   { id: "h12", label: "Pooja", category: "spiritual", type: "binary", icon: "✦" },
 ];
 
+// ─── STORAGE HELPERS ──────────────────────────────────────────────────────────
+function useLS(key, def) {
+  const [val, setVal] = useState(() => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } });
+  useEffect(() => { localStorage.setItem(key, JSON.stringify(val)); }, [val, key]);
+  return [val, setVal];
+}
+
+// ─── AI FOOD SEARCH ───────────────────────────────────────────────────────────
+async function searchFoodNutrition(query) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      messages: [{
+        role: "user",
+        content: `Give me the nutritional info for: "${query}". 
+Return ONLY a JSON array of 1-4 matching food items (no markdown, no backticks, just raw JSON).
+Format: [{"name":"Food Name (amount)","calories":0,"protein":0,"carbs":0,"fat":0,"fibre":0,"amount":"100g"}]
+Use realistic Indian food database values. All numbers should be per the specified amount.
+If amount is not specified, use 100g as default. Be accurate for Indian foods like dal, roti, rice, paneer, soya chunks etc.`
+      }]
+    })
+  });
+  const data = await res.json();
+  const text = data.content?.[0]?.text || "[]";
+  try { return JSON.parse(text.replace(/```json|```/g, "").trim()); }
+  catch { return []; }
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+export default function App() {
+  const [view, setView] = useState("dashboard");
+  const [logs, setLogs] = useLS("anant_v3_logs", {});
+  const [workoutLogs, setWorkoutLogs] = useLS("anant_v3_workout", {});
+  const [foodLogs, setFoodLogs] = useLS("anant_v3_food", {});
+  const [weightLogs, setWeightLogs] = useLS("anant_v3_weight", {});
+  const [nofapStart, setNofapStart] = useLS("anant_v3_nofap", todayKey());
+  const [nofapHistory, setNofapHistory] = useLS("anant_v3_nofap_history", []);
+  const [xpLogs, setXpLogs] = useLS("anant_v3_xp", {});
+  const [workoutPlan, setWorkoutPlan] = useLS("anant_v3_workout_plan", WORKOUT_DAYS);
+  const [skincarePlan, setSkincarePlan] = useLS("anant_v3_skincare_plan", DEFAULT_SKINCARE);
+  const [dietPlan, setDietPlan] = useLS("anant_v3_diet_plan", DEFAULT_DIET);
+  const [haircarePlan, setHaircarePlan] = useLS("anant_v3_haircare_plan", DEFAULT_HAIRCARE);
+  const [spiritualPlan, setSpiritualPlan] = useLS("anant_v3_spiritual_plan", DEFAULT_SPIRITUAL);
+
+  useEffect(() => {
+    const startDate = "2026-04-18";
+    const days = [];
+    let d = new Date(startDate);
+    const todayD = new Date(todayKey());
+    while (d <= todayD) {
+      days.push(d.toISOString().split("T")[0]);
+      d.setDate(d.getDate() + 1);
+    }
+    setXpLogs(p => {
+      const updated = { ...p };
+      let changed = false;
+      days.forEach(day => {
+        if (updated[`bf_${day}`]) return;
+        const dayLogs = logs[day] || {};
+        let dayXP = 0;
+        HABITS.forEach(h => {
+          if (dayLogs[h.id]?.done) dayXP += XP_VALUES[h.id] || 10;
+        });
+        if (dayXP > 0) {
+          updated[day] = (updated[day] || 0) + dayXP;
+          updated[`bf_${day}`] = true;
+          changed = true;
+        }
+      });
+      return changed ? updated : p;
+    });
+  }, []);
+
+  const [achievements, setAchievements] = useLS("anant_v3_achievements", []);
+  const [xpToast, setXpToast] = useState(null);
+  const [selectedRoutine, setSelectedRoutine] = useState(null);
+  const [subView, setSubView] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(todayKey());
+  const today = selectedDate;
+  const todayLogs = logs[today] || {};
+
+  function toggleHabit(id) {
+    const currentlyDone = todayLogs[id]?.done;
+    setLogs(p => { const d = { ...(p[today] || {}) }; d[id] = { ...d[id], done: !d[id]?.done }; return { ...p, [today]: d }; });
+    if (!currentlyDone) {
+      const baseXP = XP_VALUES[id] || 10;
+      const streak = getStreak(id);
+      const multiplier = streak >= 90 ? 5 : streak >= 30 ? 3 : streak >= 7 ? 2 : 1;
+      const earned = baseXP * multiplier;
+      setXpLogs(p => ({ ...p, [today]: (p[today] || 0) + earned }));
+      setXpToast(`+${earned} XP`);
+      setTimeout(() => setXpToast(null), 2000);
+      checkAchievements(id);
+    } else {
+      const baseXP = XP_VALUES[id] || 10;
+      setXpLogs(p => ({ ...p, [today]: Math.max(0, (p[today] || 0) - baseXP) }));
+    }
+  }
+
+  function checkAchievements(habitId) {
+    const newAchievements = [];
+    const totalDone = HABITS.filter(h => todayLogs[h.id]?.done).length;
+    if (totalDone === 0) newAchievements.push("first_habit");
+    if (habitId === "h4") newAchievements.push("first_workout");
+    if (totalDone + 1 >= HABITS.length) newAchievements.push("full_day");
+    const streak = getStreak(habitId);
+    if (streak >= 6) newAchievements.push("streak_7");
+    if (streak >= 29) newAchievements.push("streak_30");
+    if (streak >= 89) newAchievements.push("streak_90");
+    newAchievements.forEach(achId => {
+      if (!achievements.includes(achId)) {
+        const ach = ACHIEVEMENTS_LIST.find(a => a.id === achId);
+        if (ach) {
+          setAchievements(p => [...p, achId]);
+          setXpLogs(p => ({ ...p, [today]: (p[today] || 0) + ach.xp }));
+          setXpToast(`🏆 ${ach.title} +${ach.xp} XP`);
+          setTimeout(() => setXpToast(null), 3000);
+        }
+      }
+    });
+  }
+
+  function setQty(id, val) {
+    setLogs(p => { const d = { ...(p[today] || {}) }; d[id] = { done: parseFloat(val) > 0, value: parseFloat(val) }; return { ...p, [today]: d }; });
+  }
+
+  function getStreak(id) {
+    const habit = HABITS.find(h => h.id === id);
+    let s = 0, d = new Date();
+    while (true) {
+      const k = d.toISOString().split("T")[0];
+      const dayOfWeek = d.getDay();
+      if (logs[k]?.[id]?.done) {
+        s++; d.setDate(d.getDate() - 1);
+      } else if (habit?.skipDay !== undefined && dayOfWeek === habit.skipDay) {
+        d.setDate(d.getDate() - 1);
+      } else break;
+    }
+    return s;
+  }
+
+  function getNofapStreak() { return Math.floor((new Date() - new Date(nofapStart)) / 86400000); }
+  function getTodayPct() { return Math.round((HABITS.filter(h => todayLogs[h.id]?.done).length / HABITS.length) * 100); }
+  function getWeeklyPct() {
+    const days = last7(); let done = 0;
+    days.forEach(d => HABITS.forEach(h => { if (logs[d]?.[h.id]?.done) done++; }));
+    return Math.round((done / (HABITS.length * 7)) * 100);
+  }
+  function getTodayMacros() {
+    const entries = Array.isArray(foodLogs[today]) ? foodLogs[today] : [];
+    return entries.reduce((acc, e) => ({
+      calories: acc.calories + (e.calories || 0),
+      protein: acc.protein + (e.protein || 0),
+      carbs: acc.carbs + (e.carbs || 0),
+      fat: acc.fat + (e.fat || 0),
+      fibre: acc.fibre + (e.fibre || 0),
+    }), { calories: 0, protein: 0, carbs: 0, fat: 0, fibre: 0 });
+  }
+
+  if (subView === "workoutlog") return <WorkoutLogger workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} onBack={() => setSubView(null)} />;
+  if (subView === "foodlog") return <FoodLogger foodLogs={foodLogs} setFoodLogs={setFoodLogs} onBack={() => setSubView(null)} />;
+  if (subView === "analytics") return <AnalyticsView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} nofapStreak={getNofapStreak()} weightLogs={weightLogs} onBack={() => setSubView(null)} />;
+
+  return (
+    <div style={{minHeight:"-webkit-fill-available", minHeight:"100dvh", background:C.bg, color:C.text, fontFamily:"'DM Mono',monospace", width:"100vw", maxWidth:"100%", margin:"0 auto", paddingBottom:80, overflowX:"hidden"}}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:wght@600;700&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        ::-webkit-scrollbar{width:0}
+        .press{transition:transform 0.15s ease,opacity 0.15s ease;cursor:pointer}
+        .press:active{transform:scale(0.96);opacity:0.8}
+        .fade{animation:fd 0.25s ease}
+        @keyframes fd{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        .ring-track{transition:stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)}
+        input,textarea{background:#0D0D12;border:1px solid #16161E;color:#E8E4DC;border-radius:7px;padding:8px 10px;font-family:inherit;font-size:13px;outline:none;transition:border 0.2s}
+        input:focus,textarea:focus{border-color:#2A2A3A}
+        button{cursor:pointer;font-family:inherit}
+      `}</style>
+
+      <div style={{ padding:"60px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+        <div>
+          <div style={{ fontSize:10, letterSpacing:4, color:C.muted, textTransform:"uppercase" }}>Self System</div>
+          <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:30, fontWeight:700, lineHeight:1, marginTop:4 }}>Anant</div>
+        </div>
+        <div style={{ textAlign:"right" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d.toISOString().split("T")[0]); }} style={{ background:"none", border:"none", color:C.muted, fontSize:16, cursor:"pointer" }}>‹</button>
+            <div style={{ fontSize:10, color: selectedDate === todayKey() ? C.muted : C.nofap, letterSpacing:1 }}>
+              {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}
+            </div>
+            <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); const next = d.toISOString().split("T")[0]; if (next <= todayKey()) setSelectedDate(next); }} style={{ background:"none", border:"none", color:C.muted, fontSize:16, cursor:"pointer" }}>›</button>
+          </div>
+          <div style={{ fontSize:24, color:C.skincare, fontFamily:"'Cormorant Garamond',serif", fontWeight:700, marginTop:4 }}>{getTodayPct()}%</div>
+          <div style={{ fontSize:9, color:C.muted, letterSpacing:2 }}>TODAY</div>
+          {(() => {
+            const totalXP = getTotalXP(xpLogs);
+            const rank = getCurrentRank(totalXP);
+            return (
+              <div style={{ fontSize:9, color:rank.color, letterSpacing:1, marginTop:2, textShadow:`0 0 8px ${rank.color}` }}>
+                [{rank.rank}] {rank.title}
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
+      {xpToast && (
+        <div style={{ position:"fixed", top:80, left:"50%", transform:"translateX(-50%)", background:"rgba(7,7,10,0.95)", border:"1px solid #FF000060", borderRadius:10, padding:"10px 20px", color:"#FF0000", fontSize:13, fontFamily:"'Cormorant Garamond',serif", fontWeight:700, zIndex:99999, letterSpacing:1, boxShadow:"0 0 20px #FF000040" }}>
+          {xpToast}
+        </div>
+      )}
+
+      <div className="fade" key={view} style={{ padding:"20px 20px 0" }}>
+        {view==="dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
+        {view==="habits" && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
+        {view==="routines" && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory}
+          workoutPlan={workoutPlan} setWorkoutPlan={setWorkoutPlan}
+          skincarePlan={skincarePlan} setSkincarePlan={setSkincarePlan}
+          dietPlan={dietPlan} setDietPlan={setDietPlan}
+          haircarePlan={haircarePlan} setHaircarePlan={setHaircarePlan}
+          spiritualPlan={spiritualPlan} setSpiritualPlan={setSpiritualPlan}
+        />}
+        {view==="log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} />}
+        {view==="stats" && <StatsView xpLogs={xpLogs} achievements={achievements} logs={logs} getStreak={getStreak} nofapStreak={getNofapStreak()} />}
+      </div>
+
+      <nav style={{ position:"fixed", bottom:0, left:0, right:0, width:"100%", background:"rgba(7,7,10,0.97)", backdropFilter:"blur(16px)", borderTop:`1px solid ${C.border}`, display:"flex", padding:"12px 0 34px", zIndex:9999 }}>
+        {[["dashboard","◎","Home"],["habits","◉","Today"],["log","◈","Log"],["routines","◆","Plans"],["stats","★","Rank"]].map(([key,icon,label]) => (
+          <button key={key} className="press" onClick={() => setView(key)} style={{ flex:1, background:"none", border:"none", display:"flex", flexDirection:"column", alignItems:"center", gap:5, color:view===key ? C.skincare : C.muted }}>
+            <span style={{ fontSize:17 }}>{icon}</span>
+            <span style={{ fontSize:9, letterSpacing:1.5, textTransform:"uppercase" }}>{label}</span>
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function Dashboard({ logs, nofapStreak, weeklyPct, todayPct, getStreak, setView, setSelectedRoutine, todayLogs, setSubView, todayMacros }) {
+  const doneTodayCount = HABITS.filter(h => todayLogs[h.id]?.done).length;
+  const topStreaks = HABITS.map(h => ({ ...h, streak: getStreak(h.id) })).sort((a,b) => b.streak-a.streak).slice(0,3);
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+      <div style={{ display:"flex", justifyContent:"center", padding:"4px 0 8px" }}>
+        <Ring value={todayPct} size={120} color={C.skincare} label={`${doneTodayCount}/${HABITS.length}`} sublabel="done" />
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+        <Stat label="NoFap" value={`${nofapStreak}d`} color={C.nofap} />
+        <Stat label="Weekly" value={`${weeklyPct}%`} color={C.workout} />
+        <Stat label="Calories" value={Math.round(todayMacros.calories)} color={C.diet} />
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+        {[["◆","Log Workout","workoutlog",C.workout],["◉","Meal Log","foodlog",C.diet],["◎","Analytics","analytics",C.skincare]].map(([icon,label,sub,color]) => (
+          <button key={sub} className="press" onClick={() => setSubView(sub)} style={{ background:C.surface, border:`1px solid ${color}25`, borderRadius:10, padding:"14px 8px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, color:C.text }}>
+            <span style={{ color, fontSize:18 }}>{icon}</span>
+            <span style={{ fontSize:10, color:C.muted, textAlign:"center", lineHeight:1.3 }}>{label}</span>
+          </button>
+        ))}
+      </div>
+      <div style={{ background:C.surface, border:`1px solid ${C.diet}18`, borderRadius:12, padding:"12px 14px" }}>
+        <div style={{ fontSize:9, color:C.diet, letterSpacing:3, textTransform:"uppercase", marginBottom:10 }}>Today's Nutrition</div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:4 }}>
+          {[["Cal",Math.round(todayMacros.calories),""],["Pro",Math.round(todayMacros.protein),"g"],["Carb",Math.round(todayMacros.carbs),"g"],["Fat",Math.round(todayMacros.fat),"g"],["Fibre",Math.round(todayMacros.fibre),"g"]].map(([l,v,u]) => (
+            <div key={l} style={{ textAlign:"center" }}>
+              <div style={{ fontSize:14, color:C.diet, fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{v}{u}</div>
+              <div style={{ fontSize:9, color:C.muted, marginTop:2 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop:10 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:C.muted, marginBottom:4 }}>
+            <span>Protein</span><span>{Math.round(todayMacros.protein)}/178g</span>
+          </div>
+          <div style={{ background:C.faint, borderRadius:3, height:3 }}>
+            <div style={{ width:`${Math.min(100,(todayMacros.protein/178)*100)}%`, height:"100%", background:C.diet, borderRadius:3 }} />
+          </div>
+        </div>
+      </div>
+      <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:14 }}>
+        <div style={{ fontSize:9, color:C.muted, letterSpacing:3, textTransform:"uppercase", marginBottom:10 }}>Streaks</div>
+        {topStreaks.map((h,i) => (
+          <div key={h.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:i<topStreaks.length-1?`1px solid ${C.border}`:"none" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ color:COLORS[h.category], fontSize:11 }}>{h.icon}</span>
+              <span style={{ fontSize:12, color:h.streak>0?C.text:C.muted }}>{h.label}</span>
+            </div>
+            <span style={{ fontSize:15, color:COLORS[h.category], fontFamily:"'Cormorant Garamond',serif", fontWeight:700 }}>{h.streak}<span style={{ fontSize:10, color:C.muted }}>d</span></span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── WORKOUT DATA ─────────────────────────────────────────────────────────────
 
 // ─── DEFAULT PLAN DATA ────────────────────────────────────────────────────────
