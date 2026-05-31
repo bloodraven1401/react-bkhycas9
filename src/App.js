@@ -116,36 +116,6 @@ const HABITS = [
 ];
 
 // ─── WORKOUT DATA ─────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────────────────
-// PATCH INSTRUCTIONS — Apply these 3 changes to App.js
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// CHANGE 1: In StatsView, find this line:
-//   const catXP = getCategoryXP(logs, category)(xpLogs, cat);
-// Replace with:
-//   const catXP = getCategoryXP(logs, cat);
-//
-// CHANGE 2: In the main App() function, add these useLS lines after the existing ones:
-//   (after the line:  const [xpLogs, setXpLogs] = useLS("anant_v3_xp", {}); )
-//
-//   const [workoutPlan, setWorkoutPlan] = useLS("anant_v3_workout_plan", WORKOUT_DAYS);
-//   const [skincarePlan, setSkincarePlan] = useLS("anant_v3_skincare_plan", DEFAULT_SKINCARE);
-//   const [dietPlan, setDietPlan] = useLS("anant_v3_diet_plan", DEFAULT_DIET);
-//   const [haircarePlan, setHaircarePlan] = useLS("anant_v3_haircare_plan", DEFAULT_HAIRCARE);
-//   const [spiritualPlan, setSpiritualPlan] = useLS("anant_v3_spiritual_plan", DEFAULT_SPIRITUAL);
-//
-// CHANGE 3: Pass the plans + setters into RoutinesView in the JSX:
-//   Find: <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} ... />
-//   Replace props to add:
-//     workoutPlan={workoutPlan} setWorkoutPlan={setWorkoutPlan}
-//     skincarePlan={skincarePlan} setSkincarePlan={setSkincarePlan}
-//     dietPlan={dietPlan} setDietPlan={setDietPlan}
-//     haircarePlan={haircarePlan} setHaircarePlan={setHaircarePlan}
-//     spiritualPlan={spiritualPlan} setSpiritualPlan={setSpiritualPlan}
-//
-// CHANGE 4: Replace everything from "// ─── WORKOUT DATA" down to the end of
-//   the SpiritualPlan function with the code below.
-// ─────────────────────────────────────────────────────────────────────────────
 
 // ─── DEFAULT PLAN DATA ────────────────────────────────────────────────────────
 const WORKOUT_DAYS = [
