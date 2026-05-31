@@ -64,12 +64,14 @@ function getNextRank(totalXP) {
   return RANKS.find(r => r.xpRequired > totalXP) || RANKS[RANKS.length-1];
 }
 
-function getCategoryXP(xpLogs, category) {
+function getCategoryXP(logs, category)(logs, category) {
   const catHabits = HABITS.filter(h => h.category === category);
   let total = 0;
-  Object.values(xpLogs).forEach(day => {
-    if (typeof day === "object") {
-      catHabits.forEach(h => { total += day[h.id] || 0; });
+  Object.values(logs).forEach(dayLogs => {
+    if (typeof dayLogs === "object") {
+      catHabits.forEach(h => {
+        if (dayLogs[h.id]?.done) total += XP_VALUES[h.id] || 10;
+      });
     }
   });
   return total;
@@ -1814,7 +1816,7 @@ function StatsView({ xpLogs, achievements, logs, getStreak, nofapStreak }) {
       <div style={{ background:C.surface, border:`1px solid ${SL_BLUE}30`, borderRadius:12, padding:14 }}>
         <div style={{ fontSize:9, color:SL_BLUE, letterSpacing:3, textTransform:"uppercase", marginBottom:14, textShadow:`0 0 8px ${SL_BLUE}` }}>Category Stats</div>
         {Object.entries(CATEGORY_LEVELS).map(([cat, data]) => {
-          const catXP = getCategoryXP(xpLogs, cat);
+          const catXP = getCategoryXP(logs, category)(xpLogs, cat);
           const level = getCategoryLevel(catXP);
           const levelName = data.levels[level];
           const nextLevelXP = [0,200,600,1500,3500,7000,15000][Math.min(level+1, 6)];
