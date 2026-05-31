@@ -886,7 +886,7 @@ function SkincarePlan({ plan, setPlan }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <EditHeader title="Skincare Plan" editing={editing} setEditing={setEditing} onReset={() => { setSkincarePlan(DEFAULT_SKINCARE); setEditing(false); }} />
+      <EditHeader title="Skincare Plan" editing={editing} setEditing={setEditing} onReset={() => { setPlan(DEFAULT_SKINCARE); setEditing(false); }} />
 
       {[{ key: "morning", label: "Morning" }, { key: "night", label: "Night" }].map(({ key, label }) => (
         <div key={key} style={{ background: "#0D0D12", border: "1px solid #C9A96E18", borderRadius: 12, padding: 14 }}>
