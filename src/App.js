@@ -64,7 +64,7 @@ function getNextRank(totalXP) {
   return RANKS.find(r => r.xpRequired > totalXP) || RANKS[RANKS.length-1];
 }
 
-function getCategoryXP(logs, category)(logs, category) {
+function getCategoryXP(logs, category) {
   const catHabits = HABITS.filter(h => h.category === category);
   let total = 0;
   Object.values(logs).forEach(dayLogs => {
