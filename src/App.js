@@ -214,6 +214,9 @@ const WORKOUT_DAYS = [
       "Cable Crunches — 3×15-20 | Ribcage toward pelvis",
       "Hanging Leg Raises — 3×12-15",
     ]},
+    { title: "Medial Delt Activation", exercises: [
+      "Cable Lateral Raises — 2×15-20 | Light, strict, slow",
+    ]},
   ]},
   { day: "Day 3", focus: "BACK — Width + Thickness", sections: [
     { title: "Width", exercises: [
@@ -227,6 +230,9 @@ const WORKOUT_DAYS = [
     { title: "Traps", exercises: [
       "Barbell Shrugs — 3×12-15 | Last set: Dropset | Hold top 1 sec",
       "Rear Delt Machine Fly — 3×15-18 | Light weight, full range",
+    ]},
+    { title: "Medial Delt Activation", exercises: [
+      "Cable Lateral Raises — 2×15-20 | Light, strict, slow",
     ]},
   ]},
   { day: "Day 4", focus: "SHOULDERS + ARMS — Volume + Pump", sections: [
@@ -243,6 +249,13 @@ const WORKOUT_DAYS = [
       "Unilateral Cable Pressdowns — 12-15 reps each",
       "Hammer Curls (DB) — 12-15 reps",
     ]},
+    { title: "Abs", exercises: [
+      "Cable Woodchoppers — 3×15 each side",
+      "Hanging Leg Raises — 3×12-15",
+    ]},
+    { title: "Medial Delt Activation", exercises: [
+      "Cable Lateral Raises — 2×15-20 | Light, strict, slow",
+    ]},
   ]},
   { day: "Day 5", focus: "CHEST + BACK — Pump Day", sections: [
     { title: "Chest", exercises: [
@@ -254,6 +267,13 @@ const WORKOUT_DAYS = [
       "Straight-Arm Lat Pulldown — 3×12-15",
       "Assisted Pull-Ups or Lat Pulldown — 3×10-12",
       "Barbell Bent-Over Rows — 3×8-10",
+    ]},
+    { title: "Abs", exercises: [
+      "Cable Crunches — 3×15-20",
+      "Leg Raises — 3×15-20",
+    ]},
+    { title: "Medial Delt Activation", exercises: [
+      "Cable Lateral Raises — 2×15-20 | Light, strict, slow",
     ]},
   ]},
   { day: "Day 6", focus: "ARMS — Compound Power", sections: [
@@ -271,10 +291,12 @@ const WORKOUT_DAYS = [
       "Reverse EZ-bar Curls — 3×12-15",
       "Farmer's Carries — 3×35 meters",
     ]},
+    { title: "Medial Delt Activation", exercises: [
+      "Cable Lateral Raises — 2×15-20 | Light, strict, slow",
+    ]},
   ]},
   { day: "Day 7", focus: "REST", sections: [] },
 ];
-
 const DEFAULT_SKINCARE = {
   morning: [
     { step: 1, task: "Ponds Charcoal Face Wash",   note: "Lukewarm water. Gentle circular motions." },
@@ -629,45 +651,81 @@ function Dashboard({ logs, nofapStreak, weeklyPct, todayPct, getStreak, setView,
 
 // ─── HABITS VIEW ──────────────────────────────────────────────────────────────
 function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
-  const done = HABITS.filter(h => todayLogs[h.id]?.done).length;
-  const categories = [...new Set(HABITS.map(h => h.category))];
+  const [editing, setEditing] = useState(false);
+  const [habits, setHabits] = useLS("anant_v3_custom_habits", HABITS);
+  const done = habits.filter(h => todayLogs[h.id]?.done).length;
+  const categories = [...new Set(habits.map(h => h.category))];
+  const ALL_CATEGORIES = ["skincare","workout","diet","nofap","haircare","spiritual","productivity"];
+
+  function addHabit(cat) {
+    const newId = `custom_${Date.now()}`;
+    setHabits(p => [...p, { id: newId, label: "New Habit", category: cat, type: "binary", icon: "◉" }]);
+  }
+  function removeHabit(id) { setHabits(p => p.filter(h => h.id !== id)); }
+  function updateHabit(id, field, val) { setHabits(p => p.map(h => h.id === id ? { ...h, [field]: val } : h)); }
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
         <div style={{ fontSize: 10, color: C.muted, letterSpacing: 3, textTransform: "uppercase" }}>Today</div>
-        <div style={{ fontSize: 12, color: C.skincare }}>{done}/{HABITS.length}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ fontSize: 12, color: C.skincare }}>{done}/{habits.length}</div>
+          <button onClick={() => setEditing(e => !e)} style={editBtnStyle(editing)}>{editing ? "✓ Done" : "✎ Edit"}</button>
+        </div>
       </div>
       {categories.map(cat => {
-        const catH = HABITS.filter(h => h.category === cat);
+        const catH = habits.filter(h => h.category === cat);
         return (
           <div key={cat} style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 9, color: COLORS[cat], letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>{cat}</div>
+            <div style={{ fontSize: 9, color: COLORS[cat] || C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>{cat}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
               {catH.map(h => {
                 const log = todayLogs[h.id] || {};
                 const streak = getStreak(h.id);
                 return (
-                  <div key={h.id} style={{ background: log.done ? `${COLORS[h.category]}0E` : C.surface, border: `1px solid ${log.done ? COLORS[h.category] + "35" : C.border}`, borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }} onClick={() => h.type === "binary" && toggleHabit(h.id)}>
-                    <button onClick={e => { e.stopPropagation(); toggleHabit(h.id); }} style={{ width: 24, height: 24, borderRadius: 6, background: log.done ? COLORS[h.category] : "transparent", border: `2px solid ${log.done ? COLORS[h.category] : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {log.done && <span style={{ color: "#000", fontSize: 11, fontWeight: 700 }}>✓</span>}
-                    </button>
+                  <div key={h.id} style={{ background: log.done ? `${COLORS[h.category] || C.muted}0E` : C.surface, border: `1px solid ${log.done ? (COLORS[h.category] || C.muted) + "35" : C.border}`, borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}
+                    onClick={() => !editing && h.type === "binary" && toggleHabit(h.id)}>
+                    {!editing && (
+                      <button onClick={e => { e.stopPropagation(); toggleHabit(h.id); }} style={{ width: 24, height: 24, borderRadius: 6, background: log.done ? COLORS[h.category] : "transparent", border: `2px solid ${log.done ? COLORS[h.category] : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {log.done && <span style={{ color: "#000", fontSize: 11, fontWeight: 700 }}>✓</span>}
+                      </button>
+                    )}
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, color: log.done ? C.text : "#666" }}>{h.label}</div>
-                      {streak > 0 && <div style={{ fontSize: 10, color: COLORS[h.category], marginTop: 2, opacity: 0.7 }}>{streak}d streak</div>}
+                      {editing ? (
+                        <input style={{ ...editInput, fontSize: 12 }} value={h.label} onChange={e => updateHabit(h.id, "label", e.target.value)} />
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 12, color: log.done ? C.text : "#666" }}>{h.label}</div>
+                          {streak > 0 && <div style={{ fontSize: 10, color: COLORS[h.category], marginTop: 2, opacity: 0.7 }}>{streak}d streak</div>}
+                        </>
+                      )}
                     </div>
-                    {h.type === "quantitative" && (
+                    {editing ? (
+                      <RemoveBtn onClick={() => removeHabit(h.id)} />
+                    ) : h.type === "quantitative" ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }} onClick={e => e.stopPropagation()}>
                         <input type="number" min={0} step={0.5} value={log.value || ""} placeholder={`/${h.target}`} onChange={e => setQty(h.id, e.target.value)} style={{ width: 60, padding: "5px 8px", fontSize: 12 }} />
                         <span style={{ fontSize: 10, color: C.muted }}>{h.unit}</span>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
             </div>
+            {editing && <AddButton onClick={() => addHabit(cat)} label={`+ Add to ${cat}`} color={COLORS[cat] || C.muted} />}
           </div>
         );
       })}
+      {editing && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Add habit to new category</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {ALL_CATEGORIES.filter(c => !categories.includes(c)).map(c => (
+              <button key={c} onClick={() => addHabit(c)} style={{ background: C.faint, border: `1px dashed ${COLORS[c] || C.muted}60`, borderRadius: 6, padding: "5px 10px", color: COLORS[c] || C.muted, fontSize: 10, fontFamily: "inherit" }}>+ {c}</button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
