@@ -517,7 +517,7 @@ export default function App() {
     }), { calories: 0, protein: 0, carbs: 0, fat: 0, fibre: 0 });
   }
 
-  if (subView === "workoutlog") return <WorkoutLogger workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} onBack={() => setSubView(null)} />;
+  if (subView === "workoutlog") return <WorkoutLogger workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} workoutPlan={workoutPlan} onBack={() => setSubView(null)} />;
   if (subView === "foodlog")    return <FoodLogger foodLogs={foodLogs} setFoodLogs={setFoodLogs} onBack={() => setSubView(null)} />;
   if (subView === "analytics")  return <AnalyticsView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} nofapStreak={getNofapStreak()} weightLogs={weightLogs} onBack={() => setSubView(null)} />;
 
@@ -868,7 +868,7 @@ function LogHub({ setSubView, todayMacros, workoutLogs, weightLogs, setWeightLog
 }
 
 // ─── WORKOUT LOGGER ───────────────────────────────────────────────────────────
-function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
+function WorkoutLogger({ workoutLogs, setWorkoutLogs, workoutPlan: plan, onBack }) {
   const [selectedWorkoutDate, setSelectedWorkoutDate] = useState(todayKey());
   const today = selectedWorkoutDate;
   const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
@@ -877,7 +877,7 @@ function WorkoutLogger({ workoutLogs, setWorkoutLogs, onBack }) {
   const [logMode, setLogMode] = useState("grouped");
   const [form, setForm] = useState({ sets: "3", reps: "10", weight: "", notes: "" });
   const [indivSets, setIndivSets] = useState([{ reps: "", weight: "" }]);
-  const dayData = WORKOUT_DAYS[dayIdx];
+  const dayData = plan[dayIdx] || WORKOUT_DAYS[dayIdx];
   const todayLog = workoutLogs[today] || {};
 
   function getExLog(exName) { return todayLog[exName] || { sets: [] }; }
