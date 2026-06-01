@@ -1258,40 +1258,73 @@ function BestLifts({ workoutLogs }) {
 
 // ─── ROUTINES VIEW ────────────────────────────────────────────────────────────
 function RoutinesView({ selected, setSelected, nofapStreak, setNofapStart, nofapHistory, setNofapHistory, workoutPlan, setWorkoutPlan, skincarePlan, setSkincarePlan, dietPlan, setDietPlan, haircarePlan, setHaircarePlan, spiritualPlan, setSpiritualPlan }) {
-  const routineList = [
-    { id: "workout",  label: "Workout",      icon: "◆", color: "#5B8DEF", meta: "6 days/week · Arms focused" },
-    { id: "skincare", label: "Skincare",     icon: "✦", color: "#C9A96E", meta: "AM + PM · 4 steps" },
-    { id: "diet",     label: "Diet",         icon: "◉", color: "#E07B5A", meta: "6 meals · ~3030 kcal · ~178g protein" },
-    { id: "nofap",    label: "NoFap",        icon: "⬡", color: "#E05A7B", meta: "Full celibacy · Streak + Protocol" },
-    { id: "haircare", label: "Hair Care",    icon: "◈", color: "#7EB8A4", meta: "Wash days + Daily + Weekly" },
-    { id: "spiritual",label: "Spirituality", icon: "✦", color: "#C9A96E", meta: "Morning · Day · Night" },
+  const [editing, setEditing] = useState(false);
+  const DEFAULT_PLANS = [
+    { id: "workout",   label: "Workout",      icon: "◆", color: "#5B8DEF", meta: "6 days/week · Arms focused" },
+    { id: "skincare",  label: "Skincare",     icon: "✦", color: "#C9A96E", meta: "AM + PM · 4 steps" },
+    { id: "diet",      label: "Diet",         icon: "◉", color: "#E07B5A", meta: "6 meals · ~3030 kcal · ~178g protein" },
+    { id: "nofap",     label: "NoFap",        icon: "⬡", color: "#E05A7B", meta: "Full celibacy · Streak + Protocol" },
+    { id: "haircare",  label: "Hair Care",    icon: "◈", color: "#7EB8A4", meta: "Wash days + Daily + Weekly" },
+    { id: "spiritual", label: "Spirituality", icon: "✦", color: "#C9A96E", meta: "Morning · Day · Night" },
   ];
+  const [planList, setPlanList] = useLS("anant_v3_plan_list", DEFAULT_PLANS);
+
+  function removePlan(id) { setPlanList(p => p.filter(r => r.id !== id)); }
+  function updatePlanMeta(id, field, val) { setPlanList(p => p.map(r => r.id === id ? { ...r, [field]: val } : r)); }
+  function addPlan() {
+    const newId = `custom_${Date.now()}`;
+    setPlanList(p => [...p, { id: newId, label: "New Plan", icon: "◉", color: "#7EB8A4", meta: "Add a description" }]);
+  }
+
   if (!selected) return (
     <div>
-      <div style={{ fontSize: 10, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 14 }}>All Plans</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div style={{ fontSize: 10, color: C.muted, letterSpacing: 3, textTransform: "uppercase" }}>All Plans</div>
+        <button onClick={() => setEditing(e => !e)} style={editBtnStyle(editing)}>{editing ? "✓ Done" : "✎ Edit"}</button>
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {routineList.map(r => (
-          <button key={r.id} className="press" onClick={() => setSelected(r.id)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, display: "flex", alignItems: "center", gap: 14, color: C.text, textAlign: "left" }}>
-            <span style={{ color: r.color, fontSize: 20, width: 24 }}>{r.icon}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontFamily: "'Cormorant Garamond',serif", fontWeight: 600 }}>{r.label}</div>
-              <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>{r.meta}</div>
-            </div>
-            <span style={{ color: C.muted, fontSize: 14 }}>›</span>
-          </button>
+        {planList.map(r => (
+          <div key={r.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, display: "flex", alignItems: "center", gap: 14 }}>
+            {editing ? (
+              <>
+                <span style={{ color: r.color, fontSize: 20, width: 24, flexShrink: 0 }}>{r.icon}</span>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+                  <input style={{ ...editInput, fontSize: 13 }} value={r.label} onChange={e => updatePlanMeta(r.id, "label", e.target.value)} />
+                  <input style={{ ...editInput, color: C.muted, fontSize: 10 }} value={r.meta} onChange={e => updatePlanMeta(r.id, "meta", e.target.value)} />
+                </div>
+                <RemoveBtn onClick={() => removePlan(r.id)} />
+              </>
+            ) : (
+              <button className="press" onClick={() => setSelected(r.id)} style={{ display: "flex", alignItems: "center", gap: 14, background: "none", border: "none", color: C.text, textAlign: "left", flex: 1, padding: 0 }}>
+                <span style={{ color: r.color, fontSize: 20, width: 24 }}>{r.icon}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontFamily: "'Cormorant Garamond',serif", fontWeight: 600 }}>{r.label}</div>
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>{r.meta}</div>
+                </div>
+                <span style={{ color: C.muted, fontSize: 14 }}>›</span>
+              </button>
+            )}
+          </div>
         ))}
+        {editing && <AddButton onClick={addPlan} label="+ Add Plan" color={C.skincare} />}
       </div>
     </div>
   );
+
   return (
     <div>
       <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 11, marginBottom: 20, letterSpacing: 1, fontFamily: "inherit", cursor: "pointer" }}>← Back</button>
-      {selected === "workout"   && <WorkoutPlan   plan={workoutPlan}  setPlan={setWorkoutPlan} />}
-      {selected === "skincare"  && <SkincarePlan  plan={skincarePlan} setPlan={setSkincarePlan} />}
-      {selected === "diet"      && <DietPlan      plan={dietPlan}     setPlan={setDietPlan} />}
+      {selected === "workout"   && <WorkoutPlan   plan={workoutPlan}   setPlan={setWorkoutPlan} />}
+      {selected === "skincare"  && <SkincarePlan  plan={skincarePlan}  setPlan={setSkincarePlan} />}
+      {selected === "diet"      && <DietPlan      plan={dietPlan}      setPlan={setDietPlan} />}
       {selected === "nofap"     && <NofapPlan     nofapStreak={nofapStreak} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} />}
-      {selected === "haircare"  && <HaircarePlan  plan={haircarePlan} setPlan={setHaircarePlan} />}
+      {selected === "haircare"  && <HaircarePlan  plan={haircarePlan}  setPlan={setHaircarePlan} />}
       {selected === "spiritual" && <SpiritualPlan plan={spiritualPlan} setPlan={setSpiritualPlan} />}
+      {!["workout","skincare","diet","nofap","haircare","spiritual"].includes(selected) && (
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 24, textAlign: "center", color: C.muted, fontSize: 13 }}>
+          Custom plan — content editor coming soon.
+        </div>
+      )}
     </div>
   );
 }
