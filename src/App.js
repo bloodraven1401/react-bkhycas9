@@ -522,7 +522,7 @@ export default function App() {
   if (subView === "analytics")  return <AnalyticsView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} nofapStreak={getNofapStreak()} weightLogs={weightLogs} onBack={() => setSubView(null)} />;
 
   return (
-    <div style={{ minHeight: "-webkit-fill-available", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", width: "100vw", maxWidth: "100%", margin: "0 auto", paddingBottom: 80, overflowX: "hidden" }}>
+    <div style={{ minHeight: "100dvh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", width: "100vw", maxWidth: "100%", margin: "0 auto", paddingBottom: 80, overflowX: "hidden", position: "relative" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:wght@600;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
@@ -578,7 +578,7 @@ export default function App() {
       </div>
 
       {/* Bottom Nav */}
-      <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, width: "100%", background: "rgba(7,7,10,0.97)", backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "12px 0 34px", zIndex: 9999 }}>
+      <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, width: "100%", background: "rgba(7,7,10,0.97)", backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "12px 0 env(safe-area-inset-bottom, 16px)", zIndex: 9999 }}>
         {[["dashboard","◎","Home"],["habits","◉","Today"],["log","◈","Log"],["routines","◆","Plans"],["stats","★","Rank"]].map(([key, icon, label]) => (
           <button key={key} className="press" onClick={() => setView(key)} style={{ flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, color: view === key ? C.skincare : C.muted }}>
             <span style={{ fontSize: 17 }}>{icon}</span>
