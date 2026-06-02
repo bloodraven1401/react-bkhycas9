@@ -573,7 +573,7 @@ export default function App() {
         {view === "dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
         {view === "habits"    && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
         {view === "routines"  && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} workoutPlan={workoutPlan} setWorkoutPlan={setWorkoutPlan} skincarePlan={skincarePlan} setSkincarePlan={setSkincarePlan} dietPlan={dietPlan} setDietPlan={setDietPlan} haircarePlan={haircarePlan} setHaircarePlan={setHaircarePlan} spiritualPlan={spiritualPlan} setSpiritualPlan={setSpiritualPlan} />}
-        {view === "log"       && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} />}
+        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} />}
         {view === "stats"     && <StatsView xpLogs={xpLogs} achievements={achievements} logs={logs} getStreak={getStreak} nofapStreak={getNofapStreak()} />}
       </div>
 
@@ -731,7 +731,7 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
 }
 
 // ─── LOG HUB ──────────────────────────────────────────────────────────────────
-function LogHub({ setSubView, todayMacros, workoutLogs, weightLogs, setWeightLogs, logs, foodLogs, setFoodLogs, nofapStreak }) {
+function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs }) {
   const today = todayKey();
   const todayW = workoutLogs[today] || {};
   const totalSets = Object.values(todayW).reduce((a, ex) => a + (ex.sets?.length || 0), 0);
@@ -863,6 +863,7 @@ function LogHub({ setSubView, todayMacros, workoutLogs, weightLogs, setWeightLog
         </div>
         <span style={{ color: C.muted, fontSize: 14 }}>›</span>
       </button>
+        <ResetProgress logs={logs} setLogs={setLogs} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} setNofapStart={setNofapStart} xpLogs={xpLogs} />
     </div>
   );
 }
@@ -1832,5 +1833,109 @@ function Stat({ label, value, color }) {
       <div style={{ fontSize: 20, color, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{value}</div>
       <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginTop: 4 }}>{label}</div>
     </div>
+  );
+}
+
+function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, setNofapStart, xpLogs }) {
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [reason, setReason] = useState("");
+  const [selectedResets, setSelectedResets] = useState({ streaks: true, workout: true, weight: false, food: false });
+  const [seasons, setSeasons] = useLS("anant_v3_seasons", []);
+
+  const totalDays = Object.keys(logs).filter(k => !k.startsWith("bf_")).length;
+  const totalSessions = Object.keys(workoutLogs).length;
+  const bestStreak = Math.max(0, ...HABITS.map(h => {
+    let s = 0, best = 0, d = new Date();
+    for (let i = 0; i < 365; i++) {
+      const k = new Date(d.getTime() - i * 86400000).toISOString().split("T")[0];
+      if (logs[k]?.[h.id]?.done) { s++; best = Math.max(best, s); } else s = 0;
+    }
+    return best;
+  }));
+
+  function doReset() {
+    const season = {
+      number: seasons.length + 1,
+      date: todayKey(),
+      reason: reason || "Fresh start",
+      stats: {
+        totalDays,
+        totalSessions,
+        bestStreak,
+        totalXP: getTotalXP(xpLogs),
+      }
+    };
+    setSeasons(p => [...p, season]);
+    if (selectedResets.streaks) setLogs({});
+    if (selectedResets.workout) setWorkoutLogs({});
+    if (selectedResets.weight)  setWeightLogs({});
+    if (selectedResets.streaks) setNofapStart(todayKey());
+    setShowConfirm(false);
+    setReason("");
+  }
+
+  if (showConfirm) return (
+    <div style={{ background: C.surface, border: `1px solid #FF000030`, borderRadius: 14, padding: 20, marginTop: 12 }}>
+      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: "#FF0000", marginBottom: 4 }}>Start New Season</div>
+      <div style={{ fontSize: 11, color: C.muted, marginBottom: 16, lineHeight: 1.6 }}>Season {seasons.length + 1} begins today. Your past data is archived, not deleted.</div>
+
+      <div style={{ background: C.faint, borderRadius: 10, padding: 12, marginBottom: 14 }}>
+        <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>This Season's Stats (being archived)</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {[["Days Logged", totalDays], ["Workout Sessions", totalSessions], ["Best Streak", `${bestStreak}d`], ["Total XP", getTotalXP(xpLogs).toLocaleString()]].map(([label, val]) => (
+            <div key={label} style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 18, color: C.skincare, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{val}</div>
+              <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>What to reset</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+        {[["streaks", "Habit streaks & logs"], ["workout", "Workout logs & weights"], ["weight", "Body weight history"], ["food", "Food logs"]].map(([key, label]) => (
+          <div key={key} onClick={() => setSelectedResets(p => ({ ...p, [key]: !p[key] }))} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: selectedResets[key] ? "#FF000010" : C.faint, border: `1px solid ${selectedResets[key] ? "#FF000040" : C.border}`, borderRadius: 8, cursor: "pointer" }}>
+            <div style={{ width: 18, height: 18, borderRadius: 4, background: selectedResets[key] ? "#FF0000" : "transparent", border: `2px solid ${selectedResets[key] ? "#FF0000" : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {selectedResets[key] && <span style={{ color: "#000", fontSize: 10, fontWeight: 700 }}>✓</span>}
+            </div>
+            <span style={{ fontSize: 12, color: selectedResets[key] ? C.text : C.muted }}>{label}</span>
+          </div>
+        ))}
+      </div>
+
+      <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Why are you resetting? (injury, new program, fresh start...)" style={{ width: "100%", minHeight: 70, resize: "none", fontSize: 12, lineHeight: 1.6, marginBottom: 12 }} />
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => setShowConfirm(false)} style={{ flex: 1, background: "none", border: `1px solid ${C.border}`, borderRadius: 8, padding: "11px", color: C.muted, fontSize: 12, fontFamily: "inherit" }}>Cancel</button>
+        <button onClick={doReset} style={{ flex: 2, background: "#FF0000", border: "none", borderRadius: 8, padding: "11px", color: "#fff", fontSize: 12, fontFamily: "inherit", fontWeight: 600 }}>Start Season {seasons.length + 1}</button>
+      </div>
+
+      {seasons.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Past Seasons</div>
+          {[...seasons].reverse().map((s, i) => (
+            <div key={i} style={{ padding: "8px 0", borderBottom: i < seasons.length - 1 ? `1px solid ${C.border}` : "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 12, color: C.skincare }}>Season {s.number}</span>
+                <span style={{ fontSize: 10, color: C.muted }}>{new Date(s.date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+              </div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>{s.reason}</div>
+              <div style={{ fontSize: 10, color: C.dim, marginTop: 3 }}>{s.stats.totalDays}d logged · {s.stats.totalSessions} sessions · {s.stats.bestStreak}d best streak · {s.stats.totalXP?.toLocaleString()} XP</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <button onClick={() => setShowConfirm(true)} style={{ width: "100%", background: "none", border: `1px solid #FF000030`, borderRadius: 12, padding: 14, display: "flex", alignItems: "center", gap: 12, color: "#FF000080", fontFamily: "inherit", marginTop: 4, textAlign: "left" }}>
+      <span style={{ fontSize: 18 }}>↺</span>
+      <div>
+        <div style={{ fontSize: 13, color: "#FF0000" }}>Start New Season</div>
+        <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>Reset progress · Archive this season's data</div>
+      </div>
+      {seasons.length > 0 && <span style={{ marginLeft: "auto", fontSize: 10, color: C.muted }}>Season {seasons.length + 1}</span>}
+    </button>
   );
 }
