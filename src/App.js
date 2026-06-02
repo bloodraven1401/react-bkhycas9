@@ -573,7 +573,7 @@ export default function App() {
         {view === "dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
         {view === "habits"    && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
         {view === "routines"  && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} workoutPlan={workoutPlan} setWorkoutPlan={setWorkoutPlan} skincarePlan={skincarePlan} setSkincarePlan={setSkincarePlan} dietPlan={dietPlan} setDietPlan={setDietPlan} haircarePlan={haircarePlan} setHaircarePlan={setHaircarePlan} spiritualPlan={spiritualPlan} setSpiritualPlan={setSpiritualPlan} />}
-        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} />}
+        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} />}
         {view === "stats"     && <StatsView xpLogs={xpLogs} achievements={achievements} logs={logs} getStreak={getStreak} nofapStreak={getNofapStreak()} />}
       </div>
 
@@ -731,7 +731,7 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
 }
 
 // ─── LOG HUB ──────────────────────────────────────────────────────────────────
-function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs }) {
+function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs, setXpLogs }) {
   const today = todayKey();
   const todayW = workoutLogs[today] || {};
   const totalSets = Object.values(todayW).reduce((a, ex) => a + (ex.sets?.length || 0), 0);
@@ -863,7 +863,7 @@ function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLo
         </div>
         <span style={{ color: C.muted, fontSize: 14 }}>›</span>
       </button>
-        <ResetProgress logs={logs} setLogs={setLogs} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} setNofapStart={setNofapStart} xpLogs={xpLogs} />
+        <ResetProgress logs={logs} setLogs={setLogs} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} />
     </div>
   );
 }
@@ -1836,7 +1836,7 @@ function Stat({ label, value, color }) {
   );
 }
 
-function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, setNofapStart, xpLogs }) {
+function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, setNofapStart, xpLogs, setXpLogs }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [reason, setReason] = useState("");
   const [selectedResets, setSelectedResets] = useState({ streaks: true, workout: true, weight: false, food: false });
@@ -1869,7 +1869,7 @@ function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs,
     if (selectedResets.streaks) setLogs({});
     if (selectedResets.workout) setWorkoutLogs({});
     if (selectedResets.weight)  setWeightLogs({});
-    if (selectedResets.streaks) setNofapStart(todayKey());
+    if (selectedResets.streaks) setNofapStart(todayKey()); if (selectedResets.xp) setXpLogs({}); if (selectedResets.xp) setXpLogs({});
     setShowConfirm(false);
     setReason("");
   }
@@ -1893,7 +1893,7 @@ function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs,
 
       <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>What to reset</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
-        {[["streaks", "Habit streaks & logs"], ["workout", "Workout logs & weights"], ["weight", "Body weight history"], ["food", "Food logs"]].map(([key, label]) => (
+        {[["streaks", "Habit streaks & logs"], ["workout", "Workout logs & weights"], ["weight", "Body weight history"], ["food", "Food logs"], ["xp", "XP & Rank (full reset)"]].map(([key, label]) => (
           <div key={key} onClick={() => setSelectedResets(p => ({ ...p, [key]: !p[key] }))} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: selectedResets[key] ? "#FF000010" : C.faint, border: `1px solid ${selectedResets[key] ? "#FF000040" : C.border}`, borderRadius: 8, cursor: "pointer" }}>
             <div style={{ width: 18, height: 18, borderRadius: 4, background: selectedResets[key] ? "#FF0000" : "transparent", border: `2px solid ${selectedResets[key] ? "#FF0000" : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               {selectedResets[key] && <span style={{ color: "#000", fontSize: 10, fontWeight: 700 }}>✓</span>}
