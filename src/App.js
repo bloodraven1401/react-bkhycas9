@@ -70,6 +70,14 @@ const HABITS = [
   { id: "h12", label: "Pooja",             category: "spiritual",    type: "binary",       icon: "✦" },
 ];
 
+const MOOD_LABELS = ["Dead Inside", "Struggling", "Holding On", "Locked In", "Unstoppable"];
+const ENERGY_LABELS = ["Drained", "Low", "Decent", "Charged", "On Fire"];
+const SLEEP_LABELS = ["<4h", "4-5h", "5-6h", "6-7h", "7-8h", "8h+"];
+const STRESS_LABELS = ["None", "Mild", "Building", "Heavy", "Overwhelming"];
+const FOCUS_LABELS = ["Scattered", "Distracted", "Average", "Sharp", "Laser"];
+const MOTIVATION_LABELS = ["Zero", "Weak", "Present", "Strong", "Burning"];
+
+
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function getTotalXP(xpLogs) {
   return Object.values(xpLogs).reduce((a, d) => a + (typeof d === "number" ? d : 0), 0);
@@ -411,6 +419,11 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState(todayKey());
   const today = selectedDate;
   const todayLogs = logs[today] || {};
+ const [checkinLogs, setCheckinLogs] = useLS("anant_v3_checkin", {});
+const [journalLogs, setJournalLogs] = useLS("anant_v3_journal", {});
+const [aiReviews, setAiReviews] = useLS("anant_v3_ai_reviews", {});
+const [checkinDone, setCheckinDone] = useState(false);
+
 
   // XP backfill — runs once on mount
   useEffect(() => {
@@ -431,6 +444,15 @@ export default function App() {
       });
       return changed ? updated : p;
     });
+    useEffect(() => {
+  const key = todayKey();
+  if (!checkinLogs[key] && !checkinDone) {
+    setShowCheckin(true);
+  }
+}, []);
+
+const [showCheckin, setShowCheckin] = useState(false);
+
   }, []); // eslint-disable-line
 
   function toggleHabit(id) {
@@ -499,7 +521,17 @@ export default function App() {
     return s;
   }
 
-  function getNofapStreak() { return Math.floor((new Date() - new Date(nofapStart)) / 86400000); }
+  function getNofapStreak() {
+  let streak = 0;
+  let d = new Date();
+  while (true) {
+    const k = new Date(d.getTime() - streak * 86400000).toISOString().split("T")[0];
+    if (logs[k]?.h9?.done) streak++;
+    else break;
+  }
+  return streak;
+}
+
   function getTodayPct() { return Math.round((HABITS.filter(h => todayLogs[h.id]?.done).length / HABITS.length) * 100); }
   function getWeeklyPct() {
     const days = last7(); let done = 0;
@@ -567,13 +599,24 @@ export default function App() {
           {xpToast}
         </div>
       )}
+      {showCheckin && (
+  <DailyCheckin
+    onComplete={(data) => {
+      setCheckinLogs(p => ({ ...p, [todayKey()]: data }));
+      setShowCheckin(false);
+      setCheckinDone(true);
+    }}
+    onSkip={() => { setShowCheckin(false); setCheckinDone(true); }}
+  />
+)}
+
 
       {/* Views */}
       <div className="fade" key={view} style={{ padding: "20px 20px 0" }}>
         {view === "dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
         {view === "habits"    && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
         {view === "routines"  && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} workoutPlan={workoutPlan} setWorkoutPlan={setWorkoutPlan} skincarePlan={skincarePlan} setSkincarePlan={setSkincarePlan} dietPlan={dietPlan} setDietPlan={setDietPlan} haircarePlan={haircarePlan} setHaircarePlan={setHaircarePlan} spiritualPlan={spiritualPlan} setSpiritualPlan={setSpiritualPlan} />}
-        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} />}
+        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} setJournalLogs={setJournalLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} />}
         {view === "stats"     && <StatsView xpLogs={xpLogs} achievements={achievements} logs={logs} getStreak={getStreak} nofapStreak={getNofapStreak()} />}
       </div>
 
@@ -731,7 +774,7 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
 }
 
 // ─── LOG HUB ──────────────────────────────────────────────────────────────────
-function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs, setXpLogs }) {
+function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs, setXpLogs, checkinLogs, journalLogs, setJournalLogs, aiReviews, setAiReviews }) {
   const today = todayKey();
   const todayW = workoutLogs[today] || {};
   const totalSets = Object.values(todayW).reduce((a, ex) => a + (ex.sets?.length || 0), 0);
@@ -863,7 +906,9 @@ function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLo
         </div>
         <span style={{ color: C.muted, fontSize: 14 }}>›</span>
       </button>
-        <ResetProgress logs={logs} setLogs={setLogs} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} />
+      <JournalCard journalLogs={journalLogs} setJournalLogs={setJournalLogs} checkinLogs={checkinLogs} logs={logs} workoutLogs={workoutLogs} />
+<AIReviewCard logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={nofapStreak} />
+        <ResetProgress logs={logs} setLogs={setLogs} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} setAchievements={setAchievements}/>
     </div>
   );
 }
@@ -1810,6 +1855,317 @@ function StatsView({ xpLogs, achievements, logs, getStreak, nofapStreak }) {
   );
 }
 
+// ─── DAILY CHECK-IN POPUP ─────────────────────────────────────────────────────
+function DailyCheckin({ onComplete, onSkip }) {
+  const [step, setStep] = useState(0);
+  const [data, setData] = useState({ mood: null, energy: null, sleep: null, stress: null, focus: null, motivation: null });
+  const fields = [
+    { key: "mood",       label: "How are you feeling?",     labels: MOOD_LABELS,       color: C.skincare },
+    { key: "energy",     label: "Energy level?",            labels: ENERGY_LABELS,     color: C.workout },
+    { key: "sleep",      label: "How much did you sleep?",  labels: SLEEP_LABELS,      color: C.haircare },
+    { key: "stress",     label: "Stress level?",            labels: STRESS_LABELS,     color: C.nofap },
+    { key: "focus",      label: "Mental focus?",            labels: FOCUS_LABELS,      color: C.diet },
+    { key: "motivation", label: "Motivation today?",        labels: MOTIVATION_LABELS, color: "#A07EE0" },
+  ];
+  const current = fields[step];
+  const allDone = step >= fields.length;
+
+  if (allDone) {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(7,7,10,0.97)", zIndex: 99998, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>⚡</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Day logged.</div>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>Your baseline is set. Now execute.</div>
+          <button onClick={() => onComplete(data)} style={{ width: "100%", background: C.skincare, border: "none", borderRadius: 10, padding: 14, color: "#000", fontSize: 13, fontFamily: "inherit", fontWeight: 600 }}>Let's go →</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(7,7,10,0.97)", zIndex: 99998, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ width: "100%", maxWidth: 480, background: C.surface, borderRadius: "20px 20px 0 0", padding: "28px 24px 48px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <div style={{ display: "flex", gap: 4 }}>
+            {fields.map((_, i) => (
+              <div key={i} style={{ width: i === step ? 20 : 6, height: 4, borderRadius: 2, background: i <= step ? current.color : C.muted, transition: "all 0.3s" }} />
+            ))}
+          </div>
+          <button onClick={onSkip} style={{ background: "none", border: "none", color: C.muted, fontSize: 11, fontFamily: "inherit" }}>skip</button>
+        </div>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 24, marginTop: 16 }}>{current.label}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {current.labels.map((label, i) => {
+            const selected = data[current.key] === i;
+            return (
+              <button key={i} onClick={() => {
+                setData(p => ({ ...p, [current.key]: i }));
+                setTimeout(() => setStep(s => s + 1), 300);
+              }} style={{ background: selected ? `${current.color}20` : C.faint, border: `1px solid ${selected ? current.color : C.border}`, borderRadius: 10, padding: "13px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", color: selected ? current.color : C.text, fontSize: 13, fontFamily: "inherit", transition: "all 0.2s" }}>
+                <span>{label}</span>
+                <span style={{ fontSize: 11, color: C.muted }}>{i + 1}/5</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── JOURNAL CARD ─────────────────────────────────────────────────────────────
+function JournalCard({ journalLogs, setJournalLogs, checkinLogs, logs, workoutLogs }) {
+  const [expanded, setExpanded] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(todayKey());
+  const entry = journalLogs[selectedDate] || {};
+  const checkin = checkinLogs[selectedDate];
+
+  function getPrompts() {
+    const fixed = [
+      { key: "good",   label: "What went well today?" },
+      { key: "bad",    label: "What got in the way?" },
+      { key: "lesson", label: "What did you learn?" },
+    ];
+    const dynamic = [];
+    const dayLogs = logs[selectedDate] || {};
+    const workoutDone = Object.values(workoutLogs[selectedDate] || {}).some(ex => ex.sets?.length > 0);
+    const habitsDone = HABITS.filter(h => dayLogs[h.id]?.done).length;
+    const guitarDone = dayLogs["h10"]?.done;
+    if (!workoutDone) dynamic.push({ key: "workout_miss", label: "You skipped the gym. What happened?" });
+    if (!guitarDone)  dynamic.push({ key: "guitar_miss",  label: "No guitar today. What got in the way?" });
+    if (habitsDone < HABITS.length * 0.5) dynamic.push({ key: "low_day", label: "Tough day — what drained you?" });
+    if (checkin?.mood <= 1) dynamic.push({ key: "mood_low", label: "You were struggling today. What was going on?" });
+    if (checkin?.stress >= 3) dynamic.push({ key: "stress", label: "Stress was high. What was the source?" });
+    return [...dynamic.slice(0, 2), ...fixed];
+  }
+
+  function updateEntry(key, val) {
+    setJournalLogs(p => ({ ...p, [selectedDate]: { ...(p[selectedDate] || {}), [key]: val } }));
+  }
+
+  const prompts = getPrompts();
+  const hasEntry = Object.values(entry).some(v => v?.trim?.().length > 0);
+
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.skincare}25`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
+      <div className="press" onClick={() => setExpanded(e => !e)} style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700 }}>Journal</div>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{hasEntry ? "Entry logged" : "No entry yet"}</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {hasEntry && <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.skincare }} />}
+          <span style={{ color: C.muted, fontSize: 14 }}>{expanded ? "↑" : "↓"}</span>
+        </div>
+      </div>
+      {expanded && (
+        <div style={{ padding: "0 16px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+            <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d.toISOString().split("T")[0]); }} style={{ background: "none", border: "none", color: C.muted, fontSize: 14 }}>‹</button>
+            <div style={{ fontSize: 10, color: selectedDate === todayKey() ? C.muted : C.nofap, flex: 1, textAlign: "center" }}>
+              {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
+            </div>
+            <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); const next = d.toISOString().split("T")[0]; if (next <= todayKey()) setSelectedDate(next); }} style={{ background: "none", border: "none", color: C.muted, fontSize: 14 }}>›</button>
+          </div>
+          {checkin && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+              {[["Mood", MOOD_LABELS[checkin.mood], C.skincare], ["Energy", ENERGY_LABELS[checkin.energy], C.workout], ["Sleep", SLEEP_LABELS[checkin.sleep], C.haircare]].map(([label, val, color]) => val && (
+                <div key={label} style={{ background: `${color}15`, border: `1px solid ${color}30`, borderRadius: 6, padding: "4px 10px", fontSize: 10, color }}>
+                  {label}: {val}
+                </div>
+              ))}
+            </div>
+          )}
+          {prompts.map(p => (
+            <div key={p.key} style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: C.skincare, marginBottom: 6, letterSpacing: 0.5 }}>{p.label}</div>
+              <textarea
+                value={entry[p.key] || ""}
+                onChange={e => updateEntry(p.key, e.target.value)}
+                placeholder="..."
+                style={{ width: "100%", minHeight: 72, resize: "none", fontSize: 12, lineHeight: 1.6, background: C.faint, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", color: C.text, fontFamily: "inherit" }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AI REVIEW CARD ───────────────────────────────────────────────────────────
+function AIReviewCard({ logs, workoutLogs, foodLogs, checkinLogs, journalLogs, xpLogs, aiReviews, setAiReviews, nofapStreak }) {
+  const [expanded, setExpanded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [activePeriod, setActivePeriod] = useState("weekly");
+
+  const PERIODS = [
+    { key: "weekly",     label: "Week",    days: 7,   minDays: 5   },
+    { key: "monthly",    label: "Month",   days: 30,  minDays: 20  },
+    { key: "quarterly",  label: "Quarter", days: 90,  minDays: 60  },
+    { key: "halfyearly", label: "6 Month", days: 180, minDays: 120 },
+    { key: "yearly",     label: "Year",    days: 365, minDays: 240 },
+  ];
+
+  function getRange(days) {
+    return Array.from({ length: days }, (_, i) => dateKey(-(days - 1 - i)));
+  }
+
+  function getDaysWithData(days) {
+    return getRange(days).filter(d => Object.keys(logs[d] || {}).length > 0).length;
+  }
+
+  function buildPrompt(period) {
+    const days = period.days;
+    const range = getRange(days);
+    const habitCompletion = Math.round((range.reduce((a, d) => a + HABITS.filter(h => logs[d]?.[h.id]?.done).length, 0) / (HABITS.length * days)) * 100);
+    const workoutDays = range.filter(d => Object.values(workoutLogs[d] || {}).some(ex => ex.sets?.length > 0)).length;
+    const guitarDays = range.filter(d => logs[d]?.h10?.done).length;
+    const nofapDays = range.filter(d => logs[d]?.h9?.done).length;
+    const avgMood = (() => { const vals = range.map(d => checkinLogs[d]?.mood).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
+    const avgEnergy = (() => { const vals = range.map(d => checkinLogs[d]?.energy).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
+    const avgSleep = (() => { const vals = range.map(d => checkinLogs[d]?.sleep).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
+    const journalEntries = range.filter(d => journalLogs[d]).map(d => {
+      const e = journalLogs[d];
+      return `${d}: Good: ${e.good || "-"} | Bad: ${e.bad || "-"} | Lesson: ${e.lesson || "-"}`;
+    }).join("\n");
+    const totalXP = getTotalXP(xpLogs);
+    const totalSets = range.reduce((a, d) => a + Object.values(workoutLogs[d] || {}).reduce((b, ex) => b + (ex.sets?.length || 0), 0), 0);
+
+    return `You are a personal coach reviewing ${period.label.toLowerCase()} data for Anant, a 21-year-old in India focused on physique, guitar, discipline, and self-improvement.
+
+DATA (last ${days} days):
+- Habit completion: ${habitCompletion}%
+- Workout days: ${workoutDays}/${days}
+- Guitar practice days: ${guitarDays}/${days}
+- NoFap days: ${nofapDays}/${days}
+- Total workout sets: ${totalSets}
+- NoFap streak: ${nofapStreak} days
+- Total XP: ${totalXP}
+- Avg mood: ${avgMood}/4 (0=Dead Inside, 4=Unstoppable)
+- Avg energy: ${avgEnergy}/4
+- Avg sleep: ${avgSleep}/5 (0=<4h, 5=8h+)
+
+JOURNAL ENTRIES:
+${journalEntries || "No journal entries this period."}
+
+Write a ${period.label.toLowerCase()} review. Be balanced and motivating but brutally honest. Structure it as:
+1. PERFORMANCE SUMMARY (2-3 sentences, key numbers)
+2. WHAT'S WORKING (specific patterns you noticed)
+3. WHAT NEEDS WORK (specific weak points)
+4. KEY INSIGHT (one powerful observation connecting multiple data points)
+5. NEXT ${period.label.toUpperCase()} FOCUS (2-3 specific actionable targets)
+
+Keep it concise, direct, masculine. No fluff. Talk to him like a coach who believes in him but won't coddle him.`;
+  }
+
+  async function generateReview(period) {
+    setLoading(true);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: buildPrompt(period) }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || "Could not generate review.";
+      const reviewKey = `${period.key}_${todayKey()}`;
+      setAiReviews(p => ({ ...p, [reviewKey]: { text, date: todayKey(), period: period.key } }));
+    } catch (e) {
+      console.error(e);
+    }
+    setLoading(false);
+  }
+
+  function getLatestReview(periodKey) {
+    const keys = Object.keys(aiReviews).filter(k => k.startsWith(periodKey));
+    if (!keys.length) return null;
+    keys.sort().reverse();
+    return aiReviews[keys[0]];
+  }
+
+  function shouldAutoGenerate(period) {
+    const latest = getLatestReview(period.key);
+    if (!latest) return true;
+    const daysSince = Math.floor((new Date(todayKey()) - new Date(latest.date)) / 86400000);
+    const thresholds = { weekly: 7, monthly: 30, quarterly: 90, halfyearly: 180, yearly: 365 };
+    return daysSince >= thresholds[period.key];
+  }
+
+  useEffect(() => {
+    if (expanded) {
+      const period = PERIODS.find(p => p.key === activePeriod);
+      if (period && getDaysWithData(period.days) >= period.minDays && shouldAutoGenerate(period)) {
+        generateReview(period);
+      }
+    }
+  }, [expanded, activePeriod]);
+
+  const activePeriodObj = PERIODS.find(p => p.key === activePeriod);
+  const daysWithData = getDaysWithData(activePeriodObj.days);
+  const unlocked = daysWithData >= activePeriodObj.minDays;
+  const latestReview = getLatestReview(activePeriod);
+
+  return (
+    <div style={{ background: C.surface, border: `1px solid #A07EE025`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
+      <div className="press" onClick={() => setExpanded(e => !e)} style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700 }}>AI Coach</div>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>Performance reviews · Pattern analysis</div>
+        </div>
+        <span style={{ color: C.muted, fontSize: 14 }}>{expanded ? "↑" : "↓"}</span>
+      </div>
+      {expanded && (
+        <div style={{ padding: "0 16px 16px" }}>
+          <div style={{ display: "flex", gap: 5, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
+            {PERIODS.map(p => {
+              const days = getDaysWithData(p.days);
+              const isUnlocked = days >= p.minDays;
+              return (
+                <button key={p.key} onClick={() => isUnlocked && setActivePeriod(p.key)} style={{ background: activePeriod === p.key ? "#A07EE0" : C.faint, border: `1px solid ${activePeriod === p.key ? "#A07EE0" : C.border}`, borderRadius: 7, padding: "6px 10px", color: activePeriod === p.key ? "#000" : isUnlocked ? C.text : C.muted, fontSize: 10, whiteSpace: "nowrap", fontFamily: "inherit", opacity: isUnlocked ? 1 : 0.4 }}>
+                  {p.label}{!isUnlocked ? ` (${days}/${p.minDays}d)` : ""}
+                </button>
+              );
+            })}
+          </div>
+          {!unlocked ? (
+            <div style={{ background: C.faint, borderRadius: 10, padding: 16, textAlign: "center" }}>
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 6 }}>Not enough data yet</div>
+              <div style={{ fontSize: 11, color: C.dim }}>{daysWithData}/{activePeriodObj.minDays} days logged to unlock {activePeriodObj.label.toLowerCase()} review</div>
+              <div style={{ background: C.border, borderRadius: 3, height: 4, marginTop: 10 }}>
+                <div style={{ width: `${Math.min(100, (daysWithData / activePeriodObj.minDays) * 100)}%`, height: "100%", background: "#A07EE0", borderRadius: 3 }} />
+              </div>
+            </div>
+          ) : loading ? (
+            <div style={{ background: C.faint, borderRadius: 10, padding: 24, textAlign: "center" }}>
+              <div style={{ fontSize: 13, color: "#A07EE0", marginBottom: 8 }}>Analyzing your data...</div>
+              <div style={{ fontSize: 11, color: C.muted }}>Your coach is reviewing everything.</div>
+            </div>
+          ) : latestReview ? (
+            <div>
+              <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>
+                Generated {new Date(latestReview.date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+              </div>
+              <div style={{ fontSize: 12, color: C.text, lineHeight: 1.8, whiteSpace: "pre-wrap", background: C.faint, borderRadius: 10, padding: 14 }}>
+                {latestReview.text}
+              </div>
+              <button onClick={() => generateReview(activePeriodObj)} style={{ marginTop: 10, width: "100%", background: "none", border: `1px solid #A07EE040`, borderRadius: 8, padding: "9px", color: "#A07EE0", fontSize: 11, fontFamily: "inherit" }}>
+                ↺ Regenerate
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 // ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
 function Ring({ value, size, color, label, sublabel }) {
   const r = (size - 14) / 2, circ = 2 * Math.PI * r, offset = circ - (value / 100) * circ;
@@ -1869,7 +2225,7 @@ function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs,
     if (selectedResets.streaks) setLogs({});
     if (selectedResets.workout) setWorkoutLogs({});
     if (selectedResets.weight)  setWeightLogs({});
-    if (selectedResets.streaks) setNofapStart(todayKey()); if (selectedResets.xp) setXpLogs({}); if (selectedResets.xp) setXpLogs({});
+    if (selectedResets.streaks) setNofapStart(todayKey()); if (selectedResets.xp) { setXpLogs({}); setAchievements([]); } if (selectedResets.xp) setXpLogs({});
     setShowConfirm(false);
     setReason("");
   }
@@ -1939,3 +2295,4 @@ function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs,
     </button>
   );
 }
+
