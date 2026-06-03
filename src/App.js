@@ -444,14 +444,14 @@ const [checkinDone, setCheckinDone] = useState(false);
       });
       return changed ? updated : p;
     });
-    useEffect(() => {
+    const [showCheckin, setShowCheckin] = useState(false);
+
+useEffect(() => {
   const key = todayKey();
   if (!checkinLogs[key] && !checkinDone) {
     setShowCheckin(true);
   }
 }, []);
-
-const [showCheckin, setShowCheckin] = useState(false);
 
   }, []); // eslint-disable-line
 
