@@ -432,7 +432,7 @@ const [checkinDone, setCheckinDone] = useState(false);
     let d = new Date(startDate);
     const todayD = new Date(todayKey());
     while (d <= todayD) { days.push(d.toISOString().split("T")[0]); d.setDate(d.getDate() + 1); }
-    setXpLogs(p => {
+setXpLogs(p => {
       const updated = { ...p };
       let changed = false;
       days.forEach(day => {
@@ -444,16 +444,16 @@ const [checkinDone, setCheckinDone] = useState(false);
       });
       return changed ? updated : p;
     });
-    const [showCheckin, setShowCheckin] = useState(false);
-
-useEffect(() => {
-  const key = todayKey();
-  if (!checkinLogs[key] && !checkinDone) {
-    setShowCheckin(true);
-  }
-}, []);
-
   }, []); // eslint-disable-line
+
+  const [showCheckin, setShowCheckin] = useState(false);
+
+  useEffect(() => {
+    const key = todayKey();
+    if (!checkinLogs[key] && !checkinDone) {
+      setShowCheckin(true);
+    }
+  }, []);
 
   function toggleHabit(id) {
     const currentlyDone = todayLogs[id]?.done;
