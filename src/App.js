@@ -955,13 +955,6 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
     </div>
   );
 }
-  
- return (
-    <div style={{ background: C.surface, border: `1px solid ${SLEEP_COLOR}30`, borderRadius: 14, padding: 16, marginBottom: 4 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-        <div>
-          <div style={{ fontSize: 10, color: SLEEP_COLOR, letterSpacing: 3, textTransform: "uppercase", marginBottom: 4 }}>Sleep Schedule</div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, lineHeight: 1 }}>Rest & Recovery</div>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 22, color: SLEEP_COLOR, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, lineHeight: 1 }}>{streak > 0 ? streak : weekScore}</div>
