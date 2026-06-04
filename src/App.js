@@ -616,7 +616,7 @@ setXpLogs(p => {
         {view === "dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
         {view === "habits"    && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
         {view === "routines"  && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} workoutPlan={workoutPlan} setWorkoutPlan={setWorkoutPlan} skincarePlan={skincarePlan} setSkincarePlan={setSkincarePlan} dietPlan={dietPlan} setDietPlan={setDietPlan} haircarePlan={haircarePlan} setHaircarePlan={setHaircarePlan} spiritualPlan={spiritualPlan} setSpiritualPlan={setSpiritualPlan} />}
-        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} setJournalLogs={setJournalLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} />}
+        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} setJournalLogs={setJournalLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} setAchievements={setAchievements} />}
         {view === "stats"     && <StatsView xpLogs={xpLogs} achievements={achievements} logs={logs} getStreak={getStreak} nofapStreak={getNofapStreak()} />}
       </div>
 
@@ -774,7 +774,7 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
 }
 
 // ─── LOG HUB ──────────────────────────────────────────────────────────────────
-function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs, setXpLogs, checkinLogs, journalLogs, setJournalLogs, aiReviews, setAiReviews }) {
+function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs, setXpLogs, checkinLogs, journalLogs, setJournalLogs, aiReviews, setAchievements, setAiReviews }) {
   const today = todayKey();
   const todayW = workoutLogs[today] || {};
   const totalSets = Object.values(todayW).reduce((a, ex) => a + (ex.sets?.length || 0), 0);
@@ -908,7 +908,7 @@ function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLo
       </button>
       <JournalCard journalLogs={journalLogs} setJournalLogs={setJournalLogs} checkinLogs={checkinLogs} logs={logs} workoutLogs={workoutLogs} />
 <AIReviewCard logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={nofapStreak} />
-        <ResetProgress logs={logs} setLogs={setLogs} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} setAchievements={setAchievements}/>
+  <ResetProgress logs={logs} setLogs={setLogs} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} />
     </div>
   );
 }
@@ -2192,7 +2192,7 @@ function Stat({ label, value, color }) {
   );
 }
 
-function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, setNofapStart, xpLogs, setXpLogs }) {
+function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, setNofapStart, xpLogs, setXpLogs, setAchievements }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [reason, setReason] = useState("");
   const [selectedResets, setSelectedResets] = useState({ streaks: true, workout: true, weight: false, food: false });
