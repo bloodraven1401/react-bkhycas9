@@ -955,8 +955,7 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
     </div>
   );
 }
-        </div>
-        <div style={{ textAlign: "right" }}>
+       
           <div style={{ fontSize: 22, color: SLEEP_COLOR, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, lineHeight: 1 }}>{streak > 0 ? streak : weekScore}</div>
           <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>{streak > 0 ? "day streak 🔥" : `${weekScore}/7 this week`}</div>
         </div>
