@@ -697,14 +697,13 @@ function Dashboard({ logs, nofapStreak, weeklyPct, todayPct, getStreak, setView,
 function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
   const [editing, setEditing] = useState(false);
   const [habits, setHabits] = useLS("anant_v3_custom_habits", HABITS);
-  // Sync new default habits that don't exist in stored habits
-  React.useEffect(() => {
+  useEffect(() => {
     setHabits(p => {
       const ids = p.map(h => h.id);
       const missing = HABITS.filter(h => !ids.includes(h.id));
       return missing.length ? [...p, ...missing] : p;
     });
-  }, []);
+  }, []); // eslint-disable-line
   const done = habits.filter(h => todayLogs[h.id]?.done).length;
   const categories = [...new Set(habits.map(h => h.category))];
   const ALL_CATEGORIES = ["skincare","workout","diet","nofap","haircare","spiritual","productivity","sleep"];
