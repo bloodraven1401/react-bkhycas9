@@ -9,9 +9,8 @@ const C = {
 };
 const COLORS = {
   workout: C.workout, skincare: C.skincare, diet: C.diet,
-  nofap: C.nofap, haircare: C.haircare, spiritual: C.skincare, productivity: "#A07EE0"
+  nofap: C.nofap, haircare: C.haircare, spiritual: C.skincare, productivity: "#A07EE0", sleep: "#7c6fa0"
 };
-
 // ─── XP SYSTEM ────────────────────────────────────────────────────────────────
 const XP_VALUES = {
   h1: 15, h2: 15, h3: 10, h4: 50, h5: 20, h6: 15,
@@ -67,7 +66,8 @@ const HABITS = [
   { id: "h9",  label: "NoFap",             category: "nofap",        type: "binary",       icon: "⬡" },
   { id: "h10", label: "Guitar Practice",   category: "productivity", type: "binary",       icon: "♪" },
   { id: "h11", label: "No Junk Food",      category: "diet",         type: "binary",       icon: "◉" },
-  { id: "h12", label: "Pooja",             category: "spiritual",    type: "binary",       icon: "✦" },
+  { id: "h12", label: "Pooja", category: "spiritual", type: "binary", icon: "✦" },
+{ id: "h13", label: "Sleep Schedule", category: "sleep", type: "binary", icon: "☽" },
 ];
 
 const MOOD_LABELS = ["Dead Inside", "Struggling", "Holding On", "Locked In", "Unstoppable"];
@@ -446,7 +446,8 @@ setXpLogs(p => {
     });
   }, []); // eslint-disable-line
 
-  const [showCheckin, setShowCheckin] = useState(false);
+  const [showCheckin, setShowCheckin] = useState(false); 
+  const [sleepLogs, setSleepLogs] = useLS("anant_v3_sleep", {});
 
   useEffect(() => {
     const key = todayKey();
@@ -616,7 +617,7 @@ setXpLogs(p => {
         {view === "dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
         {view === "habits"    && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
         {view === "routines"  && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} workoutPlan={workoutPlan} setWorkoutPlan={setWorkoutPlan} skincarePlan={skincarePlan} setSkincarePlan={setSkincarePlan} dietPlan={dietPlan} setDietPlan={setDietPlan} haircarePlan={haircarePlan} setHaircarePlan={setHaircarePlan} spiritualPlan={spiritualPlan} setSpiritualPlan={setSpiritualPlan} />}
-        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} setJournalLogs={setJournalLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} setAchievements={setAchievements} />}
+        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} setJournalLogs={setJournalLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} setAchievements={setAchievements} sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} />}
         {view === "stats"     && <StatsView xpLogs={xpLogs} achievements={achievements} logs={logs} getStreak={getStreak} nofapStreak={getNofapStreak()} />}
       </div>
 
@@ -773,8 +774,124 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
   );
 }
 
+function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }) {
+  const today = todayKey();
+  const entry = sleepLogs[today] || {};
+  const [bedtime, setBedtime] = useState(entry.bedtime || "");
+  const [wakeTime, setWakeTime] = useState(entry.wakeTime || "");
+
+  const TARGET_BED = "23:00";
+  const TARGET_WAKE = "06:00";
+  const XP_AMOUNT = 20;
+
+  const sleptOnTime = entry.sleptOnTime || false;
+  const wokeOnTime = entry.wokeOnTime || false;
+
+  // streak calc
+  const streak = (() => {
+    let s = 0;
+    let d = new Date();
+    while (true) {
+      const k = d.toISOString().slice(0, 10);
+      const e = sleepLogs[k];
+      if (e && e.sleptOnTime && e.wokeOnTime) { s++; d.setDate(d.getDate() - 1); }
+      else break;
+    }
+    return s;
+  })();
+
+  const grantXP = () => {
+    const already = (xpLogs[today] || 0);
+    setXpLogs({ ...xpLogs, [today]: already + XP_AMOUNT });
+    const todayLogs = logs[today] || {};
+    setLogs({ ...logs, [today]: { ...todayLogs, h13: { done: true } } });
+  };
+
+  const revokeXP = () => {
+    const already = (xpLogs[today] || 0);
+    setXpLogs({ ...xpLogs, [today]: Math.max(0, already - XP_AMOUNT) });
+    const todayLogs = logs[today] || {};
+    setLogs({ ...logs, [today]: { ...todayLogs, h13: { done: false } } });
+  };
+
+  const updateEntry = (patch) => {
+    const updated = { ...entry, ...patch };
+    setSleepLogs({ ...sleepLogs, [today]: updated });
+
+    const bothDone = updated.sleptOnTime && updated.wokeOnTime;
+    const wasBothDone = entry.sleptOnTime && entry.wokeOnTime;
+    if (bothDone && !wasBothDone) grantXP();
+    if (!bothDone && wasBothDone) revokeXP();
+  };
+
+  const cardStyle = {
+    background: "var(--card)", borderRadius: 12, padding: "16px",
+    marginBottom: 12, border: "1px solid var(--border)"
+  };
+  const rowStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 };
+  const labelStyle = { fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: 1 };
+  const checkRow = { display: "flex", alignItems: "center", gap: 10, marginBottom: 8 };
+  const checkBox = (checked) => ({
+    width: 20, height: 20, borderRadius: 4,
+    border: `2px solid ${checked ? "#7c6fa0" : "var(--border)"}`,
+    background: checked ? "#7c6fa0" : "transparent",
+    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+  });
+  const inputStyle = {
+    background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 6,
+    color: "var(--text)", padding: "4px 8px", fontSize: 13, width: 100
+  };
+
+  return (
+    <div style={cardStyle}>
+      <div style={rowStyle}>
+        <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 1 }}>SLEEP SCHEDULE</span>
+        <span style={{ fontSize: 12, color: "#7c6fa0" }}>
+          {streak > 0 ? `🔥 ${streak}d streak` : "No streak"}
+        </span>
+      </div>
+      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 12 }}>
+        Target: Sleep by 11:00 PM · Wake at 6:00 AM · 7–8 hrs
+      </div>
+
+      {/* Checkboxes */}
+      <div style={checkRow}>
+        <div style={checkBox(sleptOnTime)} onClick={() => updateEntry({ sleptOnTime: !sleptOnTime })}>
+          {sleptOnTime && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}
+        </div>
+        <span style={{ fontSize: 13 }}>Slept by 11:00 PM</span>
+      </div>
+      <div style={checkRow}>
+        <div style={checkBox(wokeOnTime)} onClick={() => updateEntry({ wokeOnTime: !wokeOnTime })}>
+          {wokeOnTime && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}
+        </div>
+        <span style={{ fontSize: 13 }}>Woke at 6:00 AM</span>
+      </div>
+
+      {/* Time inputs */}
+      <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
+        <div>
+          <div style={labelStyle}>Actual Bedtime</div>
+          <input type="time" style={inputStyle} value={bedtime}
+            onChange={e => { setBedtime(e.target.value); updateEntry({ bedtime: e.target.value }); }} />
+        </div>
+        <div>
+          <div style={labelStyle}>Actual Wake Time</div>
+          <input type="time" style={inputStyle} value={wakeTime}
+            onChange={e => { setWakeTime(e.target.value); updateEntry({ wakeTime: e.target.value }); }} />
+        </div>
+      </div>
+
+      {/* XP badge */}
+      {sleptOnTime && wokeOnTime && (
+        <div style={{ marginTop: 12, fontSize: 12, color: "#7c6fa0" }}>+20 XP earned ✦</div>
+      )}
+    </div>
+  );
+}
+
 // ─── LOG HUB ──────────────────────────────────────────────────────────────────
-function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs, setXpLogs, checkinLogs, journalLogs, setJournalLogs, aiReviews, setAchievements, setAiReviews }) {
+function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs, setXpLogs, checkinLogs, journalLogs, setJournalLogs, aiReviews, setAiReviews, setAchievements, sleepLogs, setSleepLogs }) {
   const today = todayKey();
   const todayW = workoutLogs[today] || {};
   const totalSets = Object.values(todayW).reduce((a, ex) => a + (ex.sets?.length || 0), 0);
@@ -800,6 +917,8 @@ function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLo
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ fontSize: 10, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 4 }}>Log</div>
+
+      <SleepCard sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} />
 
       {/* Weight tracker */}
       <div style={{ background: C.surface, border: `1px solid ${C.haircare}25`, borderRadius: 14, padding: 16 }}>
