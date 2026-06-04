@@ -956,55 +956,7 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
     </div>
   );
 }
-  const today = todayKey();
-  const entry = sleepLogs[today] || {};
-  const [bedtime, setBedtime] = useState(entry.bedtime || "");
-  const [wakeTime, setWakeTime] = useState(entry.wakeTime || "");
-
-  const TARGET_BED = "23:00";
-  const TARGET_WAKE = "06:00";
-  const XP_AMOUNT = 20;
-
-  const sleptOnTime = entry.sleptOnTime || false;
-  const wokeOnTime = entry.wokeOnTime || false;
-
-  // streak calc
-  const streak = (() => {
-    let s = 0;
-    let d = new Date();
-    while (true) {
-      const k = d.toISOString().slice(0, 10);
-      const e = sleepLogs[k];
-      if (e && e.sleptOnTime && e.wokeOnTime) { s++; d.setDate(d.getDate() - 1); }
-      else break;
-    }
-    return s;
-  })();
-
-  const grantXP = () => {
-    const already = (xpLogs[today] || 0);
-    setXpLogs({ ...xpLogs, [today]: already + XP_AMOUNT });
-    const todayLogs = logs[today] || {};
-    setLogs({ ...logs, [today]: { ...todayLogs, h13: { done: true } } });
-  };
-
-  const revokeXP = () => {
-    const already = (xpLogs[today] || 0);
-    setXpLogs({ ...xpLogs, [today]: Math.max(0, already - XP_AMOUNT) });
-    const todayLogs = logs[today] || {};
-    setLogs({ ...logs, [today]: { ...todayLogs, h13: { done: false } } });
-  };
-
-  const updateEntry = (patch) => {
-    const updated = { ...entry, ...patch };
-    setSleepLogs({ ...sleepLogs, [today]: updated });
-
-    const bothDone = updated.sleptOnTime && updated.wokeOnTime;
-    const wasBothDone = entry.sleptOnTime && entry.wokeOnTime;
-    if (bothDone && !wasBothDone) grantXP();
-    if (!bothDone && wasBothDone) revokeXP();
-  };
-
+  
  return (
     <div style={{ background: C.surface, border: `1px solid ${SLEEP_COLOR}30`, borderRadius: 14, padding: 16, marginBottom: 4 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
