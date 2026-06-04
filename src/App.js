@@ -697,9 +697,17 @@ function Dashboard({ logs, nofapStreak, weeklyPct, todayPct, getStreak, setView,
 function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
   const [editing, setEditing] = useState(false);
   const [habits, setHabits] = useLS("anant_v3_custom_habits", HABITS);
+  // Sync new default habits that don't exist in stored habits
+  React.useEffect(() => {
+    setHabits(p => {
+      const ids = p.map(h => h.id);
+      const missing = HABITS.filter(h => !ids.includes(h.id));
+      return missing.length ? [...p, ...missing] : p;
+    });
+  }, []);
   const done = habits.filter(h => todayLogs[h.id]?.done).length;
   const categories = [...new Set(habits.map(h => h.category))];
-  const ALL_CATEGORIES = ["skincare","workout","diet","nofap","haircare","spiritual","productivity"];
+  const ALL_CATEGORIES = ["skincare","workout","diet","nofap","haircare","spiritual","productivity","sleep"];
 
   function addHabit(cat) {
     const newId = `custom_${Date.now()}`;
@@ -775,6 +783,180 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
 }
 
 function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }) {
+  const today = todayKey();
+  const entry = sleepLogs[today] || {};
+  const [bedtime, setBedtime] = useState(entry.bedtime || "");
+  const [wakeTime, setWakeTime] = useState(entry.wakeTime || "");
+  const SLEEP_COLOR = "#7c6fa0";
+  const XP_AMOUNT = 20;
+
+  const sleptOnTime = entry.sleptOnTime || false;
+  const wokeOnTime = entry.wokeOnTime || false;
+
+  const streak = (() => {
+    let s = 0;
+    let d = new Date();
+    while (true) {
+      const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+      const k = ist.toISOString().split("T")[0];
+      const e = sleepLogs[k];
+      if (e && e.sleptOnTime && e.wokeOnTime) { s++; d.setDate(d.getDate() - 1); }
+      else break;
+    }
+    return s;
+  })();
+
+  // Last 7 days for mini chart
+  const last7Data = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+    const k = ist.toISOString().split("T")[0];
+    const e = sleepLogs[k] || {};
+    const label = new Date(k + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short" });
+    // calculate hours slept if both times logged
+    let hours = 0;
+    if (e.bedtime && e.wakeTime) {
+      const [bh, bm] = e.bedtime.split(":").map(Number);
+      const [wh, wm] = e.wakeTime.split(":").map(Number);
+      let mins = (wh * 60 + wm) - (bh * 60 + bm);
+      if (mins < 0) mins += 24 * 60;
+      hours = parseFloat((mins / 60).toFixed(1));
+    }
+    return { k, label, slept: e.sleptOnTime || false, woke: e.wokeOnTime || false, hours, both: (e.sleptOnTime && e.wokeOnTime) || false };
+  });
+
+  const grantXP = () => {
+    setXpLogs(p => ({ ...p, [today]: (p[today] || 0) + XP_AMOUNT }));
+    setLogs(p => ({ ...p, [today]: { ...(p[today] || {}), h13: { done: true } } }));
+  };
+  const revokeXP = () => {
+    setXpLogs(p => ({ ...p, [today]: Math.max(0, (p[today] || 0) - XP_AMOUNT) }));
+    setLogs(p => ({ ...p, [today]: { ...(p[today] || {}), h13: { done: false } } }));
+  };
+
+  const updateEntry = (patch) => {
+    const updated = { ...entry, ...patch };
+    setSleepLogs(p => ({ ...p, [today]: updated }));
+    const bothDone = updated.sleptOnTime && updated.wokeOnTime;
+    const wasBothDone = entry.sleptOnTime && entry.wokeOnTime;
+    if (bothDone && !wasBothDone) grantXP();
+    if (!bothDone && wasBothDone) revokeXP();
+  };
+
+  const weekScore = last7Data.filter(d => d.both).length;
+
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${SLEEP_COLOR}30`, borderRadius: 14, padding: 16, marginBottom: 4 }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 10, color: SLEEP_COLOR, letterSpacing: 3, textTransform: "uppercase", marginBottom: 4 }}>Sleep Schedule</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, lineHeight: 1 }}>Rest & Recovery</div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 22, color: SLEEP_COLOR, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, lineHeight: 1 }}>
+            {streak > 0 ? streak : weekScore}
+          </div>
+          <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>
+            {streak > 0 ? "day streak 🔥" : `${weekScore}/7 this week`}
+          </div>
+        </div>
+      </div>
+
+      {/* Target bar */}
+      <div style={{ background: `${SLEEP_COLOR}12`, border: `1px solid ${SLEEP_COLOR}20`, borderRadius: 8, padding: "8px 12px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: 11, color: C.muted }}>Target</div>
+        <div style={{ display: "flex", gap: 14 }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 12, color: SLEEP_COLOR }}>11:00 PM</div>
+            <div style={{ fontSize: 9, color: C.muted }}>Sleep by</div>
+          </div>
+          <div style={{ width: 1, background: C.border }} />
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 12, color: SLEEP_COLOR }}>6:00 AM</div>
+            <div style={{ fontSize: 9, color: C.muted }}>Wake at</div>
+          </div>
+          <div style={{ width: 1, background: C.border }} />
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 12, color: SLEEP_COLOR }}>7h</div>
+            <div style={{ fontSize: 9, color: C.muted }}>Duration</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Checkboxes */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+        {[
+          { key: "sleptOnTime", val: sleptOnTime, label: "Slept by 11:00 PM" },
+          { key: "wokeOnTime",  val: wokeOnTime,  label: "Woke at 6:00 AM"  },
+        ].map(({ key, val, label }) => (
+          <div key={key} onClick={() => updateEntry({ [key]: !val })}
+            style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 10, cursor: "pointer", background: val ? `${SLEEP_COLOR}12` : C.faint, border: `1px solid ${val ? SLEEP_COLOR + "40" : C.border}`, transition: "all 0.2s" }}>
+            <div style={{ width: 22, height: 22, borderRadius: 6, background: val ? SLEEP_COLOR : "transparent", border: `2px solid ${val ? SLEEP_COLOR : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {val && <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</span>}
+            </div>
+            <span style={{ fontSize: 13, color: val ? C.text : "#888" }}>{label}</span>
+            {val && <span style={{ marginLeft: "auto", fontSize: 10, color: SLEEP_COLOR }}>✦</span>}
+          </div>
+        ))}
+      </div>
+
+      {/* Time inputs */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+        {[
+          { label: "Actual Bedtime", val: bedtime, setter: setBedtime, key: "bedtime" },
+          { label: "Actual Wake Time", val: wakeTime, setter: setWakeTime, key: "wakeTime" },
+        ].map(({ label, val, setter, key }) => (
+          <div key={key} style={{ background: C.faint, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 12px" }}>
+            <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
+            <input type="time" style={{ background: "transparent", border: "none", color: SLEEP_COLOR, fontSize: 16, fontFamily: "'DM Mono',monospace", outline: "none", width: "100%" }}
+              value={val} onChange={e => { setter(e.target.value); updateEntry({ [key]: e.target.value }); }} />
+          </div>
+        ))}
+      </div>
+
+      {/* Hours slept display */}
+      {bedtime && wakeTime && (() => {
+        const [bh, bm] = bedtime.split(":").map(Number);
+        const [wh, wm] = wakeTime.split(":").map(Number);
+        let mins = (wh * 60 + wm) - (bh * 60 + bm);
+        if (mins < 0) mins += 24 * 60;
+        const hrs = (mins / 60).toFixed(1);
+        const good = parseFloat(hrs) >= 7;
+        return (
+          <div style={{ background: `${good ? SLEEP_COLOR : C.nofap}12`, border: `1px solid ${good ? SLEEP_COLOR : C.nofap}30`, borderRadius: 8, padding: "8px 14px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 11, color: C.muted }}>Duration logged</span>
+            <span style={{ fontSize: 16, color: good ? SLEEP_COLOR : C.nofap, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{hrs}h {good ? "✦" : "⚠"}</span>
+          </div>
+        );
+      })()}
+
+      {/* XP badge */}
+      {sleptOnTime && wokeOnTime && (
+        <div style={{ background: `${SLEEP_COLOR}15`, border: `1px solid ${SLEEP_COLOR}30`, borderRadius: 8, padding: "8px 14px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 11, color: C.muted }}>XP earned today</span>
+          <span style={{ fontSize: 13, color: SLEEP_COLOR }}>+{XP_AMOUNT} XP ✦</span>
+        </div>
+      )}
+
+      {/* 7-day mini chart */}
+      <div style={{ marginTop: 4 }}>
+        <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Last 7 Nights</div>
+        <div style={{ display: "flex", gap: 4 }}>
+          {last7Data.map((d, i) => (
+            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div style={{ width: "100%", height: 36, borderRadius: 5, background: d.both ? `${SLEEP_COLOR}70` : d.slept || d.woke ? `${SLEEP_COLOR}25` : C.faint, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${d.both ? SLEEP_COLOR + "50" : C.border}` }}>
+                {d.hours > 0 && <span style={{ fontSize: 8, color: d.both ? "#fff" : C.muted }}>{d.hours}h</span>}
+              </div>
+              <div style={{ fontSize: 8, color: d.k === today ? SLEEP_COLOR : C.muted }}>{d.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
   const today = todayKey();
   const entry = sleepLogs[today] || {};
   const [bedtime, setBedtime] = useState(entry.bedtime || "");
