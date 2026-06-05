@@ -2148,11 +2148,138 @@ function RoutinesView({ selected, setSelected, nofapStreak, setNofapStart, nofap
       {selected === "nofap"     && <NofapPlan     nofapStreak={nofapStreak} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} />}
       {selected === "haircare"  && <HaircarePlan  plan={haircarePlan}  setPlan={setHaircarePlan} />}
       {selected === "spiritual" && <SpiritualPlan plan={spiritualPlan} setPlan={setSpiritualPlan} />}
-      {!["workout","skincare","diet","nofap","haircare","spiritual"].includes(selected) && (
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 24, textAlign: "center", color: C.muted, fontSize: 13 }}>
-          Custom plan — content editor coming soon.
+
+      // ─── CUSTOM PLAN EDITOR ───────────────────────────────────────────────────────
+function CustomPlanEditor({ planId, planList, setPlanList }) {
+  const plan = planList.find(p => p.id === planId);
+  const [customPlans, setCustomPlans] = useLS("anant_v3_custom_plans", {});
+  const content = customPlans[planId] || { sections: [] };
+
+  function setContent(updater) {
+    setCustomPlans(p => {
+      const current = p[planId] || { sections: [] };
+      const updated = typeof updater === "function" ? updater(current) : updater;
+      return { ...p, [planId]: updated };
+    });
+  }
+
+  function addSection() {
+    setContent(p => ({ ...p, sections: [...p.sections, { id: `s_${Date.now()}`, title: "New Section", items: [] }] }));
+  }
+  function removeSection(sid) {
+    setContent(p => ({ ...p, sections: p.sections.filter(s => s.id !== sid) }));
+  }
+  function updateSectionTitle(sid, val) {
+    setContent(p => ({ ...p, sections: p.sections.map(s => s.id === sid ? { ...s, title: val } : s) }));
+  }
+  function addItem(sid) {
+    setContent(p => ({ ...p, sections: p.sections.map(s => s.id === sid ? { ...s, items: [...s.items, { id: `i_${Date.now()}`, text: "", note: "" }] } : s) }));
+  }
+  function removeItem(sid, iid) {
+    setContent(p => ({ ...p, sections: p.sections.map(s => s.id === sid ? { ...s, items: s.items.filter(it => it.id !== iid) } : s) }));
+  }
+  function updateItem(sid, iid, field, val) {
+    setContent(p => ({ ...p, sections: p.sections.map(s => s.id === sid ? { ...s, items: s.items.map(it => it.id === iid ? { ...it, [field]: val } : it) } : s) }));
+  }
+  function updatePlanColor(val) {
+    setPlanList(p => p.map(pl => pl.id === planId ? { ...pl, color: val } : pl));
+  }
+  function updatePlanIcon(val) {
+    setPlanList(p => p.map(pl => pl.id === planId ? { ...pl, icon: val } : pl));
+  }
+
+  const color = plan?.color || C.skincare;
+  const ICON_OPTIONS = ["◆", "◉", "◈", "✦", "⬡", "★", "♪", "◎", "◇", "▲", "⚡", "☽"];
+  const COLOR_OPTIONS = [C.workout, C.skincare, C.diet, C.nofap, C.haircare, "#A07EE0", "#7c6fa0", "#FFD700", "#4CAF50", "#FF5722"];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Plan header */}
+      <div style={{ background: C.surface, border: `1px solid ${color}30`, borderRadius: 14, padding: 16 }}>
+        <div style={{ fontSize: 9, color, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>Plan Settings</div>
+
+        {/* Icon picker */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>Icon</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {ICON_OPTIONS.map(ic => (
+              <button key={ic} onClick={() => updatePlanIcon(ic)} style={{ width: 36, height: 36, borderRadius: 8, background: plan?.icon === ic ? `${color}20` : C.faint, border: `1px solid ${plan?.icon === ic ? color : C.border}`, color: plan?.icon === ic ? color : C.muted, fontSize: 16, fontFamily: "inherit", cursor: "pointer" }}>
+                {ic}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Color picker */}
+        <div>
+          <div style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>Color</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {COLOR_OPTIONS.map(col => (
+              <button key={col} onClick={() => updatePlanColor(col)} style={{ width: 28, height: 28, borderRadius: "50%", background: col, border: `2px solid ${plan?.color === col ? "#fff" : "transparent"}`, cursor: "pointer", boxShadow: plan?.color === col ? `0 0 8px ${col}` : "none" }} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Sections */}
+      {content.sections.length === 0 ? (
+        <div style={{ background: C.surface, border: `1px dashed ${color}30`, borderRadius: 12, padding: 24, textAlign: "center" }}>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 14, lineHeight: 1.7 }}>
+            No content yet. Add a section to start building your plan.
+          </div>
+          <button onClick={addSection} style={{ background: `${color}15`, border: `1px solid ${color}40`, borderRadius: 8, padding: "10px 20px", color, fontSize: 12, fontFamily: "inherit", cursor: "pointer" }}>
+            + Add First Section
+          </button>
+        </div>
+      ) : (
+        content.sections.map((sec, si) => (
+          <div key={sec.id} style={{ background: C.surface, border: `1px solid ${color}18`, borderRadius: 12, padding: 14 }}>
+            {/* Section header */}
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
+              <input
+                style={{ ...editInput, flex: 1, color, fontSize: 11, letterSpacing: 1, textTransform: "uppercase" }}
+                value={sec.title}
+                onChange={e => updateSectionTitle(sec.id, e.target.value)}
+                placeholder="Section title"
+              />
+              <RemoveBtn onClick={() => removeSection(sec.id)} />
+            </div>
+
+            {/* Items */}
+            {sec.items.map((item, ii) => (
+              <div key={item.id} style={{ borderBottom: ii < sec.items.length - 1 ? `1px solid ${C.border}` : "none", padding: "8px 0" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <span style={{ color, fontSize: 10, flexShrink: 0, marginTop: 8 }}>·</span>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+                    <input
+                      style={editInput}
+                      value={item.text}
+                      onChange={e => updateItem(sec.id, item.id, "text", e.target.value)}
+                      placeholder="Step / task / item"
+                    />
+                    <input
+                      style={{ ...editInput, color: C.muted, fontSize: 11 }}
+                      value={item.note}
+                      onChange={e => updateItem(sec.id, item.id, "note", e.target.value)}
+                      placeholder="Note (optional)"
+                    />
+                  </div>
+                  <RemoveBtn onClick={() => removeItem(sec.id, item.id)} />
+                </div>
+              </div>
+            ))}
+
+            <AddButton onClick={() => addItem(sec.id)} label="+ Add item" color={color} />
+          </div>
+        ))
       )}
+
+      {content.sections.length > 0 && (
+        <AddButton onClick={addSection} label="+ Add Section" color={color} />
+      )}
+    </div>
+  );
+}
     </div>
   );
 }
