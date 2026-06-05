@@ -446,8 +446,10 @@ setXpLogs(p => {
     });
   }, []); // eslint-disable-line
 
-  const [showCheckin, setShowCheckin] = useState(false); 
+const [showCheckin, setShowCheckin] = useState(false); 
   const [sleepLogs, setSleepLogs] = useLS("anant_v3_sleep", {});
+  const [measurements, setMeasurements] = useLS("anant_v3_measurements", {});
+  const [quests, setQuests] = useLS("anant_v3_quests", {});
 
   useEffect(() => {
     const key = todayKey();
@@ -552,7 +554,8 @@ setXpLogs(p => {
 
   if (subView === "workoutlog") return <WorkoutLogger workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} workoutPlan={workoutPlan} onBack={() => setSubView(null)} />;
   if (subView === "foodlog")    return <FoodLogger foodLogs={foodLogs} setFoodLogs={setFoodLogs} onBack={() => setSubView(null)} />;
-  if (subView === "analytics")  return <AnalyticsView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} nofapStreak={getNofapStreak()} weightLogs={weightLogs} onBack={() => setSubView(null)} />;
+  if (subView === "analytics")  return <AnalyticsView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} nofapStreak={getNofapStreak()} weightLogs={weightLogs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} onBack={() => setSubView(null)} setView={setView} setSelectedDate={setSelectedDate} />;
+  if (subView === "measurements") return <MeasurementsView measurements={measurements} setMeasurements={setMeasurements} onBack={() => setSubView(null)} />;
 
   return (
     <div style={{ minHeight: "100dvh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", width: "100vw", maxWidth: "100%", margin: "0 auto", paddingBottom: 80, overflowX: "hidden", position: "relative" }}>
@@ -617,7 +620,7 @@ setXpLogs(p => {
         {view === "dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
         {view === "habits"    && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
         {view === "routines"  && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} workoutPlan={workoutPlan} setWorkoutPlan={setWorkoutPlan} skincarePlan={skincarePlan} setSkincarePlan={setSkincarePlan} dietPlan={dietPlan} setDietPlan={setDietPlan} haircarePlan={haircarePlan} setHaircarePlan={setHaircarePlan} spiritualPlan={spiritualPlan} setSpiritualPlan={setSpiritualPlan} />}
-        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} setJournalLogs={setJournalLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} setAchievements={setAchievements} sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} />}
+        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} setJournalLogs={setJournalLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} setAchievements={setAchievements} sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} measurements={measurements} setMeasurements={setMeasurements} quests={quests} setQuests={setQuests} />}
         {view === "stats"     && <StatsView xpLogs={xpLogs} achievements={achievements} logs={logs} getStreak={getStreak} nofapStreak={getNofapStreak()} />}
       </div>
 
@@ -955,10 +958,538 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
     </div>
   );
 }
+
+// ─── DAILY QUESTS ─────────────────────────────────────────────────────────────
+const QUEST_POOL = [
+  { id: "q_all_skincare", label: "Complete all skincare steps", category: "skincare", xp: 25, check: (logs, t) => ["h1","h2","h3"].every(h => logs[t]?.[h]?.done) },
+  { id: "q_workout", label: "Log a workout today", category: "workout", xp: 50, check: (_, __, wl, t) => Object.values(wl[t] || {}).some(ex => ex.sets?.length > 0) },
+  { id: "q_protein", label: "Hit your protein goal", category: "diet", xp: 30, check: (logs, t) => logs[t]?.h5?.done },
+  { id: "q_all_meals", label: "Complete all 6 meals", category: "diet", xp: 35, check: (logs, t) => logs[t]?.h7?.done },
+  { id: "q_water", label: "Hit 3L water intake", category: "diet", xp: 25, check: (logs, t) => (logs[t]?.h6?.value || 0) >= 3 },
+  { id: "q_nofap", label: "Stay clean today", category: "nofap", xp: 40, check: (logs, t) => logs[t]?.h9?.done },
+  { id: "q_guitar", label: "Practice guitar today", category: "productivity", xp: 30, check: (logs, t) => logs[t]?.h10?.done },
+  { id: "q_pooja", label: "Complete your pooja", category: "spiritual", xp: 25, check: (logs, t) => logs[t]?.h12?.done },
+  { id: "q_sleep", label: "Sleep & wake on schedule", category: "sleep", xp: 30, check: (_, t, __, ___, sl) => sl[t]?.sleptOnTime && sl[t]?.wokeOnTime },
+  { id: "q_no_junk", label: "Zero junk food today", category: "diet", xp: 25, check: (logs, t) => logs[t]?.h11?.done },
+  { id: "q_supplements", label: "Take all supplements", category: "diet", xp: 20, check: (logs, t) => logs[t]?.h8?.done },
+  { id: "q_sunscreen", label: "Apply sunscreen", category: "skincare", xp: 15, check: (logs, t) => logs[t]?.h3?.done },
+  { id: "q_perfect_day", label: "Complete 10+ habits", category: "workout", xp: 75, check: (logs, t) => HABITS.filter(h => logs[t]?.[h.id]?.done).length >= 10 },
+  { id: "q_all_diet", label: "Complete all diet habits", category: "diet", xp: 60, check: (logs, t) => ["h5","h7","h8","h11"].every(h => logs[t]?.[h]?.done) },
+];
+
+function getWeakCategories(logs, checkinLogs) {
+  const range = Array.from({ length: 14 }, (_, i) => dateKey(-(13 - i)));
+  const catScores = {};
+  Object.keys(COLORS).forEach(cat => {
+    const catH = HABITS.filter(h => h.category === cat);
+    if (!catH.length) return;
+    let done = 0, total = 0;
+    range.forEach(d => catH.forEach(h => { total++; if (logs[d]?.[h.id]?.done) done++; }));
+    catScores[cat] = total ? done / total : 0;
+  });
+  return Object.entries(catScores).sort((a, b) => a[1] - b[1]).map(([cat]) => cat);
+}
+
+function generateDailyQuests(logs, checkinLogs, sleepLogs, workoutLogs, foodLogs) {
+  const weak = getWeakCategories(logs, checkinLogs);
+  const today = todayKey();
+  // Weight quests by weak category
+  const weighted = QUEST_POOL.map(q => ({
+    ...q,
+    weight: weak.indexOf(q.category) !== -1 ? (5 - Math.min(weak.indexOf(q.category), 4)) : 1
+  }));
+  // Shuffle weighted
+  const pool = [];
+  weighted.forEach(q => { for (let i = 0; i < q.weight; i++) pool.push(q); });
+  const shuffled = pool.sort(() => {
+    // deterministic seed from today's date
+    const seed = parseInt(today.replace(/-/g, "")) % 997;
+    return (Math.sin(seed + pool.indexOf(pool[0])) * 10000) % 1 - 0.5;
+  });
+  const seen = new Set();
+  const picked = [];
+  for (const q of shuffled) {
+    if (!seen.has(q.id) && picked.length < 3) { seen.add(q.id); picked.push(q); }
+  }
+  return picked;
+}
+
+function DailyQuestsCard({ quests, setQuests, logs, setLogs, xpLogs, setXpLogs, checkinLogs, sleepLogs, workoutLogs, foodLogs }) {
+  const today = todayKey();
+  const todayQuests = quests[today];
+
+  useEffect(() => {
+    if (!quests[today]) {
+      const generated = generateDailyQuests(logs, checkinLogs, sleepLogs, workoutLogs, foodLogs);
+      setQuests(p => ({ ...p, [today]: generated.map(q => ({ ...q, completed: false, xpAwarded: false })) }));
+    }
+  }, []); // eslint-disable-line
+
+  // Auto-complete quests based on habit state
+  useEffect(() => {
+    if (!todayQuests) return;
+    let changed = false;
+    const updated = todayQuests.map(q => {
+      if (q.completed) return q;
+      const done = q.check(logs, today, workoutLogs, foodLogs, sleepLogs);
+      if (done) { changed = true; return { ...q, completed: true }; }
+      return q;
+    });
+    if (changed) {
+      // Award XP for newly completed
+      updated.forEach((q, i) => {
+        if (q.completed && !todayQuests[i].xpAwarded) {
+          setXpLogs(p => ({ ...p, [today]: (p[today] || 0) + q.xp }));
+          updated[i] = { ...q, xpAwarded: true };
+        }
+      });
+      setQuests(p => ({ ...p, [today]: updated }));
+    }
+  }, [logs, sleepLogs, workoutLogs]); // eslint-disable-line
+
+  if (!todayQuests) return null;
+  const completedCount = todayQuests.filter(q => q.completed).length;
+  const SLEEP_COLOR = "#7c6fa0";
+
+  return (
+    <div style={{ background: C.surface, border: `1px solid #FFD70025`, borderRadius: 14, padding: 16, marginBottom: 4 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 10, color: "#FFD700", letterSpacing: 3, textTransform: "uppercase", marginBottom: 4 }}>Daily Quests</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, lineHeight: 1 }}>Today's Challenges</div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 22, color: "#FFD700", fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{completedCount}/3</div>
+          <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>completed</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {todayQuests.map((q, i) => (
+          <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 10, background: q.completed ? `#FFD70010` : C.faint, border: `1px solid ${q.completed ? "#FFD70040" : C.border}`, transition: "all 0.3s" }}>
+            <div style={{ width: 22, height: 22, borderRadius: 6, background: q.completed ? "#FFD700" : "transparent", border: `2px solid ${q.completed ? "#FFD700" : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {q.completed && <span style={{ color: "#000", fontSize: 11, fontWeight: 700 }}>✓</span>}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: q.completed ? C.text : "#888" }}>{q.label}</div>
+              <div style={{ fontSize: 10, color: COLORS[q.category] || C.muted, marginTop: 2 }}>{q.category}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 12, color: "#FFD700" }}>+{q.xp} XP</div>
+              {q.completed && <div style={{ fontSize: 9, color: C.muted }}>earned ✦</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+      {completedCount === 3 && (
+        <div style={{ marginTop: 12, background: "#FFD70015", border: "1px solid #FFD70030", borderRadius: 8, padding: "8px 14px", textAlign: "center", fontSize: 12, color: "#FFD700" }}>
+          All quests complete. Legendary day. ✦
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── MEASUREMENTS VIEW ────────────────────────────────────────────────────────
+const MEASUREMENT_FIELDS = [
+  { id: "chest", label: "Chest", unit: "cm", icon: "◆" },
+  { id: "shoulder", label: "Shoulder Width", unit: "cm", icon: "◆" },
+  { id: "waist", label: "Waist", unit: "cm", icon: "◆" },
+  { id: "hips", label: "Hips", unit: "cm", icon: "◆" },
+  { id: "neck", label: "Neck", unit: "cm", icon: "◆" },
+  { id: "arm_l", label: "Left Arm", unit: "cm", icon: "◆" },
+  { id: "arm_r", label: "Right Arm", unit: "cm", icon: "◆" },
+  { id: "forearm_l", label: "Left Forearm", unit: "cm", icon: "◆" },
+  { id: "forearm_r", label: "Right Forearm", unit: "cm", icon: "◆" },
+  { id: "thigh_l", label: "Left Thigh", unit: "cm", icon: "◆" },
+  { id: "thigh_r", label: "Right Thigh", unit: "cm", icon: "◆" },
+  { id: "calf_l", label: "Left Calf", unit: "cm", icon: "◆" },
+  { id: "calf_r", label: "Right Calf", unit: "cm", icon: "◆" },
+];
+
+function MeasurementsView({ measurements, setMeasurements, onBack }) {
+  const today = todayKey();
+  const [inputs, setInputs] = useState({});
+  const [showForm, setShowForm] = useState(false);
+  const [selectedField, setSelectedField] = useState(null);
+
+  const allDates = Object.keys(measurements).sort();
+  const latest = allDates.length ? measurements[allDates[allDates.length - 1]] : {};
+  const prev = allDates.length > 1 ? measurements[allDates[allDates.length - 2]] : {};
+
+  function saveAll() {
+    const filtered = Object.fromEntries(Object.entries(inputs).filter(([_, v]) => v !== ""));
+    if (Object.keys(filtered).length === 0) return;
+    setMeasurements(p => ({ ...p, [today]: { ...(p[today] || {}), ...Object.fromEntries(Object.entries(filtered).map(([k, v]) => [k, parseFloat(v)])) } }));
+    setInputs({});
+    setShowForm(false);
+  }
+
+  function getHistory(fieldId) {
+    return allDates.map(d => ({ date: d, value: measurements[d]?.[fieldId] })).filter(d => d.value != null).slice(-8);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1 }}>← Back</button>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Body Measurements</div>
+      </div>
+
+      {/* Log new measurements button */}
+      {!showForm ? (
+        <button onClick={() => setShowForm(true)} style={{ width: "100%", background: C.faint, border: `1px dashed ${C.haircare}40`, borderRadius: 10, padding: 12, color: C.haircare, fontSize: 12, fontFamily: "inherit", marginBottom: 16 }}>
+          + Log Today's Measurements
+        </button>
+      ) : (
+        <div style={{ background: C.surface, border: `1px solid ${C.haircare}25`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+          <div style={{ fontSize: 10, color: C.haircare, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>Log Measurements — {today}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+            {MEASUREMENT_FIELDS.map(f => (
+              <div key={f.id} style={{ background: C.faint, borderRadius: 8, padding: "10px 12px" }}>
+                <div style={{ fontSize: 9, color: C.muted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>{f.label}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <input type="number" step="0.1" placeholder={latest[f.id] ? `${latest[f.id]}` : "—"} value={inputs[f.id] || ""} onChange={e => setInputs(p => ({ ...p, [f.id]: e.target.value }))} style={{ flex: 1, fontSize: 14, padding: "4px 6px", background: "transparent", border: "none", borderBottom: `1px solid ${C.border}`, borderRadius: 0, color: C.text }} />
+                  <span style={{ fontSize: 10, color: C.muted }}>cm</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => { setShowForm(false); setInputs({}); }} style={{ flex: 1, background: "none", border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, color: C.muted, fontSize: 12, fontFamily: "inherit" }}>Cancel</button>
+            <button onClick={saveAll} style={{ flex: 2, background: C.haircare, border: "none", borderRadius: 8, padding: 10, color: "#000", fontSize: 12, fontFamily: "inherit" }}>Save</button>
+          </div>
+        </div>
+      )}
+
+      {/* Current measurements grid */}
+      {allDates.length > 0 && (
+        <div style={{ background: C.surface, border: `1px solid ${C.haircare}25`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+          <div style={{ fontSize: 10, color: C.haircare, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>Current Measurements</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {MEASUREMENT_FIELDS.map(f => {
+              const val = latest[f.id];
+              const prevVal = prev[f.id];
+              const diff = val && prevVal ? (val - prevVal).toFixed(1) : null;
+              return (
+                <div key={f.id} onClick={() => setSelectedField(selectedField === f.id ? null : f.id)} style={{ background: C.faint, borderRadius: 10, padding: "10px 12px", cursor: "pointer", border: `1px solid ${selectedField === f.id ? C.haircare + "50" : C.border}` }}>
+                  <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{f.label}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span style={{ fontSize: 18, color: C.haircare, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{val ? `${val}` : "—"}</span>
+                    {val && <span style={{ fontSize: 9, color: C.muted }}>cm</span>}
+                  </div>
+                  {diff && <div style={{ fontSize: 9, color: parseFloat(diff) >= 0 ? C.haircare : C.nofap, marginTop: 2 }}>{parseFloat(diff) >= 0 ? "+" : ""}{diff}cm</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* History graph for selected field */}
+      {selectedField && (() => {
+        const history = getHistory(selectedField);
+        const field = MEASUREMENT_FIELDS.find(f => f.id === selectedField);
+        if (history.length < 2) return <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, marginBottom: 12, textAlign: "center", fontSize: 11, color: C.muted }}>Log at least 2 entries to see progress</div>;
+        const max = Math.max(...history.map(h => h.value));
+        const min = Math.min(...history.map(h => h.value));
+        return (
+          <div style={{ background: C.surface, border: `1px solid ${C.haircare}25`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+            <div style={{ fontSize: 10, color: C.haircare, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>{field.label} — Progress</div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 70 }}>
+              {history.map((h, i) => {
+                const barH = min === max ? 40 : Math.max(8, ((h.value - min) / (max - min)) * 60);
+                return (
+                  <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                    <div style={{ fontSize: 8, color: C.haircare }}>{h.value}</div>
+                    <div style={{ width: "100%", background: `${C.haircare}70`, borderRadius: "3px 3px 0 0", height: `${barH}px` }} />
+                    <div style={{ fontSize: 7, color: C.muted }}>{new Date(h.date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {allDates.length === 0 && (
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 24, textAlign: "center", color: C.muted, fontSize: 12 }}>
+          No measurements logged yet. Tap above to start tracking.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── HEATMAP VIEW ─────────────────────────────────────────────────────────────
+function HeatmapView({ logs, checkinLogs, sleepLogs, setView, setSelectedDate }) {
+  const [months, setMonths] = useState(3);
+  const [mode, setMode] = useState("overall");
+  const [selectedCat, setSelectedCat] = useState("workout");
+  const [popup, setPopup] = useState(null);
+  const SLEEP_COLOR = "#7c6fa0";
+
+  const endDate = new Date(todayKey() + "T12:00:00");
+  const startDate = new Date(endDate);
+  if (months === "all") startDate.setFullYear(startDate.getFullYear() - 2);
+  else startDate.setMonth(startDate.getMonth() - months);
+
+  const days = [];
+  const d = new Date(startDate);
+  while (d <= endDate) {
+    days.push(d.toISOString().split("T")[0]);
+    d.setDate(d.getDate() + 1);
+  }
+
+  function getDayValue(date) {
+    if (mode === "overall") {
+      const done = HABITS.filter(h => logs[date]?.[h.id]?.done).length;
+      return done / HABITS.length;
+    } else {
+      const catH = HABITS.filter(h => h.category === selectedCat);
+      if (!catH.length) return 0;
+      const done = catH.filter(h => logs[date]?.[h.id]?.done).length;
+      return done / catH.length;
+    }
+  }
+
+  function getColor(val) {
+    if (val === 0) return C.faint;
+    const color = mode === "overall" ? C.skincare : (COLORS[selectedCat] || C.skincare);
+    const alpha = Math.round(20 + val * 200).toString(16).padStart(2, "0");
+    return `${color}${alpha}`;
+  }
+
+  // Group by weeks
+  const weeks = [];
+  let week = [];
+  const firstDay = new Date(days[0] + "T12:00:00").getDay();
+  for (let i = 0; i < firstDay; i++) week.push(null);
+  days.forEach(d => {
+    week.push(d);
+    if (week.length === 7) { weeks.push(week); week = []; }
+  });
+  if (week.length) { while (week.length < 7) week.push(null); weeks.push(week); }
+
+  const DAY_LABELS = ["S","M","T","W","T","F","S"];
+
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.skincare}25`, borderRadius: 14, padding: 16, marginBottom: 12 }}>
+      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Habit Heatmap</div>
+
+      {/* Controls */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+        {[3, 6, "all"].map(m => (
+          <button key={m} onClick={() => setMonths(m)} style={{ background: months === m ? C.skincare : C.faint, border: `1px solid ${months === m ? C.skincare : C.border}`, borderRadius: 6, padding: "4px 10px", color: months === m ? "#000" : C.muted, fontSize: 10, fontFamily: "inherit" }}>
+            {m === "all" ? "All" : `${m}mo`}
+          </button>
+        ))}
+        <div style={{ width: 1, background: C.border }} />
+        <button onClick={() => setMode("overall")} style={{ background: mode === "overall" ? C.skincare : C.faint, border: `1px solid ${mode === "overall" ? C.skincare : C.border}`, borderRadius: 6, padding: "4px 10px", color: mode === "overall" ? "#000" : C.muted, fontSize: 10, fontFamily: "inherit" }}>Overall</button>
+        <button onClick={() => setMode("category")} style={{ background: mode === "category" ? C.skincare : C.faint, border: `1px solid ${mode === "category" ? C.skincare : C.border}`, borderRadius: 6, padding: "4px 10px", color: mode === "category" ? "#000" : C.muted, fontSize: 10, fontFamily: "inherit" }}>Category</button>
+      </div>
+
+      {mode === "category" && (
+        <div style={{ display: "flex", gap: 5, marginBottom: 10, overflowX: "auto", paddingBottom: 4 }}>
+          {Object.keys(COLORS).map(cat => (
+            <button key={cat} onClick={() => setSelectedCat(cat)} style={{ background: selectedCat === cat ? COLORS[cat] : C.faint, border: `1px solid ${selectedCat === cat ? COLORS[cat] : C.border}`, borderRadius: 6, padding: "4px 8px", color: selectedCat === cat ? "#000" : C.muted, fontSize: 9, fontFamily: "inherit", whiteSpace: "nowrap", textTransform: "capitalize" }}>{cat}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Day labels */}
+      <div style={{ display: "flex", gap: 2, marginBottom: 2, paddingLeft: 0 }}>
+        {DAY_LABELS.map((l, i) => <div key={i} style={{ width: 12, fontSize: 7, color: C.muted, textAlign: "center" }}>{l}</div>)}
+      </div>
+
+      {/* Grid - rotated to columns = weeks */}
+      <div style={{ display: "flex", gap: 2, overflowX: "auto" }}>
+        {weeks.map((week, wi) => (
+          <div key={wi} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {week.map((day, di) => {
+              const val = day ? getDayValue(day) : 0;
+              return (
+                <div key={di} onClick={() => day && setPopup(day)} style={{ width: 12, height: 12, borderRadius: 2, background: day ? getColor(val) : "transparent", cursor: day ? "pointer" : "default", border: day === todayKey() ? `1px solid ${C.skincare}` : "none" }} />
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 8 }}>
+        <span style={{ fontSize: 8, color: C.muted }}>Less</span>
+        {[0, 0.25, 0.5, 0.75, 1].map(v => (
+          <div key={v} style={{ width: 10, height: 10, borderRadius: 2, background: getColor(v) }} />
+        ))}
+        <span style={{ fontSize: 8, color: C.muted }}>More</span>
+      </div>
+
+      {/* Popup */}
+      {popup && (() => {
+        const dayLogs = logs[popup] || {};
+        const checkin = checkinLogs[popup];
+        const sleep = sleepLogs[popup];
+        const done = HABITS.filter(h => dayLogs[h.id]?.done);
+        const notDone = HABITS.filter(h => !dayLogs[h.id]?.done);
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(7,7,10,0.85)", zIndex: 99998, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setPopup(null)}>
+            <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: C.surface, borderRadius: "20px 20px 0 0", padding: "24px 20px 48px", maxHeight: "80vh", overflowY: "auto" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700 }}>
+                  {new Date(popup + "T12:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
+                </div>
+                <button onClick={() => { setSelectedDate(popup); setView("habits"); setPopup(null); }} style={{ background: C.skincare, border: "none", borderRadius: 6, padding: "6px 12px", color: "#000", fontSize: 10, fontFamily: "inherit" }}>Open Day →</button>
+              </div>
+
+              {checkin && (
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                  {[["Mood", MOOD_LABELS[checkin.mood], C.skincare], ["Energy", ENERGY_LABELS[checkin.energy], C.workout], ["Sleep", SLEEP_LABELS[checkin.sleep], C.haircare], ["Stress", STRESS_LABELS[checkin.stress], C.nofap]].map(([label, val, color]) => val && (
+                    <div key={label} style={{ background: `${color}15`, border: `1px solid ${color}30`, borderRadius: 6, padding: "4px 8px", fontSize: 9, color }}>{label}: {val}</div>
+                  ))}
+                </div>
+              )}
+
+              {sleep?.sleptOnTime && sleep?.wokeOnTime && (
+                <div style={{ background: `${SLEEP_COLOR}15`, border: `1px solid ${SLEEP_COLOR}30`, borderRadius: 8, padding: "6px 12px", marginBottom: 12, fontSize: 10, color: SLEEP_COLOR }}>
+                  ☽ Sleep schedule hit {sleep.bedtime && sleep.wakeTime ? `· ${sleep.bedtime} → ${sleep.wakeTime}` : ""}
+                </div>
+              )}
+
+              <div style={{ fontSize: 9, color: C.skincare, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Completed ({done.length})</div>
+              {done.map(h => (
+                <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{ width: 16, height: 16, borderRadius: 4, background: COLORS[h.category] || C.muted, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: 9, color: "#000" }}>✓</span>
+                  </div>
+                  <span style={{ fontSize: 12 }}>{h.label}</span>
+                </div>
+              ))}
+              {notDone.length > 0 && (
+                <>
+                  <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", margin: "12px 0 8px" }}>Missed ({notDone.length})</div>
+                  {notDone.map(h => (
+                    <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.border}`, opacity: 0.4 }}>
+                      <div style={{ width: 16, height: 16, borderRadius: 4, background: C.border }} />
+                      <span style={{ fontSize: 12, color: C.muted }}>{h.label}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+// ─── DATA BACKUP ──────────────────────────────────────────────────────────────
+function DataBackupCard({ logs, workoutLogs, foodLogs, weightLogs, xpLogs, achievements, sleepLogs, measurements, checkinLogs, journalLogs, aiReviews, nofapHistory, quests, setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setAiReviews, setNofapHistory, setQuests }) {
+  const [expanded, setExpanded] = useState(false);
+  const [importMode, setImportMode] = useState(null);
+  const [selected, setSelected] = useState({ logs: true, workout: true, food: true, weight: true, xp: true, achievements: true, sleep: true, measurements: true, checkin: true, journal: true, aiReviews: false, nofap: true, quests: true });
+
+  const ALL_DATA = { logs, workoutLogs, foodLogs, weightLogs, xpLogs, achievements, sleepLogs, measurements, checkinLogs, journalLogs, aiReviews, nofapHistory, quests };
+  const SETTERS = { logs: setLogs, workoutLogs: setWorkoutLogs, foodLogs: setFoodLogs, weightLogs: setWeightLogs, xpLogs: setXpLogs, achievements: setAchievements, sleepLogs: setSleepLogs, measurements: setMeasurements, checkinLogs: setCheckinLogs, journalLogs: setJournalLogs, aiReviews: setAiReviews, nofapHistory: setNofapHistory, quests: setQuests };
+  const LABELS = { logs: "Habit Logs", workoutLogs: "Workout Logs", foodLogs: "Food Logs", weightLogs: "Body Weight", xp: "XP & Rank", achievements: "Achievements", sleep: "Sleep Logs", measurements: "Body Measurements", checkin: "Daily Check-ins", journal: "Journal", aiReviews: "AI Reviews", nofap: "NoFap History", quests: "Quest History" };
+
+  function exportSelected() {
+    const out = {};
+    if (selected.logs) out.logs = logs;
+    if (selected.workout) out.workoutLogs = workoutLogs;
+    if (selected.food) out.foodLogs = foodLogs;
+    if (selected.weight) out.weightLogs = weightLogs;
+    if (selected.xp) out.xpLogs = xpLogs;
+    if (selected.achievements) out.achievements = achievements;
+    if (selected.sleep) out.sleepLogs = sleepLogs;
+    if (selected.measurements) out.measurements = measurements;
+    if (selected.checkin) out.checkinLogs = checkinLogs;
+    if (selected.journal) out.journalLogs = journalLogs;
+    if (selected.aiReviews) out.aiReviews = aiReviews;
+    if (selected.nofap) out.nofapHistory = nofapHistory;
+    if (selected.quests) out.quests = quests;
+    const blob = new Blob([JSON.stringify({ version: "anant_v3", exportDate: todayKey(), data: out }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `self-system-backup-${todayKey()}.json`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportAll() {
+    const blob = new Blob([JSON.stringify({ version: "anant_v3", exportDate: todayKey(), data: ALL_DATA }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `self-system-full-backup-${todayKey()}.json`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImport(e, mode) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        const d = parsed.data || parsed;
+        const keyMap = { logs: "logs", workoutLogs: "workoutLogs", foodLogs: "foodLogs", weightLogs: "weightLogs", xpLogs: "xpLogs", achievements: "achievements", sleepLogs: "sleepLogs", measurements: "measurements", checkinLogs: "checkinLogs", journalLogs: "journalLogs", aiReviews: "aiReviews", nofapHistory: "nofapHistory", quests: "quests" };
+        Object.entries(keyMap).forEach(([key, dataKey]) => {
+          if (d[dataKey] !== undefined && SETTERS[key]) {
+            if (mode === "overwrite") SETTERS[key](d[dataKey]);
+            else if (mode === "merge") SETTERS[key](p => Array.isArray(p) ? [...p, ...d[dataKey]] : { ...p, ...d[dataKey] });
+          }
+        });
+        alert("Import successful!");
+      } catch { alert("Invalid backup file."); }
+    };
+    reader.readAsText(file);
+  }
+
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.workout}25`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
+      <div className="press" onClick={() => setExpanded(e => !e)} style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700 }}>Data Backup</div>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>Export · Import · Protect your progress</div>
+        </div>
+        <span style={{ color: C.muted, fontSize: 14 }}>{expanded ? "↑" : "↓"}</span>
+      </div>
+      {expanded && (
+        <div style={{ padding: "0 16px 16px" }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            <button onClick={exportAll} style={{ flex: 1, background: C.workout, border: "none", borderRadius: 8, padding: 10, color: "#000", fontSize: 11, fontFamily: "inherit" }}>↓ Export All</button>
+            <button onClick={exportSelected} style={{ flex: 1, background: C.faint, border: `1px solid ${C.workout}40`, borderRadius: 8, padding: 10, color: C.workout, fontSize: 11, fontFamily: "inherit" }}>↓ Export Selected</button>
+          </div>
+
+          <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Select data to export</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 14 }}>
+            {Object.entries(selected).map(([key, val]) => (
+              <div key={key} onClick={() => setSelected(p => ({ ...p, [key]: !p[key] }))} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: val ? `${C.workout}10` : C.faint, border: `1px solid ${val ? C.workout + "30" : C.border}`, borderRadius: 8, cursor: "pointer" }}>
+                <div style={{ width: 16, height: 16, borderRadius: 4, background: val ? C.workout : "transparent", border: `2px solid ${val ? C.workout : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {val && <span style={{ color: "#000", fontSize: 9, fontWeight: 700 }}>✓</span>}
+                </div>
+                <span style={{ fontSize: 11, color: val ? C.text : C.muted }}>{LABELS[key] || key}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Import backup</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <label style={{ flex: 1, background: C.faint, border: `1px solid ${C.nofap}30`, borderRadius: 8, padding: 10, color: C.nofap, fontSize: 11, fontFamily: "inherit", textAlign: "center", cursor: "pointer" }}>
+              ↑ Merge
+              <input type="file" accept=".json" style={{ display: "none" }} onChange={e => handleImport(e, "merge")} />
+            </label>
+            <label style={{ flex: 1, background: C.faint, border: `1px solid #FF000030`, borderRadius: 8, padding: 10, color: "#FF0000", fontSize: 11, fontFamily: "inherit", textAlign: "center", cursor: "pointer" }}>
+              ↑ Overwrite
+              <input type="file" accept=".json" style={{ display: "none" }} onChange={e => handleImport(e, "overwrite")} />
+            </label>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
        
           
 // ─── LOG HUB ──────────────────────────────────────────────────────────────────
-function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs, setXpLogs, checkinLogs, journalLogs, setJournalLogs, aiReviews, setAiReviews, setAchievements, sleepLogs, setSleepLogs }) {
+function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs, setXpLogs, checkinLogs, journalLogs, setJournalLogs, aiReviews, setAiReviews, setAchievements, sleepLogs, setSleepLogs, measurements, setMeasurements, quests, setQuests }) {
   const today = todayKey();
   const todayW = workoutLogs[today] || {};
   const totalSets = Object.values(todayW).reduce((a, ex) => a + (ex.sets?.length || 0), 0);
@@ -1092,8 +1623,19 @@ function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLo
         </div>
         <span style={{ color: C.muted, fontSize: 14 }}>›</span>
       </button>
+      <DailyQuestsCard quests={quests} setQuests={setQuests} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} workoutLogs={workoutLogs} foodLogs={foodLogs} />
+      <button className="press" onClick={() => setSubView("measurements")} style={{ background: C.surface, border: `1px solid ${C.haircare}25`, borderRadius: 14, padding: 16, display: "flex", alignItems: "center", gap: 14, color: C.text, textAlign: "left" }}>
+        <span style={{ color: C.haircare, fontSize: 22 }}>◈</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontFamily: "'Cormorant Garamond',serif", fontWeight: 600 }}>Body Measurements</div>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>Track chest, arms, waist & more</div>
+        </div>
+        <span style={{ color: C.muted, fontSize: 14 }}>›</span>
+      </button>
+      <HeatmapView logs={logs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} setView={() => {}} setSelectedDate={() => {}} />
       <JournalCard journalLogs={journalLogs} setJournalLogs={setJournalLogs} checkinLogs={checkinLogs} logs={logs} workoutLogs={workoutLogs} />
 <AIReviewCard logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={nofapStreak} />
+  <DataBackupCard logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} nofapHistory={[]} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={() => {}} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setNofapHistory={() => {}} setQuests={setQuests} />
   <ResetProgress logs={logs} setLogs={setLogs} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} />
     </div>
   );
@@ -1326,7 +1868,7 @@ function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
 }
 
 // ─── ANALYTICS ────────────────────────────────────────────────────────────────
-function AnalyticsView({ logs, workoutLogs, foodLogs, nofapStreak, weightLogs, onBack }) {
+function AnalyticsView({ logs, workoutLogs, foodLogs, nofapStreak, weightLogs, checkinLogs, sleepLogs, onBack, setView, setSelectedDate }) {
   const [period, setPeriod] = useState("weekly");
   function getHabitData(range) { return range.map(d => ({ date: d, label: new Date(d + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short" }), pct: Math.round((HABITS.filter(h => logs[d]?.[h.id]?.done).length / HABITS.length) * 100) })); }
   function getProteinData(range) { return range.map(d => { const e = Array.isArray(foodLogs[d]) ? foodLogs[d] : []; return { date: d, label: new Date(d + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short" }), value: Math.round(e.reduce((a, x) => a + (x.protein || 0), 0)) }; }); }
@@ -1365,6 +1907,39 @@ function AnalyticsView({ logs, workoutLogs, foodLogs, nofapStreak, weightLogs, o
   const dispCalorie = aggData(calorieData);
   const dispWorkout = aggData(workoutData);
 
+  // Correlation analysis
+  const correlations = (() => {
+    const r = last30();
+    const results = [];
+    const pairs = [
+      { a: "protein", b: "energy", labelA: "High protein", labelB: "energy" },
+      { a: "protein", b: "mood", labelA: "High protein", labelB: "mood" },
+      { a: "sleep_score", b: "mood", labelA: "Good sleep", labelB: "mood" },
+      { a: "sleep_score", b: "focus", labelA: "Good sleep", labelB: "focus" },
+      { a: "sleep_score", b: "energy", labelA: "Good sleep", labelB: "energy" },
+      { a: "workout", b: "motivation", labelA: "Workout days", labelB: "motivation" },
+      { a: "workout", b: "energy", labelA: "Workout days", labelB: "energy" },
+      { a: "nofap", b: "focus", labelA: "NoFap days", labelB: "focus" },
+      { a: "nofap", b: "motivation", labelA: "NoFap days", labelB: "motivation" },
+    ];
+    pairs.forEach(({ a, b, labelA, labelB }) => {
+      const daysWithBoth = r.filter(d => {
+        const hasA = a === "protein" ? logs[d]?.h5?.done : a === "sleep_score" ? (checkinLogs[d]?.sleep != null) : a === "workout" ? Object.values(workoutLogs[d] || {}).some(ex => ex.sets?.length > 0) : a === "nofap" ? logs[d]?.h9?.done : false;
+        const hasB = checkinLogs[d]?.[b] != null;
+        return hasA && hasB;
+      });
+      const daysWithoutA = r.filter(d => {
+        const noA = a === "protein" ? !logs[d]?.h5?.done : a === "sleep_score" ? (checkinLogs[d]?.sleep != null && checkinLogs[d]?.sleep < 3) : a === "workout" ? !Object.values(workoutLogs[d] || {}).some(ex => ex.sets?.length > 0) : a === "nofap" ? !logs[d]?.h9?.done : false;
+        return noA && checkinLogs[d]?.[b] != null;
+      });
+      if (daysWithBoth.length < 5 || daysWithoutA.length < 5) return;
+      const avgWith = daysWithBoth.reduce((s, d) => s + (checkinLogs[d]?.[b] || 0), 0) / daysWithBoth.length;
+      const avgWithout = daysWithoutA.reduce((s, d) => s + (checkinLogs[d]?.[b] || 0), 0) / daysWithoutA.length;
+      const diff = avgWith - avgWithout;
+      if (Math.abs(diff) > 0.3) results.push({ labelA, labelB, diff: diff.toFixed(1), positive: diff > 0, n: daysWithBoth.length });
+    });
+    return results.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff)).slice(0, 5);
+  })();
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
@@ -1403,6 +1978,27 @@ function AnalyticsView({ logs, workoutLogs, foodLogs, nofapStreak, weightLogs, o
         ))}
       </div>
       <BestLifts workoutLogs={workoutLogs} />
+
+      {/* Correlation Insights */}
+      {correlations.length > 0 && (
+        <div style={{ background: C.surface, border: `1px solid #A07EE025`, borderRadius: 12, padding: 14, marginTop: 14 }}>
+          <div style={{ fontSize: 9, color: "#A07EE0", letterSpacing: 3, textTransform: "uppercase", marginBottom: 14 }}>Correlation Insights</div>
+          <div style={{ fontSize: 10, color: C.muted, marginBottom: 12 }}>Based on last 30 days of data</div>
+          {correlations.map((c, i) => (
+            <div key={i} style={{ padding: "10px 0", borderBottom: i < correlations.length - 1 ? `1px solid ${C.border}` : "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: 12, color: C.text, flex: 1, lineHeight: 1.4 }}>
+                  {c.labelA} → {c.positive ? "higher" : "lower"} {c.labelB}
+                </div>
+                <div style={{ fontSize: 13, color: c.positive ? C.haircare : C.nofap, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, marginLeft: 8 }}>
+                  {c.positive ? "+" : ""}{c.diff}
+                </div>
+              </div>
+              <div style={{ fontSize: 9, color: C.muted, marginTop: 3 }}>{c.n} days analyzed</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
