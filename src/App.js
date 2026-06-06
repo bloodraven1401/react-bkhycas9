@@ -2281,13 +2281,10 @@ function CustomPlanEditor({ planId, planList, setPlanList }) {
       )}
 
       {content.sections.length > 0 && (
-        <AddButton onClick={addSection} label="+ Add Section" color={color} />
-      )}
-    </div>
-  );
-}
-    </div>
-  );
+          <AddButton onClick={addSection} label="+ Add Section" color={color} />
+        )}
+      </div>
+    );
 }
 
 // ─── WORKOUT PLAN (editable) ──────────────────────────────────────────────────
