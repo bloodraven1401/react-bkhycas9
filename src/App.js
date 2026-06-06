@@ -842,13 +842,14 @@ export default function App() {
   const [dietPlan, setDietPlan] = useLS("anant_v3_diet_plan", DEFAULT_DIET);
   const [haircarePlan, setHaircarePlan] = useLS("anant_v3_haircare_plan", DEFAULT_HAIRCARE);
   const [spiritualPlan, setSpiritualPlan] = useLS("anant_v3_spiritual_plan", DEFAULT_SPIRITUAL);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [checkinLogs, setCheckinLogs] = useLS("anant_v3_checkin", {});
   const [xpToast, setXpToast] = useState(null);
   const [selectedRoutine, setSelectedRoutine] = useState(null);
   const [subView, setSubView] = useState(null);
   const [selectedDate, setSelectedDate] = useState(todayKey());
   const today = selectedDate;
   const todayLogs = logs[today] || {};
- const [checkinLogs, setCheckinLogs] = useLS("anant_v3_checkin", {});
 const [journalLogs, setJournalLogs] = useLS("anant_v3_journal", {});
 const [aiReviews, setAiReviews] = useLS("anant_v3_ai_reviews", {});
 const [checkinDone, setCheckinDone] = useState(false);
@@ -971,20 +972,39 @@ const [showCheckin, setShowCheckin] = useState(false);
     return Math.round((done / (HABITS.length * 7)) * 100);
   }
   function getTodayMacros() {
-    const entries = Array.isArray(foodLogs[today]) ? foodLogs[today] : [];
-    return entries.reduce((acc, e) => ({
-      calories: acc.calories + (e.calories || 0),
-      protein:  acc.protein  + (e.protein  || 0),
-      carbs:    acc.carbs    + (e.carbs    || 0),
-      fat:      acc.fat      + (e.fat      || 0),
-      fibre:    acc.fibre    + (e.fibre    || 0),
-    }), { calories: 0, protein: 0, carbs: 0, fat: 0, fibre: 0 });
+    const MEAL_EST = {
+      m1: { protein: 40, calories: 700, carbs: 55, fat: 28, fibre: 5 },
+      m2: { protein: 30, calories: 500, carbs: 70, fat: 8,  fibre: 6 },
+      m3: { protein: 8,  calories: 280, carbs: 32, fat: 14, fibre: 3 },
+      m4: { protein: 50, calories: 650, carbs: 80, fat: 16, fibre: 7 },
+      m5: { protein: 40, calories: 650, carbs: 65, fat: 18, fibre: 8 },
+      m6: { protein: 10, calories: 250, carbs: 18, fat: 12, fibre: 1 },
+    };
+    const dayLog = foodLogs[today] || {};
+    return Object.entries(dayLog).reduce((acc, [id, entry]) => {
+      const done = entry === true || (typeof entry === "object" && entry?.done);
+      if (!done) return acc;
+      const macros = (typeof entry === "object" && entry?.macros) ? entry.macros : (MEAL_EST[id] || {});
+      return {
+        calories: acc.calories + (macros.calories || 0),
+        protein:  acc.protein  + (macros.protein  || 0),
+        carbs:    acc.carbs    + (macros.carbs    || 0),
+        fat:      acc.fat      + (macros.fat      || 0),
+        fibre:    acc.fibre    + (macros.fibre    || 0),
+      };
+    }, { calories: 0, protein: 0, carbs: 0, fat: 0, fibre: 0 });
   }
 
   if (subView === "workoutlog") return <WorkoutLogger workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} workoutPlan={workoutPlan} onBack={() => setSubView(null)} />;
   if (subView === "foodlog")    return <FoodLogger foodLogs={foodLogs} setFoodLogs={setFoodLogs} onBack={() => setSubView(null)} />;
   if (subView === "analytics")  return <AnalyticsView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} nofapStreak={getNofapStreak()} weightLogs={weightLogs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} onBack={() => setSubView(null)} setView={setView} setSelectedDate={setSelectedDate} />;
   if (subView === "measurements") return <MeasurementsView measurements={measurements} setMeasurements={setMeasurements} onBack={() => setSubView(null)} />;
+  if (subView === "heatmap") return <HeatmapFullView logs={logs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} onBack={() => setSubView(null)} setSelectedDate={setSelectedDate} setView={setView} />;
+  if (subView === "journal") return <JournalFullView journalLogs={journalLogs} setJournalLogs={setJournalLogs} checkinLogs={checkinLogs} logs={logs} workoutLogs={workoutLogs} onBack={() => setSubView(null)} />;
+  if (subView === "aicoach") return <AICoachFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={getNofapStreak()} onBack={() => setSubView(null)} />;
+  if (subView === "quests") return <DailyQuestsFullView quests={quests} setQuests={setQuests} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} workoutLogs={workoutLogs} foodLogs={foodLogs} onBack={() => setSubView(null)} />;
+  if (subView === "sleep") return <SleepFullView sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} onBack={() => setSubView(null)} />;
+  if (subView === "backup") return <BackupFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={setCheckinLogs} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setQuests={setQuests} onBack={() => setSubView(null)} />;
 
   if (showOnboarding) return (
     <ThemeContext.Provider value={{ theme: activeTheme, isFemale }}>
@@ -1016,9 +1036,16 @@ const [showCheckin, setShowCheckin] = useState(false);
 
       {/* Header */}
       <div style={{ padding: "60px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-        <div>
-          <div style={{ fontSize: 10, letterSpacing: 4, color: C.muted, textTransform: "uppercase" }}>Self System</div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 30, fontWeight: 700, lineHeight: 1, marginTop: 4 }}>{userProfile?.name || "Anant"}</div>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
+          <button onClick={() => setSidebarOpen(true)} style={{ background: "none", border: "none", padding: "0 0 4px 0", cursor: "pointer", display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ width: 20, height: 2, background: C.muted, borderRadius: 2 }} />
+            <div style={{ width: 14, height: 2, background: C.muted, borderRadius: 2 }} />
+            <div style={{ width: 17, height: 2, background: C.muted, borderRadius: 2 }} />
+          </button>
+          <div>
+            <div style={{ fontSize: 10, letterSpacing: 4, color: C.muted, textTransform: "uppercase" }}>Self System</div>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 30, fontWeight: 700, lineHeight: 1, marginTop: 4 }}>{userProfile?.name || "Anant"}</div>
+          </div>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1038,6 +1065,118 @@ const [showCheckin, setShowCheckin] = useState(false);
         </div>
       </div>
 
+{/* Sidebar */}
+      {sidebarOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 99990, display: "flex" }} onClick={() => setSidebarOpen(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "82%", maxWidth: 320, height: "100%", background: C.surface, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", overflowY: "auto", animation: "slideIn 0.25s ease" }}>
+            <style>{`@keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}`}</style>
+
+            {/* Profile Card */}
+            <div style={{ padding: "60px 20px 20px", background: C.faint, borderBottom: `1px solid ${C.border}` }}>
+              {(() => {
+                const totalXP = getTotalXP(xpLogs);
+                const rank = getCurrentRank(totalXP);
+                const nextRank = getNextRank(totalXP);
+                const pct = nextRank.xpRequired === rank.xpRequired ? 100 : Math.round(((totalXP - rank.xpRequired) / (nextRank.xpRequired - rank.xpRequired)) * 100);
+                return (
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+                      <div style={{ position: "relative", width: 52, height: 52, flexShrink: 0 }}>
+                        <svg width={52} height={52} style={{ transform: "rotate(-90deg)" }}>
+                          <circle cx={26} cy={26} r={22} fill="none" stroke={C.faint} strokeWidth={4} />
+                          <circle cx={26} cy={26} r={22} fill="none" stroke={rank.color} strokeWidth={4} strokeLinecap="round" strokeDasharray={2 * Math.PI * 22} strokeDashoffset={2 * Math.PI * 22 - (pct / 100) * 2 * Math.PI * 22} />
+                        </svg>
+                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: rank.color, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{rank.rank}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: C.text }}>{userProfile?.name || "Anant"}</div>
+                        {userProfile?.alterEgo?.name && <div style={{ fontSize: 10, color: rank.color, letterSpacing: 1, marginTop: 2 }}>{userProfile.alterEgo.name}</div>}
+                        <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{totalXP.toLocaleString()} XP · {rank.title}</div>
+                      </div>
+                    </div>
+                    <div style={{ background: C.border, borderRadius: 3, height: 3, marginBottom: 12 }}>
+                      <div style={{ width: `${pct}%`, height: "100%", background: rank.color, borderRadius: 3 }} />
+                    </div>
+                    <button onClick={() => { setShowOnboarding(true); setSidebarOpen(false); }} style={{ width: "100%", background: "none", border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px", color: C.muted, fontSize: 11, fontFamily: "inherit", cursor: "pointer" }}>✎ Edit Profile</button>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Nav Sections */}
+            <div style={{ flex: 1, padding: "16px 0" }}>
+
+              {/* Main Navigation */}
+              <div style={{ padding: "0 16px", marginBottom: 6 }}>
+                <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8, paddingLeft: 8 }}>Navigate</div>
+                {[
+                  { icon: "◎", label: "Home", action: () => { setView("dashboard"); setSidebarOpen(false); } },
+                  { icon: "◉", label: "Today", action: () => { setView("habits"); setSidebarOpen(false); } },
+                  { icon: "◈", label: "Log", action: () => { setView("log"); setSidebarOpen(false); } },
+                  { icon: "◆", label: "Plans", action: () => { setView("routines"); setSidebarOpen(false); } },
+                  { icon: "★", label: "Rank", action: () => { setView("stats"); setSidebarOpen(false); } },
+                ].map(({ icon, label, action }) => (
+                  <button key={label} onClick={action} style={{ width: "100%", background: "none", border: "none", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 9, color: C.text, fontFamily: "inherit", fontSize: 13, cursor: "pointer", textAlign: "left", marginBottom: 2 }}>
+                    <span style={{ color: C.accent, fontSize: 14, width: 18 }}>{icon}</span>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ height: 1, background: C.border, margin: "8px 16px" }} />
+
+              {/* Deep Features */}
+              <div style={{ padding: "0 16px", marginBottom: 6 }}>
+                <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8, paddingLeft: 8 }}>Features</div>
+                {[
+                  { icon: "◎", label: "Analytics", action: () => { setSubView("analytics"); setSidebarOpen(false); } },
+                  { icon: "◈", label: "Habit Heatmap", action: () => { setSubView("heatmap"); setSidebarOpen(false); } },
+                  { icon: "✦", label: "Journal", action: () => { setSubView("journal"); setSidebarOpen(false); } },
+                  { icon: "◉", label: "AI Coach", action: () => { setSubView("aicoach"); setSidebarOpen(false); } },
+                  { icon: "◆", label: "Body Measurements", action: () => { setSubView("measurements"); setSidebarOpen(false); } },
+                  { icon: "★", label: "Daily Quests", action: () => { setSubView("quests"); setSidebarOpen(false); } },
+                ].map(({ icon, label, action }) => (
+                  <button key={label} onClick={action} style={{ width: "100%", background: "none", border: "none", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 9, color: C.text, fontFamily: "inherit", fontSize: 13, cursor: "pointer", textAlign: "left", marginBottom: 2 }}>
+                    <span style={{ color: C.accent, fontSize: 14, width: 18 }}>{icon}</span>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ height: 1, background: C.border, margin: "8px 16px" }} />
+
+              {/* Tools */}
+              <div style={{ padding: "0 16px", marginBottom: 6 }}>
+                <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8, paddingLeft: 8 }}>Tools</div>
+                {[
+                  { icon: "☽", label: "Sleep Schedule", action: () => { setSubView("sleep"); setSidebarOpen(false); } },
+                  { icon: "◇", label: "Data Backup", action: () => { setSubView("backup"); setSidebarOpen(false); } },
+                ].map(({ icon, label, action }) => (
+                  <button key={label} onClick={action} style={{ width: "100%", background: "none", border: "none", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 9, color: C.text, fontFamily: "inherit", fontSize: 13, cursor: "pointer", textAlign: "left", marginBottom: 2 }}>
+                    <span style={{ color: C.accent, fontSize: 14, width: 18 }}>{icon}</span>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ height: 1, background: C.border, margin: "8px 16px" }} />
+
+              {/* Bottom */}
+              <div style={{ padding: "0 16px" }}>
+                <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8, paddingLeft: 8 }}>Settings</div>
+                <button onClick={() => setSidebarOpen(false)} style={{ width: "100%", background: "none", border: "none", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 9, color: C.muted, fontFamily: "inherit", fontSize: 13, cursor: "pointer", textAlign: "left" }}>
+                  <span style={{ fontSize: 14, width: 18 }}>⚙</span> Settings
+                </button>
+                <button onClick={() => setSidebarOpen(false)} style={{ width: "100%", background: "none", border: "none", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 9, color: C.muted, fontFamily: "inherit", fontSize: 13, cursor: "pointer", textAlign: "left" }}>
+                  <span style={{ fontSize: 14, width: 18 }}>◎</span> About
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* XP Toast */}
       {/* XP Toast */}
       {xpToast && (
         <div style={{ position: "fixed", top: 80, left: "50%", transform: "translateX(-50%)", background: "rgba(7,7,10,0.95)", border: "1px solid #FF000060", borderRadius: 10, padding: "10px 20px", color: "#FF0000", fontSize: 13, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, zIndex: 99999, letterSpacing: 1, boxShadow: "0 0 20px #FF000040" }}>
@@ -1229,46 +1368,39 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
 function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }) {
   const today = todayKey();
   const entry = sleepLogs[today] || {};
-  const [bedtime, setBedtime] = useState(entry.bedtime || "");
-  const [wakeTime, setWakeTime] = useState(entry.wakeTime || "");
   const SLEEP_COLOR = "#7c6fa0";
   const XP_AMOUNT = 20;
-
   const sleptOnTime = entry.sleptOnTime || false;
   const wokeOnTime = entry.wokeOnTime || false;
 
-  const streak = (() => {
-    let s = 0;
-    let d = new Date();
-    while (true) {
-      const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-      const k = ist.toISOString().split("T")[0];
-      const e = sleepLogs[k];
-      if (e && e.sleptOnTime && e.wokeOnTime) { s++; d.setDate(d.getDate() - 1); }
-      else break;
-    }
-    return s;
-  })();
+  // AM/PM time picker state — reactive to entry
+  const parseTime = (t) => {
+    if (!t) return { h: "", m: "", ampm: "PM" };
+    const [hStr, mStr] = t.split(":");
+    let h = parseInt(hStr); const m = mStr || "00";
+    const ampm = h >= 12 ? "PM" : "AM";
+    if (h > 12) h -= 12;
+    if (h === 0) h = 12;
+    return { h: String(h), m, ampm };
+  };
 
-  // Last 7 days for mini chart
-  const last7Data = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-    const k = ist.toISOString().split("T")[0];
-    const e = sleepLogs[k] || {};
-    const label = new Date(k + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short" });
-    // calculate hours slept if both times logged
-    let hours = 0;
-    if (e.bedtime && e.wakeTime) {
-      const [bh, bm] = e.bedtime.split(":").map(Number);
-      const [wh, wm] = e.wakeTime.split(":").map(Number);
-      let mins = (wh * 60 + wm) - (bh * 60 + bm);
-      if (mins < 0) mins += 24 * 60;
-      hours = parseFloat((mins / 60).toFixed(1));
-    }
-    return { k, label, slept: e.sleptOnTime || false, woke: e.wokeOnTime || false, hours, both: (e.sleptOnTime && e.wokeOnTime) || false };
-  });
+  const toTime24 = (h, m, ampm) => {
+    if (!h) return "";
+    let hour = parseInt(h);
+    if (ampm === "AM" && hour === 12) hour = 0;
+    if (ampm === "PM" && hour !== 12) hour += 12;
+    return `${String(hour).padStart(2, "0")}:${m || "00"}`;
+  };
+
+  const [bed, setBed] = useState(() => parseTime(entry.bedtime));
+  const [wake, setWake] = useState(() => parseTime(entry.wakeTime));
+
+  // Reset local state when date changes
+  useEffect(() => {
+    const e = sleepLogs[today] || {};
+    setBed(parseTime(e.bedtime));
+    setWake(parseTime(e.wakeTime));
+  }, [today]); // eslint-disable-line
 
   const grantXP = () => {
     setXpLogs(p => ({ ...p, [today]: (p[today] || 0) + XP_AMOUNT }));
@@ -1288,7 +1420,121 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
     if (!bothDone && wasBothDone) revokeXP();
   };
 
+  const updateBedtime = (newBed) => {
+    setBed(newBed);
+    const t = toTime24(newBed.h, newBed.m, newBed.ampm);
+    if (t) updateEntry({ bedtime: t });
+  };
+
+  const updateWakeTime = (newWake) => {
+    setWake(newWake);
+    const t = toTime24(newWake.h, newWake.m, newWake.ampm);
+    if (t) updateEntry({ wakeTime: t });
+  };
+
+  const resetBedtime = () => {
+    setBed({ h: "", m: "", ampm: "PM" });
+    updateEntry({ bedtime: "" });
+  };
+
+  const resetWakeTime = () => {
+    setWake({ h: "", m: "", ampm: "AM" });
+    updateEntry({ wakeTime: "" });
+  };
+
+  // Duration calc
+  const getDuration = () => {
+    const bt = toTime24(bed.h, bed.m, bed.ampm);
+    const wt = toTime24(wake.h, wake.m, wake.ampm);
+    if (!bt || !wt) return null;
+    const [bh, bm] = bt.split(":").map(Number);
+    const [wh, wm] = wt.split(":").map(Number);
+    let mins = (wh * 60 + wm) - (bh * 60 + bm);
+    if (mins < 0) mins += 24 * 60;
+    return parseFloat((mins / 60).toFixed(1));
+  };
+  const duration = getDuration();
+
+  // Last 7 days chart
+  const last7Data = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i));
+    const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+    const k = ist.toISOString().split("T")[0];
+    const e = sleepLogs[k] || {};
+    const label = new Date(k + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short" });
+    let hours = 0;
+    if (e.bedtime && e.wakeTime) {
+      const [bh, bm] = e.bedtime.split(":").map(Number);
+      const [wh, wm] = e.wakeTime.split(":").map(Number);
+      let mins = (wh * 60 + wm) - (bh * 60 + bm);
+      if (mins < 0) mins += 24 * 60;
+      hours = parseFloat((mins / 60).toFixed(1));
+    }
+    return { k, label, both: (e.sleptOnTime && e.wokeOnTime) || false, hours };
+  });
+
+  const streak = (() => {
+    let s = 0; let d = new Date();
+    while (true) {
+      const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+      const k = ist.toISOString().split("T")[0];
+      const e = sleepLogs[k];
+      if (e && e.sleptOnTime && e.wokeOnTime) { s++; d.setDate(d.getDate() - 1); } else break;
+    }
+    return s;
+  })();
   const weekScore = last7Data.filter(d => d.both).length;
+
+  const TimePickerInline = ({ label, value, onChange, onReset }) => {
+    const HOURS = ["1","2","3","4","5","6","7","8","9","10","11","12"];
+    const MINS = ["00","05","10","15","20","25","30","35","40","45","50","55"];
+    return (
+      <div style={{ background: C.faint, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase" }}>{label}</div>
+          {value.h && (
+            <button onClick={onReset} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 5, padding: "2px 8px", color: C.muted, fontSize: 9, fontFamily: "inherit", cursor: "pointer" }}>Reset</button>
+          )}
+        </div>
+        {value.h ? (
+          <div style={{ fontSize: 20, color: SLEEP_COLOR, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, marginBottom: 10 }}>
+            {value.h}:{value.m || "00"} {value.ampm}
+          </div>
+        ) : (
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 10 }}>Not set</div>
+        )}
+        <div style={{ display: "flex", gap: 8 }}>
+          {/* Hours */}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 8, color: C.muted, letterSpacing: 1, marginBottom: 5 }}>HOUR</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+              {HOURS.map(h => (
+                <button key={h} onClick={() => onChange({ ...value, h })} style={{ width: 28, height: 24, borderRadius: 5, background: value.h === h ? SLEEP_COLOR : C.surface, border: `1px solid ${value.h === h ? SLEEP_COLOR : C.border}`, color: value.h === h ? "#fff" : C.muted, fontSize: 10, fontFamily: "inherit", cursor: "pointer" }}>{h}</button>
+              ))}
+            </div>
+          </div>
+          {/* Minutes */}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 8, color: C.muted, letterSpacing: 1, marginBottom: 5 }}>MIN</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+              {MINS.map(m => (
+                <button key={m} onClick={() => onChange({ ...value, m })} style={{ width: 28, height: 24, borderRadius: 5, background: value.m === m ? SLEEP_COLOR : C.surface, border: `1px solid ${value.m === m ? SLEEP_COLOR : C.border}`, color: value.m === m ? "#fff" : C.muted, fontSize: 10, fontFamily: "inherit", cursor: "pointer" }}>{m}</button>
+              ))}
+            </div>
+          </div>
+          {/* AM/PM */}
+          <div>
+            <div style={{ fontSize: 8, color: C.muted, letterSpacing: 1, marginBottom: 5 }}>AM/PM</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {["AM","PM"].map(ap => (
+                <button key={ap} onClick={() => onChange({ ...value, ampm: ap })} style={{ width: 36, height: 24, borderRadius: 5, background: value.ampm === ap ? SLEEP_COLOR : C.surface, border: `1px solid ${value.ampm === ap ? SLEEP_COLOR : C.border}`, color: value.ampm === ap ? "#fff" : C.muted, fontSize: 10, fontFamily: "inherit", cursor: "pointer" }}>{ap}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${SLEEP_COLOR}30`, borderRadius: 14, padding: 16, marginBottom: 4 }}>
@@ -1296,46 +1542,31 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
         <div>
           <div style={{ fontSize: 10, color: SLEEP_COLOR, letterSpacing: 3, textTransform: "uppercase", marginBottom: 4 }}>Sleep Schedule</div>
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, lineHeight: 1 }}>Rest & Recovery</div>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>Log on the date you woke up</div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 22, color: SLEEP_COLOR, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, lineHeight: 1 }}>
-            {streak > 0 ? streak : weekScore}
-          </div>
-          <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>
-            {streak > 0 ? "day streak 🔥" : `${weekScore}/7 this week`}
-          </div>
+          <div style={{ fontSize: 22, color: SLEEP_COLOR, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, lineHeight: 1 }}>{streak > 0 ? streak : weekScore}</div>
+          <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>{streak > 0 ? "day streak 🔥" : `${weekScore}/7 this week`}</div>
         </div>
       </div>
 
-      {/* Target bar */}
+      {/* Target */}
       <div style={{ background: `${SLEEP_COLOR}12`, border: `1px solid ${SLEEP_COLOR}20`, borderRadius: 8, padding: "8px 12px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ fontSize: 11, color: C.muted }}>Target</div>
         <div style={{ display: "flex", gap: 14 }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 12, color: SLEEP_COLOR }}>11:00 PM</div>
-            <div style={{ fontSize: 9, color: C.muted }}>Sleep by</div>
-          </div>
-          <div style={{ width: 1, background: C.border }} />
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 12, color: SLEEP_COLOR }}>6:00 AM</div>
-            <div style={{ fontSize: 9, color: C.muted }}>Wake at</div>
-          </div>
-          <div style={{ width: 1, background: C.border }} />
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 12, color: SLEEP_COLOR }}>7h</div>
-            <div style={{ fontSize: 9, color: C.muted }}>Duration</div>
-          </div>
+          {[["11:00 PM","Sleep by"],["6:00 AM","Wake at"],["7h","Duration"]].map(([val, sub]) => (
+            <div key={sub} style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 12, color: SLEEP_COLOR }}>{val}</div>
+              <div style={{ fontSize: 9, color: C.muted }}>{sub}</div>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Checkboxes */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-        {[
-          { key: "sleptOnTime", val: sleptOnTime, label: "Slept by 11:00 PM" },
-          { key: "wokeOnTime",  val: wokeOnTime,  label: "Woke at 6:00 AM"  },
-        ].map(({ key, val, label }) => (
-          <div key={key} onClick={() => updateEntry({ [key]: !val })}
-            style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 10, cursor: "pointer", background: val ? `${SLEEP_COLOR}12` : C.faint, border: `1px solid ${val ? SLEEP_COLOR + "40" : C.border}`, transition: "all 0.2s" }}>
+        {[{ key: "sleptOnTime", val: sleptOnTime, label: "Slept by 11:00 PM" }, { key: "wokeOnTime", val: wokeOnTime, label: "Woke at 6:00 AM" }].map(({ key, val, label }) => (
+          <div key={key} onClick={() => updateEntry({ [key]: !val })} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 10, cursor: "pointer", background: val ? `${SLEEP_COLOR}12` : C.faint, border: `1px solid ${val ? SLEEP_COLOR + "40" : C.border}`, transition: "all 0.2s" }}>
             <div style={{ width: 22, height: 22, borderRadius: 6, background: val ? SLEEP_COLOR : "transparent", border: `2px solid ${val ? SLEEP_COLOR : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               {val && <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</span>}
             </div>
@@ -1345,37 +1576,20 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
         ))}
       </div>
 
-      {/* Time inputs */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-        {[
-          { label: "Actual Bedtime", val: bedtime, setter: setBedtime, key: "bedtime" },
-          { label: "Actual Wake Time", val: wakeTime, setter: setWakeTime, key: "wakeTime" },
-        ].map(({ label, val, setter, key }) => (
-          <div key={key} style={{ background: C.faint, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 12px" }}>
-            <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
-            <input type="time" style={{ background: "transparent", border: "none", color: SLEEP_COLOR, fontSize: 16, fontFamily: "'DM Mono',monospace", outline: "none", width: "100%" }}
-              value={val} onChange={e => { setter(e.target.value); updateEntry({ [key]: e.target.value }); }} />
-          </div>
-        ))}
+      {/* Time pickers */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+        <TimePickerInline label="Bedtime (previous night)" value={bed} onChange={updateBedtime} onReset={resetBedtime} />
+        <TimePickerInline label="Wake Time (this morning)" value={wake} onChange={updateWakeTime} onReset={resetWakeTime} />
       </div>
 
-      {/* Hours slept display */}
-      {bedtime && wakeTime && (() => {
-        const [bh, bm] = bedtime.split(":").map(Number);
-        const [wh, wm] = wakeTime.split(":").map(Number);
-        let mins = (wh * 60 + wm) - (bh * 60 + bm);
-        if (mins < 0) mins += 24 * 60;
-        const hrs = (mins / 60).toFixed(1);
-        const good = parseFloat(hrs) >= 7;
-        return (
-          <div style={{ background: `${good ? SLEEP_COLOR : C.nofap}12`, border: `1px solid ${good ? SLEEP_COLOR : C.nofap}30`, borderRadius: 8, padding: "8px 14px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 11, color: C.muted }}>Duration logged</span>
-            <span style={{ fontSize: 16, color: good ? SLEEP_COLOR : C.nofap, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{hrs}h {good ? "✦" : "⚠"}</span>
-          </div>
-        );
-      })()}
+      {/* Duration */}
+      {duration !== null && (
+        <div style={{ background: `${duration >= 7 ? SLEEP_COLOR : C.nofap}12`, border: `1px solid ${duration >= 7 ? SLEEP_COLOR : C.nofap}30`, borderRadius: 8, padding: "8px 14px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 11, color: C.muted }}>Duration logged</span>
+          <span style={{ fontSize: 16, color: duration >= 7 ? SLEEP_COLOR : C.nofap, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{duration}h {duration >= 7 ? "✦" : "⚠"}</span>
+        </div>
+      )}
 
-      {/* XP badge */}
       {sleptOnTime && wokeOnTime && (
         <div style={{ background: `${SLEEP_COLOR}15`, border: `1px solid ${SLEEP_COLOR}30`, borderRadius: 8, padding: "8px 14px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 11, color: C.muted }}>XP earned today</span>
@@ -1383,13 +1597,13 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
         </div>
       )}
 
-      {/* 7-day mini chart */}
+      {/* 7-day chart */}
       <div style={{ marginTop: 4 }}>
         <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Last 7 Nights</div>
         <div style={{ display: "flex", gap: 4 }}>
           {last7Data.map((d, i) => (
             <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-              <div style={{ width: "100%", height: 36, borderRadius: 5, background: d.both ? `${SLEEP_COLOR}70` : d.slept || d.woke ? `${SLEEP_COLOR}25` : C.faint, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${d.both ? SLEEP_COLOR + "50" : C.border}` }}>
+              <div style={{ width: "100%", height: 36, borderRadius: 5, background: d.both ? `${SLEEP_COLOR}70` : C.faint, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${d.both ? SLEEP_COLOR + "50" : C.border}` }}>
                 {d.hours > 0 && <span style={{ fontSize: 8, color: d.both ? "#fff" : C.muted }}>{d.hours}h</span>}
               </div>
               <div style={{ fontSize: 8, color: d.k === today ? SLEEP_COLOR : C.muted }}>{d.label}</div>
@@ -2077,15 +2291,83 @@ function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLo
         </div>
         <span style={{ color: C.muted, fontSize: 14 }}>›</span>
       </button>
-      <HeatmapView logs={logs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} setView={() => {}} setSelectedDate={() => {}} />
-      <JournalCard journalLogs={journalLogs} setJournalLogs={setJournalLogs} checkinLogs={checkinLogs} logs={logs} workoutLogs={workoutLogs} />
-<AIReviewCard logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={nofapStreak} />
-  <DataBackupCard logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} nofapHistory={[]} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={() => {}} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setNofapHistory={() => {}} setQuests={setQuests} />
-  <ResetProgress logs={logs} setLogs={setLogs} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} />
+     <ResetProgress logs={logs} setLogs={setLogs} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} />
     </div>
   );
 }
 
+// ─── FULL SCREEN WRAPPERS (Sidebar navigation targets) ───────────────────────
+function HeatmapFullView({ logs, checkinLogs, sleepLogs, onBack, setSelectedDate, setView }) {
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1 }}>← Back</button>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Habit Heatmap</div>
+      </div>
+      <HeatmapView logs={logs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} setView={setView} setSelectedDate={setSelectedDate} />
+    </div>
+  );
+}
+
+function JournalFullView({ journalLogs, setJournalLogs, checkinLogs, logs, workoutLogs, onBack }) {
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1 }}>← Back</button>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Journal</div>
+      </div>
+      <JournalCard journalLogs={journalLogs} setJournalLogs={setJournalLogs} checkinLogs={checkinLogs} logs={logs} workoutLogs={workoutLogs} />
+    </div>
+  );
+}
+
+function AICoachFullView({ logs, workoutLogs, foodLogs, checkinLogs, journalLogs, xpLogs, aiReviews, setAiReviews, nofapStreak, onBack }) {
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1 }}>← Back</button>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>AI Coach</div>
+      </div>
+      <AIReviewCard logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={nofapStreak} />
+    </div>
+  );
+}
+
+function DailyQuestsFullView({ quests, setQuests, logs, setLogs, xpLogs, setXpLogs, checkinLogs, sleepLogs, workoutLogs, foodLogs, onBack }) {
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1 }}>← Back</button>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Daily Quests</div>
+      </div>
+      <DailyQuestsCard quests={quests} setQuests={setQuests} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} workoutLogs={workoutLogs} foodLogs={foodLogs} />
+    </div>
+  );
+}
+
+function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs, onBack }) {
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1 }}>← Back</button>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Sleep Schedule</div>
+      </div>
+      <SleepCard sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} />
+    </div>
+  );
+}
+
+function BackupFullView({ logs, workoutLogs, foodLogs, weightLogs, xpLogs, achievements, sleepLogs, measurements, checkinLogs, journalLogs, aiReviews, quests, setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setAiReviews, setQuests, onBack }) {
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1 }}>← Back</button>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Data Backup</div>
+      </div>
+      <DataBackupCard logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} nofapHistory={[]} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={setCheckinLogs} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setNofapHistory={() => {}} setQuests={setQuests} />
+    </div>
+  );
+}
 // ─── WORKOUT LOGGER ───────────────────────────────────────────────────────────
 function WorkoutLogger({ workoutLogs, setWorkoutLogs, workoutPlan: plan, onBack }) {
   const [selectedWorkoutDate, setSelectedWorkoutDate] = useState(todayKey());
@@ -2243,27 +2525,81 @@ function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
   const [selectedFoodDate, setSelectedFoodDate] = useState(todayKey());
   const today = selectedFoodDate;
   const mealLogs = foodLogs[today] || {};
+
   const MEALS = [
-    { id: "m1", label: "Meal 1 — Breakfast",    time: "9:30 AM",  items: ["2 peanut butter sandwiches","4 whole eggs","1 glass whole milk","10 almonds","Vitamin D3 + Multivitamin"], macros: "~40g P · ~700 kcal" },
-    { id: "m2", label: "Meal 2 — Lunch",         time: "1:00 PM",  items: ["50g soya chunks (dry)","1.5 cups cooked rice","1 glass buttermilk"], macros: "~30g P · ~500 kcal" },
-    { id: "m3", label: "Meal 3 — Pre-Workout",   time: "3:00 PM",  items: ["1 banana","2 tbsp peanut butter OR peanuts"], macros: "~8g P · ~280 kcal" },
-    { id: "m4", label: "Meal 4 — Post-Workout",  time: "5:30 PM",  items: ["1 scoop whey","1 cup oats","1 banana","1 tbsp peanut butter","1 glass whole milk","Creatine 5g"], macros: "~50g P · ~650 kcal" },
-    { id: "m5", label: "Meal 5 — Dinner",        time: "8:30 PM",  items: ["150g chicken OR paneer","1.5 cups rice OR 2 roti","Spinach / mixed veg","1 glass buttermilk","Ashwagandha here"], macros: "~40g P · ~650 kcal" },
-    { id: "m6", label: "Meal 6 — Before Bed",    time: "10:30 PM", items: ["1 glass warm milk","1 tbsp peanut butter"], macros: "~10g P · ~250 kcal" },
+    { id: "m1", label: "Meal 1 — Breakfast",    time: "9:30 AM",  items: ["2 peanut butter sandwiches","4 whole eggs","1 glass whole milk","10 almonds","Vitamin D3 + Multivitamin"], estMacros: { protein: 40, calories: 700, carbs: 55, fat: 28, fibre: 5 } },
+    { id: "m2", label: "Meal 2 — Lunch",         time: "1:00 PM",  items: ["50g soya chunks (dry)","1.5 cups cooked rice","1 glass buttermilk"], estMacros: { protein: 30, calories: 500, carbs: 70, fat: 8, fibre: 6 } },
+    { id: "m3", label: "Meal 3 — Pre-Workout",   time: "3:00 PM",  items: ["1 banana","2 tbsp peanut butter OR peanuts"], estMacros: { protein: 8, calories: 280, carbs: 32, fat: 14, fibre: 3 } },
+    { id: "m4", label: "Meal 4 — Post-Workout",  time: "5:30 PM",  items: ["1 scoop whey","1 cup oats","1 banana","1 tbsp peanut butter","1 glass whole milk","Creatine 5g"], estMacros: { protein: 50, calories: 650, carbs: 80, fat: 16, fibre: 7 } },
+    { id: "m5", label: "Meal 5 — Dinner",        time: "8:30 PM",  items: ["150g chicken OR paneer","1.5 cups rice OR 2 roti","Spinach / mixed veg","1 glass buttermilk","Ashwagandha here"], estMacros: { protein: 40, calories: 650, carbs: 65, fat: 18, fibre: 8 } },
+    { id: "m6", label: "Meal 6 — Before Bed",    time: "10:30 PM", items: ["1 glass warm milk","1 tbsp peanut butter"], estMacros: { protein: 10, calories: 250, carbs: 18, fat: 12, fibre: 1 } },
   ];
+
+  const [editingMacros, setEditingMacros] = useState(null);
+  const [macroInputs, setMacroInputs] = useState({});
+
   function getMealStreak(mealId) {
-    let streak = 0, d = new Date();
+    let streak = 0; let d = new Date();
     while (true) {
       const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
       const k = ist.toISOString().split("T")[0];
-      if (foodLogs[k]?.[mealId]) { streak++; d.setDate(d.getDate() - 1); } else break;
+      const entry = foodLogs[k];
+      if (entry && (entry[mealId] === true || entry[mealId]?.done)) { streak++; d.setDate(d.getDate() - 1); } else break;
     }
     return streak;
   }
+
   function toggleMeal(id) {
-    setFoodLogs(p => { const day = { ...(p[today] || {}) }; day[id] = !day[id]; return { ...p, [today]: day }; });
+    setFoodLogs(p => {
+      const day = { ...(p[today] || {}) };
+      const current = day[id];
+      if (!current) {
+        const meal = MEALS.find(m => m.id === id);
+        day[id] = { done: true, macros: { ...meal.estMacros }, isEstimated: true };
+      } else {
+        day[id] = current.done ? { ...current, done: false } : { ...current, done: true };
+      }
+      return { ...p, [today]: day };
+    });
   }
-  const doneCount = MEALS.filter(m => mealLogs[m.id]).length;
+
+  function saveMacros(id) {
+    setFoodLogs(p => {
+      const day = { ...(p[today] || {}) };
+      const current = day[id] || { done: true };
+      day[id] = {
+        ...current,
+        macros: {
+          calories: parseFloat(macroInputs.calories) || 0,
+          protein: parseFloat(macroInputs.protein) || 0,
+          carbs: parseFloat(macroInputs.carbs) || 0,
+          fat: parseFloat(macroInputs.fat) || 0,
+          fibre: parseFloat(macroInputs.fibre) || 0,
+        },
+        isEstimated: false,
+      };
+      return { ...p, [today]: day };
+    });
+    setEditingMacros(null);
+  }
+
+  const doneCount = MEALS.filter(m => {
+    const e = mealLogs[m.id];
+    return e === true || e?.done;
+  }).length;
+
+  const totalMacros = MEALS.reduce((acc, meal) => {
+    const e = mealLogs[meal.id];
+    if (!e || (typeof e === "object" && !e.done)) return acc;
+    const macros = (typeof e === "object" && e.macros) ? e.macros : meal.estMacros;
+    return {
+      calories: acc.calories + (macros.calories || 0),
+      protein:  acc.protein  + (macros.protein  || 0),
+      carbs:    acc.carbs    + (macros.carbs    || 0),
+      fat:      acc.fat      + (macros.fat      || 0),
+      fibre:    acc.fibre    + (macros.fibre    || 0),
+    };
+  }, { calories: 0, protein: 0, carbs: 0, fat: 0, fibre: 0 });
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
@@ -2282,15 +2618,41 @@ function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
           <div style={{ fontSize: 9, color: C.muted }}>meals done</div>
         </div>
       </div>
-      <div style={{ background: `${C.diet}12`, border: `1px solid ${C.diet}30`, borderRadius: 10, padding: "11px 14px", fontSize: 12, color: C.diet, marginBottom: 14 }}>~3030 kcal/day · ~178g protein/day</div>
+
+      {/* Macro summary */}
+      <div style={{ background: C.surface, border: `1px solid ${C.diet}25`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+        <div style={{ fontSize: 9, color: C.diet, letterSpacing: 3, textTransform: "uppercase", marginBottom: 10 }}>Today's Totals</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 4 }}>
+          {[["Cal", Math.round(totalMacros.calories), ""], ["Pro", Math.round(totalMacros.protein), "g"], ["Carb", Math.round(totalMacros.carbs), "g"], ["Fat", Math.round(totalMacros.fat), "g"], ["Fibre", Math.round(totalMacros.fibre), "g"]].map(([l, v, u]) => (
+            <div key={l} style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 16, color: C.diet, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{v}{u}</div>
+              <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted, marginBottom: 4 }}>
+            <span>Protein</span><span>{Math.round(totalMacros.protein)}/178g</span>
+          </div>
+          <div style={{ background: C.faint, borderRadius: 3, height: 3 }}>
+            <div style={{ width: `${Math.min(100, (totalMacros.protein / 178) * 100)}%`, height: "100%", background: C.diet, borderRadius: 3 }} />
+          </div>
+        </div>
+      </div>
+
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {MEALS.map(meal => {
-          const done = mealLogs[meal.id];
+          const entry = mealLogs[meal.id];
+          const done = entry === true || (typeof entry === "object" && entry?.done);
+          const isEstimated = !entry || entry === true || entry?.isEstimated;
+          const macros = (typeof entry === "object" && entry?.macros) ? entry.macros : meal.estMacros;
+          const isEditingThis = editingMacros === meal.id;
+
           return (
-            <div key={meal.id} onClick={() => toggleMeal(meal.id)} style={{ background: done ? `${C.diet}12` : C.surface, border: `1px solid ${done ? C.diet + "40" : C.border}`, borderRadius: 12, padding: 14, cursor: "pointer", transition: "all 0.2s ease" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+            <div key={meal.id} style={{ background: done ? `${C.diet}12` : C.surface, border: `1px solid ${done ? C.diet + "40" : C.border}`, borderRadius: 12, padding: 14, transition: "all 0.2s ease" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }} onClick={() => toggleMeal(meal.id)}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: 6, background: done ? C.diet : "transparent", border: `2px solid ${done ? C.diet : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: 6, background: done ? C.diet : "transparent", border: `2px solid ${done ? C.diet : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer" }}>
                     {done && <span style={{ color: "#000", fontSize: 11, fontWeight: 700 }}>✓</span>}
                   </div>
                   <div>
@@ -2300,10 +2662,43 @@ function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
                 </div>
                 <span style={{ fontSize: 10, color: C.muted }}>{meal.time}</span>
               </div>
+
               {meal.items.map((item, j) => (
                 <div key={j} style={{ fontSize: 12, color: done ? "#888" : "#555", padding: "3px 0", borderBottom: j < meal.items.length - 1 ? `1px solid ${C.border}` : "none", marginLeft: 32 }}>· {item}</div>
               ))}
-              <div style={{ fontSize: 10, color: done ? C.diet : C.muted, marginTop: 8, marginLeft: 32 }}>{meal.macros}</div>
+
+              {/* Macros row */}
+              <div style={{ marginLeft: 32, marginTop: 8 }}>
+                {!isEditingThis ? (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontSize: 10, color: done ? C.diet : C.muted }}>
+                      {Math.round(macros.protein)}g P · {Math.round(macros.calories)} kcal
+                      {isEstimated && done && <span style={{ color: C.muted, fontSize: 9 }}> (est.)</span>}
+                    </div>
+                    {done && (
+                      <button onClick={e => { e.stopPropagation(); setEditingMacros(meal.id); setMacroInputs({ calories: macros.calories, protein: macros.protein, carbs: macros.carbs, fat: macros.fat, fibre: macros.fibre }); }} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, padding: "3px 8px", color: C.muted, fontSize: 9, fontFamily: "inherit", cursor: "pointer" }}>
+                        ✎ Edit macros
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div onClick={e => e.stopPropagation()}>
+                    <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Actual Macros</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 6, marginBottom: 10 }}>
+                      {[["Cal","calories"],["Pro","protein"],["Carb","carbs"],["Fat","fat"],["Fibre","fibre"]].map(([label, key]) => (
+                        <div key={key}>
+                          <div style={{ fontSize: 8, color: C.muted, marginBottom: 3 }}>{label}</div>
+                          <input type="number" value={macroInputs[key] || ""} onChange={e => setMacroInputs(p => ({ ...p, [key]: e.target.value }))} style={{ width: "100%", background: C.faint, border: `1px solid ${C.border}`, borderRadius: 6, padding: "5px 6px", color: C.text, fontFamily: "inherit", fontSize: 12, outline: "none" }} />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => setEditingMacros(null)} style={{ flex: 1, background: "none", border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px", color: C.muted, fontSize: 11, fontFamily: "inherit", cursor: "pointer" }}>Cancel</button>
+                      <button onClick={() => saveMacros(meal.id)} style={{ flex: 2, background: C.diet, border: "none", borderRadius: 7, padding: "7px", color: "#000", fontSize: 11, fontFamily: "inherit", cursor: "pointer" }}>Save</button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
@@ -2311,7 +2706,6 @@ function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
     </div>
   );
 }
-
 // ─── ANALYTICS ────────────────────────────────────────────────────────────────
 function AnalyticsView({ logs, workoutLogs, foodLogs, nofapStreak, weightLogs, checkinLogs, sleepLogs, onBack, setView, setSelectedDate }) {
   const [period, setPeriod] = useState("weekly");
