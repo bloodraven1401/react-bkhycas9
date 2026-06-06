@@ -1811,13 +1811,13 @@ function MeasurementsView({ measurements, setMeasurements, onBack }) {
       ) : (
         <div style={{ background: C.surface, border: `1px solid ${C.haircare}25`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
           <div style={{ fontSize: 10, color: C.haircare, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>Log Measurements — {today}</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
             {MEASUREMENT_FIELDS.map(f => (
-              <div key={f.id} style={{ background: C.faint, borderRadius: 8, padding: "10px 12px" }}>
-                <div style={{ fontSize: 9, color: C.muted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>{f.label}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <input type="number" step="0.1" placeholder={latest[f.id] ? `${latest[f.id]}` : "—"} value={inputs[f.id] || ""} onChange={e => setInputs(p => ({ ...p, [f.id]: e.target.value }))} style={{ flex: 1, fontSize: 14, padding: "4px 6px", background: "transparent", border: "none", borderBottom: `1px solid ${C.border}`, borderRadius: 0, color: C.text }} />
-                  <span style={{ fontSize: 10, color: C.muted }}>cm</span>
+              <div key={f.id} style={{ background: C.faint, borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>{f.label}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input type="number" step="0.1" placeholder={latest[f.id] ? `${latest[f.id]}` : "—"} value={inputs[f.id] || ""} onChange={e => setInputs(p => ({ ...p, [f.id]: e.target.value }))} style={{ width: 80, fontSize: 16, padding: "6px 10px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: "inherit", outline: "none", textAlign: "right" }} />
+                  <span style={{ fontSize: 11, color: C.muted, width: 20 }}>cm</span>
                 </div>
               </div>
             ))}
@@ -1833,19 +1833,19 @@ function MeasurementsView({ measurements, setMeasurements, onBack }) {
       {allDates.length > 0 && (
         <div style={{ background: C.surface, border: `1px solid ${C.haircare}25`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
           <div style={{ fontSize: 10, color: C.haircare, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>Current Measurements</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {MEASUREMENT_FIELDS.map(f => {
               const val = latest[f.id];
               const prevVal = prev[f.id];
               const diff = val && prevVal ? (val - prevVal).toFixed(1) : null;
               return (
-                <div key={f.id} onClick={() => setSelectedField(selectedField === f.id ? null : f.id)} style={{ background: C.faint, borderRadius: 10, padding: "10px 12px", cursor: "pointer", border: `1px solid ${selectedField === f.id ? C.haircare + "50" : C.border}` }}>
-                  <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{f.label}</div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                    <span style={{ fontSize: 18, color: C.haircare, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{val ? `${val}` : "—"}</span>
-                    {val && <span style={{ fontSize: 9, color: C.muted }}>cm</span>}
+               <div key={f.id} onClick={() => setSelectedField(selectedField === f.id ? null : f.id)} style={{ background: C.faint, borderRadius: 10, padding: "12px 16px", cursor: "pointer", border: `1px solid ${selectedField === f.id ? C.haircare + "50" : C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>{f.label}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {diff && <div style={{ fontSize: 10, color: parseFloat(diff) >= 0 ? C.haircare : C.nofap }}>{parseFloat(diff) >= 0 ? "+" : ""}{diff}cm</div>}
+                    <span style={{ fontSize: 20, color: C.haircare, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{val ? `${val}` : "—"}</span>
+                    <span style={{ fontSize: 10, color: C.muted }}>cm</span>
                   </div>
-                  {diff && <div style={{ fontSize: 9, color: parseFloat(diff) >= 0 ? C.haircare : C.nofap, marginTop: 2 }}>{parseFloat(diff) >= 0 ? "+" : ""}{diff}cm</div>}
                 </div>
               );
             })}
