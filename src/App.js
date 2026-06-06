@@ -128,27 +128,33 @@ function useLS(key, def) {
     try {
       const v = localStorage.getItem(key);
       if (!v) return def;
-      const parsed = JSON.parse(v);
-      return parsed;
+      return JSON.parse(v);
     } catch {
-      console.warn(`useLS: corrupted key "${key}", resetting to default`);
       try { localStorage.removeItem(key); } catch {}
       return def;
     }
   });
+
   useEffect(() => {
     try {
       localStorage.setItem(key, JSON.stringify(val));
     } catch (e) {
-      // localStorage full (common on iPhone) — try clearing old keys
-      console.warn(`useLS: failed to save "${key}"`, e);
-      try {
-        // remove oldest AI reviews to free space
-        localStorage.removeItem("anant_v3_ai_reviews");
-        localStorage.setItem(key, JSON.stringify(val));
-      } catch {}
+      // Storage full — aggressively free space then retry
+      const EVICTABLE = [
+        "anant_v3_ai_reviews",
+        "anant_v3_journal",
+        "anant_v3_checkin",
+        "anant_v3_quests",
+      ];
+      for (const k of EVICTABLE) {
+        if (k !== key) {
+          try { localStorage.removeItem(k); } catch {}
+        }
+      }
+      try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
     }
   }, [val, key]);
+
   return [val, setVal];
 }
 // ─── AI FOOD SEARCH ───────────────────────────────────────────────────────────
@@ -418,6 +424,39 @@ const DEFAULT_SPIRITUAL = [
 ];
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
+function StorageGuard() {
+  useEffect(() => {
+    const KEYS = [
+      "anant_v3_logs", "anant_v3_workout", "anant_v3_food",
+      "anant_v3_weight", "anant_v3_xp", "anant_v3_achievements",
+      "anant_v3_sleep", "anant_v3_measurements", "anant_v3_checkin",
+      "anant_v3_journal", "anant_v3_ai_reviews", "anant_v3_quests",
+      "anant_v3_nofap_history", "anant_v3_seasons",
+    ];
+    KEYS.forEach(k => {
+      try {
+        const v = localStorage.getItem(k);
+        if (v) JSON.parse(v);
+      } catch {
+        console.warn(`Clearing corrupted key: ${k}`);
+        localStorage.removeItem(k);
+      }
+    });
+    try {
+      let total = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        total += (localStorage.getItem(k) || "").length;
+      }
+      if (total > 3 * 1024 * 1024) {
+        localStorage.removeItem("anant_v3_ai_reviews");
+        console.warn("Storage over 3MB, cleared AI reviews");
+      }
+    } catch {}
+  }, []);
+  return null;
+}
+
 export default function App() {
   const [view, setView] = useState("dashboard");
   const [logs, setLogs] = useLS("anant_v3_logs", {});
@@ -579,6 +618,7 @@ const [showCheckin, setShowCheckin] = useState(false);
 
   return (
     <div style={{ minHeight: "100dvh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", width: "100vw", maxWidth: "100%", margin: "0 auto", paddingBottom: 80, overflowX: "hidden", position: "relative" }}>
+      <StorageGuard />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:wght@600;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
