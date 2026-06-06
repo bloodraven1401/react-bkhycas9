@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, createContext, useContext } from "react";
+import React, { useState, useEffect, useRef, createContext, useContext, useMemo } from "react";
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const THEME_MALE = {
@@ -851,8 +851,7 @@ export default function App() {
   const isFemale = userProfile?.gender === "female";
   const activeTheme = isFemale ? THEME_FEMALE : THEME_MALE;
   // Mutate global C and COLORS to match current theme
-  Object.assign(C, activeTheme);
-  Object.assign(COLORS, isFemale ? COLORS_FEMALE : COLORS_MALE);
+  
 
   useEffect(() => {
     if (!userProfile?.onboardingComplete) setShowOnboarding(true);
@@ -875,6 +874,20 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [shadowMode, setShadowMode] = useState(false);
   useEffect(() => { window.__shadowMode = shadowMode; }, [shadowMode]);
+  useMemo(() => { // eslint-disable-line
+    if (shadowMode) {
+      Object.assign(C, {
+        ...THEME_MALE,
+        bg: "#020204", surface: "#080810", border: "#0F0F1A", faint: "#060608",
+        text: "#FF0000", muted: "#4A0000", dim: "#2A0000",
+        accent: "#FF0000", skincare: "#FF0000", workout: "#CC0000",
+      });
+      Object.assign(COLORS, { ...COLORS_MALE, workout: "#CC0000", skincare: "#FF0000", diet: "#AA0000", nofap: "#FF0000" });
+    } else {
+      Object.assign(C, activeTheme);
+      Object.assign(COLORS, isFemale ? COLORS_FEMALE : COLORS_MALE);
+    }
+  }, [isFemale, shadowMode]); // eslint-disable-line
   const [checkinLogs, setCheckinLogs] = useLS("anant_v3_checkin", {});
   const [xpToast, setXpToast] = useState(null);
   const [rankUpData, setRankUpData] = useState(null);
@@ -1192,6 +1205,23 @@ const [showCheckin, setShowCheckin] = useState(false);
               </div>
 
               <div style={{ height: 1, background: C.border, margin: "8px 16px" }} />
+
+              {/* Threats */}
+              {getDemonData(logs).length > 0 && (
+                <div style={{ padding: "0 16px", marginBottom: 6 }}>
+                  <div style={{ fontSize: 9, color: C.nofap, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8, paddingLeft: 8 }}>⚠ Threats</div>
+                  {getDemonData(logs).map(d => (
+                    <div key={d.cat} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 9, marginBottom: 3, background: `${d.color}10` }}>
+                      <span style={{ fontSize: 14 }}>{d.isMajor ? "👹" : "👤"}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, color: d.color }}>{d.name}</div>
+                        <div style={{ fontSize: 9, color: C.muted }}>{d.missStreak}d · Power {d.hp}/100</div>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ height: 1, background: C.border, margin: "8px 0 14px" }} />
+                </div>
+              )}
 
               {/* Tools */}
               <div style={{ padding: "0 16px", marginBottom: 6 }}>
@@ -2541,7 +2571,7 @@ function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode
           </div>
         )}
       </div>
-{/* Shadow Mode — needs to be passed as prop */}
+
       {/* Goals */}
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
         <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>My Goals</div>
@@ -2565,8 +2595,8 @@ function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode
           </div>
         )}
       </div>
-    </div>
-{/* Shadow Mode */}
+
+      {/* Shadow Mode */}
       <div style={{ marginTop: 16, background: shadowMode ? "#020204" : C.surface, border: `2px solid ${shadowMode ? "#FF0000" : C.border}`, borderRadius: 16, padding: 20 }}>
         <div style={{ fontSize: 9, color: shadowMode ? "#FF0000" : C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>
           {shadowMode ? "⚠ SHADOW MODE ACTIVE" : "Shadow Mode"}
@@ -2574,12 +2604,13 @@ function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode
         <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.7, marginBottom: 14 }}>
           {shadowMode
             ? "The shadow self has taken over. All systems operating at maximum intensity."
-            : `Activate your alter ego. ${userProfile.alterEgo?.name ? `Become ${userProfile.alterEgo.name}.` : "Become who you were meant to be."} Dark UI, intense voice, no mercy.`}
+            : ("Activate your alter ego. " + (userProfile.alterEgo?.name ? ("Become " + userProfile.alterEgo.name + ".") : "Become who you were meant to be.") + " Dark UI, intense voice, no mercy.")}
         </div>
         <button onClick={() => setShadowMode(s => !s)} style={{ width: "100%", background: shadowMode ? "#FF0000" : "none", border: `2px solid ${shadowMode ? "#FF0000" : C.border}`, borderRadius: 10, padding: "13px", color: shadowMode ? "#000" : C.muted, fontSize: 12, fontFamily: "inherit", fontWeight: 700, cursor: "pointer", letterSpacing: 1, textTransform: "uppercase" }}>
           {shadowMode ? "◆ Deactivate Shadow Mode" : "◆ Activate Shadow Mode"}
         </button>
       </div>
+    </div>
   );
 }
 
