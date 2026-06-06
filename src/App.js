@@ -1473,7 +1473,10 @@ function DailyQuestsCard({ quests, setQuests, logs, setLogs, xpLogs, setXpLogs, 
     let changed = false;
     const updated = todayQuests.map(q => {
       if (q.completed) return q;
-      const done = q.check(logs, today, workoutLogs, foodLogs, sleepLogs);
+      // Rehydrate check function from QUEST_POOL since functions can't be stored in localStorage
+      const poolQuest = QUEST_POOL.find(p => p.id === q.id);
+      if (!poolQuest?.check) return q;
+      const done = poolQuest.check(logs, today, workoutLogs, foodLogs, sleepLogs);
       if (done) { changed = true; return { ...q, completed: true }; }
       return q;
     });
