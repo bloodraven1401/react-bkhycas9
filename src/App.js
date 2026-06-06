@@ -1004,7 +1004,9 @@ const [showCheckin, setShowCheckin] = useState(false);
   if (subView === "aicoach") return <AICoachFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={getNofapStreak()} onBack={() => setSubView(null)} />;
   if (subView === "quests") return <DailyQuestsFullView quests={quests} setQuests={setQuests} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} workoutLogs={workoutLogs} foodLogs={foodLogs} onBack={() => setSubView(null)} />;
   if (subView === "sleep") return <SleepFullView sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} onBack={() => setSubView(null)} />;
-  if (subView === "backup") return <BackupFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={setCheckinLogs} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setQuests={setQuests} onBack={() => setSubView(null)} />;
+ if (subView === "profile") return <ProfilePage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} />;
+  if (subView === "settings") return <SettingsPage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} onResetOnboarding={() => { setShowOnboarding(true); setSubView(null); }} />;
+  if (subView === "about") return <AboutPage onBack={() => setSubView(null)} />; if (subView === "backup") return <BackupFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={setCheckinLogs} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setQuests={setQuests} onBack={() => setSubView(null)} />;
 
   if (showOnboarding) return (
     <ThemeContext.Provider value={{ theme: activeTheme, isFemale }}>
@@ -1026,8 +1028,12 @@ const [showCheckin, setShowCheckin] = useState(false);
         ::-webkit-scrollbar{width:0}
         .press{transition:transform 0.15s ease,opacity 0.15s ease;cursor:pointer}
         .press:active{transform:scale(0.96);opacity:0.8}
-        .fade{animation:fd 0.25s ease}
-        @keyframes fd{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        .fade{animation:fd 0.28s cubic-bezier(0.4,0,0.2,1)}
+        @keyframes fd{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        .habit-row{transition:background 0.2s ease,border-color 0.2s ease,transform 0.15s ease}
+        .habit-row:active{transform:scale(0.98)}
+        .sidebar-item{transition:background 0.15s ease,color 0.15s ease}
+        .sidebar-item:hover{background:rgba(255,255,255,0.04)}
         .ring-track{transition:stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)}
         input,textarea{background:#0D0D12;border:1px solid #16161E;color:#E8E4DC;border-radius:7px;padding:8px 10px;font-family:inherit;font-size:13px;outline:none;transition:border 0.2s}
         input:focus,textarea:focus{border-color:#2A2A3A}
@@ -1164,11 +1170,14 @@ const [showCheckin, setShowCheckin] = useState(false);
               {/* Bottom */}
               <div style={{ padding: "0 16px" }}>
                 <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8, paddingLeft: 8 }}>Settings</div>
-                <button onClick={() => setSidebarOpen(false)} style={{ width: "100%", background: "none", border: "none", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 9, color: C.muted, fontFamily: "inherit", fontSize: 13, cursor: "pointer", textAlign: "left" }}>
+                <button onClick={() => { setSubView("profile"); setSidebarOpen(false); }} style={{ width: "100%", background: "none", border: "none", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 9, color: C.muted, fontFamily: "inherit", fontSize: 13, cursor: "pointer", textAlign: "left" }}>
+                  <span style={{ fontSize: 14, width: 18 }}>◎</span> Profile
+                </button>
+                <button onClick={() => { setSubView("settings"); setSidebarOpen(false); }} style={{ width: "100%", background: "none", border: "none", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 9, color: C.muted, fontFamily: "inherit", fontSize: 13, cursor: "pointer", textAlign: "left" }}>
                   <span style={{ fontSize: 14, width: 18 }}>⚙</span> Settings
                 </button>
-                <button onClick={() => setSidebarOpen(false)} style={{ width: "100%", background: "none", border: "none", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 9, color: C.muted, fontFamily: "inherit", fontSize: 13, cursor: "pointer", textAlign: "left" }}>
-                  <span style={{ fontSize: 14, width: 18 }}>◎</span> About
+                <button onClick={() => { setSubView("about"); setSidebarOpen(false); }} style={{ width: "100%", background: "none", border: "none", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 9, color: C.muted, fontFamily: "inherit", fontSize: 13, cursor: "pointer", textAlign: "left" }}>
+                  <span style={{ fontSize: 14, width: 18 }}>✦</span> About
                 </button>
               </div>
             </div>
@@ -1223,7 +1232,7 @@ function Dashboard({ logs, nofapStreak, weeklyPct, todayPct, getStreak, setView,
   const doneTodayCount = HABITS.filter(h => todayLogs[h.id]?.done).length;
   const topStreaks = HABITS.map(h => ({ ...h, streak: getStreak(h.id) })).sort((a, b) => b.streak - a.streak).slice(0, 3);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "center", padding: "4px 0 8px" }}>
         <Ring value={todayPct} size={120} color={C.skincare} label={`${doneTodayCount}/${HABITS.length}`} sublabel="done" />
       </div>
@@ -1318,7 +1327,7 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
                 const log = todayLogs[h.id] || {};
                 const streak = getStreak(h.id);
                 return (
-                  <div key={h.id} style={{ background: log.done ? `${COLORS[h.category] || C.muted}0E` : C.surface, border: `1px solid ${log.done ? (COLORS[h.category] || C.muted) + "35" : C.border}`, borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}
+                 <div key={h.id} className="habit-row" style={{ background: log.done ? `${COLORS[h.category] || C.muted}0E` : C.surface, border: `1px solid ${log.done ? (COLORS[h.category] || C.muted) + "35" : C.border}`, borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}
                     onClick={() => !editing && h.type === "binary" && toggleHabit(h.id)}>
                     {!editing && (
                       <button onClick={e => { e.stopPropagation(); toggleHabit(h.id); }} style={{ width: 24, height: 24, borderRadius: 6, background: log.done ? COLORS[h.category] : "transparent", border: `2px solid ${log.done ? COLORS[h.category] : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -2296,6 +2305,244 @@ function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLo
   );
 }
 
+// ─── PROFILE PAGE ─────────────────────────────────────────────────────────────
+function ProfilePage({ userProfile, setUserProfile, onBack, isFemale }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ ...userProfile });
+  const theme = isFemale ? THEME_FEMALE : THEME_MALE;
+  const accent = theme.accent;
+
+  function save() {
+    setUserProfile({ ...form });
+    setEditing(false);
+  }
+
+  const inputStyle = {
+    background: C.faint, border: `1px solid ${C.border}`,
+    borderRadius: 10, padding: "11px 14px", color: C.text,
+    fontFamily: "inherit", fontSize: 13, outline: "none", width: "100%",
+  };
+  const labelStyle = { fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 };
+
+  const totalXP = getTotalXP({});
+  const rank = getCurrentRank(0);
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1, fontFamily: "inherit", cursor: "pointer" }}>← Back</button>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Profile</div>
+        </div>
+        <button onClick={() => editing ? save() : setEditing(true)} style={{ background: editing ? accent : "none", border: `1px solid ${editing ? accent : C.border}`, borderRadius: 8, padding: "6px 14px", color: editing ? (isFemale ? "#050507" : "#000") : C.muted, fontSize: 11, fontFamily: "inherit", cursor: "pointer" }}>
+          {editing ? "✓ Save" : "✎ Edit"}
+        </button>
+      </div>
+
+      {/* Identity Card */}
+      <div style={{ background: C.surface, border: `1px solid ${accent}30`, borderRadius: 16, padding: 20, marginBottom: 16 }}>
+        <div style={{ fontSize: 9, color: accent, letterSpacing: 3, textTransform: "uppercase", marginBottom: 14 }}>Identity</div>
+        {editing ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div>
+              <div style={labelStyle}>Name</div>
+              <input style={inputStyle} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <div style={labelStyle}>Age</div>
+                <input type="number" style={inputStyle} value={form.age} onChange={e => setForm(p => ({ ...p, age: e.target.value }))} />
+              </div>
+              <div>
+                <div style={labelStyle}>Gender</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {["male","female"].map(g => (
+                    <button key={g} onClick={() => setForm(p => ({ ...p, gender: g }))} style={{ flex: 1, background: form.gender === g ? `${accent}20` : C.faint, border: `1px solid ${form.gender === g ? accent : C.border}`, borderRadius: 8, padding: "10px 6px", color: form.gender === g ? accent : C.muted, fontSize: 11, fontFamily: "inherit", cursor: "pointer", textTransform: "capitalize" }}>{g}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <div style={labelStyle}>Height (cm)</div>
+                <input type="number" style={inputStyle} value={form.height} onChange={e => setForm(p => ({ ...p, height: e.target.value }))} />
+              </div>
+              <div>
+                <div style={labelStyle}>Weight (kg)</div>
+                <input type="number" style={inputStyle} value={form.weight} onChange={e => setForm(p => ({ ...p, weight: e.target.value }))} />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, marginBottom: 4 }}>{userProfile.name || "—"}</div>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>{userProfile.gender ? userProfile.gender.charAt(0).toUpperCase() + userProfile.gender.slice(1) : "—"} · {userProfile.age ? `${userProfile.age} yrs` : "—"} · {userProfile.height ? `${userProfile.height}cm` : "—"} · {userProfile.weight ? `${userProfile.weight}kg` : "—"}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Alter Ego */}
+      <div style={{ background: C.surface, border: `1px solid ${accent}20`, borderRadius: 16, padding: 20, marginBottom: 16 }}>
+        <div style={{ fontSize: 9, color: accent, letterSpacing: 3, textTransform: "uppercase", marginBottom: 14 }}>Alter Ego</div>
+        {editing ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div>
+              <div style={labelStyle}>Alter Ego Name</div>
+              <input style={inputStyle} value={form.alterEgo?.name || ""} onChange={e => setForm(p => ({ ...p, alterEgo: { ...p.alterEgo, name: e.target.value } }))} placeholder={isFemale ? "The Empress..." : "The Shadow..."} />
+            </div>
+            <div>
+              <div style={labelStyle}>Title</div>
+              <input style={inputStyle} value={form.alterEgo?.title || ""} onChange={e => setForm(p => ({ ...p, alterEgo: { ...p.alterEgo, title: e.target.value } }))} placeholder={isFemale ? "Sovereign of the Night..." : "The Unbreakable..."} />
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: accent, marginBottom: 4 }}>{userProfile.alterEgo?.name || "—"}</div>
+            <div style={{ fontSize: 11, color: C.muted }}>{userProfile.alterEgo?.title || "—"}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Struggles */}
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 16 }}>
+        <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>What I'm Fighting</div>
+        {editing ? (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {STRUGGLE_OPTIONS.map(s => {
+              const sel = form.struggles?.includes(s);
+              return (
+                <button key={s} onClick={() => setForm(p => ({ ...p, struggles: sel ? p.struggles.filter(x => x !== s) : [...(p.struggles || []), s] }))} style={{ padding: "7px 12px", borderRadius: 20, fontSize: 11, fontFamily: "inherit", cursor: "pointer", background: sel ? `${accent}20` : C.faint, border: `1px solid ${sel ? accent : C.border}`, color: sel ? accent : C.muted }}>
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {(userProfile.struggles || []).length === 0 ? <div style={{ fontSize: 12, color: C.muted }}>None selected</div> :
+              (userProfile.struggles || []).map(s => (
+                <div key={s} style={{ padding: "5px 10px", borderRadius: 20, fontSize: 11, background: `${accent}15`, border: `1px solid ${accent}30`, color: accent }}>{s}</div>
+              ))}
+          </div>
+        )}
+      </div>
+
+      {/* Goals */}
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
+        <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>My Goals</div>
+        {editing ? (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {GOAL_OPTIONS.map(g => {
+              const sel = form.goals?.includes(g);
+              return (
+                <button key={g} onClick={() => setForm(p => ({ ...p, goals: sel ? p.goals.filter(x => x !== g) : [...(p.goals || []), g] }))} style={{ padding: "7px 12px", borderRadius: 20, fontSize: 11, fontFamily: "inherit", cursor: "pointer", background: sel ? `${accent}20` : C.faint, border: `1px solid ${sel ? accent : C.border}`, color: sel ? accent : C.muted }}>
+                  {g}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {(userProfile.goals || []).length === 0 ? <div style={{ fontSize: 12, color: C.muted }}>None selected</div> :
+              (userProfile.goals || []).map(g => (
+                <div key={g} style={{ padding: "5px 10px", borderRadius: 20, fontSize: 11, background: `${accent}15`, border: `1px solid ${accent}30`, color: accent }}>{g}</div>
+              ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
+function SettingsPage({ userProfile, setUserProfile, onBack, isFemale, onResetOnboarding }) {
+  const accent = isFemale ? THEME_FEMALE.accent : THEME_MALE.accent;
+
+  const Row = ({ icon, label, value, onClick, danger }) => (
+    <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, marginBottom: 8, cursor: onClick ? "pointer" : "default" }}>
+      <span style={{ fontSize: 16, color: danger ? C.nofap : accent, width: 22 }}>{icon}</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13, color: danger ? C.nofap : C.text }}>{label}</div>
+        {value && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{value}</div>}
+      </div>
+      {onClick && <span style={{ color: C.muted, fontSize: 14 }}>›</span>}
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1, fontFamily: "inherit", cursor: "pointer" }}>← Back</button>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Settings</div>
+      </div>
+
+      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 10, paddingLeft: 4 }}>Account</div>
+      <Row icon="◎" label="Name" value={userProfile.name || "Not set"} />
+      <Row icon={isFemale ? "✦" : "◆"} label="Theme" value={isFemale ? "Moonlit Empress (Female)" : "Iron Dark (Male)"} />
+      <Row icon="⚡" label="Alter Ego" value={userProfile.alterEgo?.name || "Not set"} />
+
+      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", margin: "20px 0 10px", paddingLeft: 4 }}>App</div>
+      <Row icon="◈" label="Re-run Onboarding" value="Reset your profile setup" onClick={onResetOnboarding} />
+
+      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", margin: "20px 0 10px", paddingLeft: 4 }}>Notifications</div>
+      <Row icon="☽" label="Daily Check-in Reminder" value="Coming soon" />
+      <Row icon="◉" label="Habit Reminders" value="Coming soon" />
+
+      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", margin: "20px 0 10px", paddingLeft: 4 }}>Data</div>
+      <div style={{ background: `${C.nofap}10`, border: `1px solid ${C.nofap}25`, borderRadius: 12, padding: "14px 16px", marginBottom: 8 }}>
+        <div style={{ fontSize: 11, color: C.nofap, marginBottom: 4 }}>⚠ Danger Zone</div>
+        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>To reset or export your data, use Data Backup in the sidebar Tools section.</div>
+      </div>
+
+      <div style={{ marginTop: 32, textAlign: "center" }}>
+        <div style={{ fontSize: 10, color: C.muted }}>Self System · Built for growth</div>
+        <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>v3.0 · Your data stays on your device</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ABOUT PAGE ───────────────────────────────────────────────────────────────
+function AboutPage({ onBack }) {
+  const sections = [
+    { icon: "⚡", title: "What is Self System?", body: "A personal operating system built for people serious about becoming their best version. No fluff. No social features. Just you, your habits, and your data." },
+    { icon: "◆", title: "How it works", body: "Track habits daily, log workouts and meals, monitor sleep, journal your thoughts, and let the AI Coach analyze your patterns. XP and ranks keep you accountable." },
+    { icon: "◎", title: "Your data", body: "Everything stays on your device. No accounts, no servers, no tracking. Export your data anytime from Data Backup." },
+    { icon: "✦", title: "Alter Ego", body: "Define the version of you that has already achieved everything you want. The app addresses you as that person in AI reviews and coaching prompts." },
+    { icon: "☽", title: "Themes", body: "Two themes available — Iron Dark (masculine, focused) and Moonlit Empress (elegant, powerful). Set during onboarding based on your identity." },
+    { icon: "★", title: "Ranks & XP", body: "Every habit completed, every clean day, every workout logged earns XP. Rise from E-Rank (The Awakened) to SSS-Rank (The Absolute)." },
+  ];
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1, fontFamily: "inherit", cursor: "pointer" }}>← Back</button>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>About</div>
+      </div>
+
+      <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <div style={{ fontSize: 44, marginBottom: 12 }}>⚡</div>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, marginBottom: 6 }}>Self System</div>
+        <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: "uppercase" }}>Your Personal Operating System</div>
+      </div>
+
+      {sections.map((s, i) => (
+        <div key={i} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 18, marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 16, color: C.accent }}>{s.icon}</span>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700 }}>{s.title}</div>
+          </div>
+          <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.8 }}>{s.body}</div>
+        </div>
+      ))}
+
+      <div style={{ marginTop: 32, textAlign: "center" }}>
+        <div style={{ fontSize: 10, color: C.muted }}>Made with discipline.</div>
+        <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>v3.0 · 2026</div>
+      </div>
+    </div>
+  );
+}
 // ─── FULL SCREEN WRAPPERS (Sidebar navigation targets) ───────────────────────
 function HeatmapFullView({ logs, checkinLogs, sleepLogs, onBack, setSelectedDate, setView }) {
   return (
@@ -3784,7 +4031,11 @@ function AIReviewCard({ logs, workoutLogs, foodLogs, checkinLogs, journalLogs, x
     const totalXP = getTotalXP(xpLogs);
     const totalSets = range.reduce((a, d) => a + Object.values(workoutLogs[d] || {}).reduce((b, ex) => b + (ex.sets?.length || 0), 0), 0);
 
-    return `You are a personal coach reviewing ${period.label.toLowerCase()} data for Anant, a 21-year-old in India focused on physique, guitar, discipline, and self-improvement.
+    const storedProfile = (() => { try { const v = localStorage.getItem("anant_v3_profile"); return v ? JSON.parse(v) : null; } catch { return null; } })();
+    const userName = storedProfile?.name || "Anant";
+    const alterEgo = storedProfile?.alterEgo?.name ? `Their alter ego — the version of themselves they are becoming — is called "${storedProfile.alterEgo.name}"${storedProfile.alterEgo.title ? `, titled "${storedProfile.alterEgo.title}"` : ""}. Address them occasionally as this alter ego when giving praise or pushing them harder.` : "";
+    const userGoals = (storedProfile?.goals || []).slice(0, 4).join(", ");
+    return `You are a personal coach reviewing ${period.label.toLowerCase()} data for ${userName}, focused on physique, discipline, and self-improvement.${alterEgo ? " " + alterEgo : ""}${userGoals ? ` Their goals include: ${userGoals}.` : ""}
 
 DATA (last ${days} days):
 - Habit completion: ${habitCompletion}%
@@ -3960,26 +4211,44 @@ function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs,
     return best;
   }));
 
+  const [rebirthScreen, setRebirthScreen] = useState(false);
+
   function doReset() {
     const season = {
       number: seasons.length + 1,
       date: todayKey(),
       reason: reason || "Fresh start",
-      stats: {
-        totalDays,
-        totalSessions,
-        bestStreak,
-        totalXP: getTotalXP(xpLogs),
-      }
+      stats: { totalDays, totalSessions, bestStreak, totalXP: getTotalXP(xpLogs) }
     };
     setSeasons(p => [...p, season]);
     if (selectedResets.streaks) setLogs({});
     if (selectedResets.workout) setWorkoutLogs({});
-    if (selectedResets.weight)  setWeightLogs({});
-    if (selectedResets.streaks) setNofapStart(todayKey()); if (selectedResets.xp) { setXpLogs({}); setAchievements([]); } if (selectedResets.xp) setXpLogs({});
+    if (selectedResets.weight) setWeightLogs({});
+    if (selectedResets.streaks) setNofapStart(todayKey());
+    if (selectedResets.xp) { setXpLogs({}); setAchievements([]); }
     setShowConfirm(false);
     setReason("");
+    setRebirthScreen(true);
+    setTimeout(() => setRebirthScreen(false), 4000);
   }
+
+  if (rebirthScreen) return (
+    <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 999999, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'DM Mono',monospace", padding: 32, textAlign: "center" }}>
+      <style>{`@keyframes pulse{0%,100%{opacity:0.4;transform:scale(0.97)}50%{opacity:1;transform:scale(1.03)}}`}</style>
+      <div style={{ animation: "pulse 1.8s ease infinite", marginBottom: 24 }}>
+        <div style={{ fontSize: 64 }}>◆</div>
+      </div>
+      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: C.text, marginBottom: 8, lineHeight: 1.2 }}>
+        Season {seasons.length} Complete.
+      </div>
+      <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.9, maxWidth: 300, marginBottom: 28 }}>
+        {totalDays} days logged · {bestStreak}d best streak · {getTotalXP(xpLogs).toLocaleString()} XP earned
+      </div>
+      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, color: C.accent, letterSpacing: 2 }}>
+        The next chapter begins now.
+      </div>
+    </div>
+  );
 
   if (showConfirm) return (
     <div style={{ background: C.surface, border: `1px solid #FF000030`, borderRadius: 14, padding: 20, marginTop: 12 }}>
