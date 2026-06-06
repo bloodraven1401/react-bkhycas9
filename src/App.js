@@ -184,6 +184,36 @@ function dateKey(offset = 0) {
 function last7()  { return Array.from({ length: 7  }, (_, i) => dateKey(-(6  - i))); }
 function last30() { return Array.from({ length: 30 }, (_, i) => dateKey(-(29 - i))); }
 
+// ─── DEMON SYSTEM ─────────────────────────────────────────────────────────────
+function getDemonData(logs) {
+  const demons = [];
+  Object.keys(COLORS).forEach(cat => {
+    const catHabits = HABITS.filter(h => h.category === cat);
+    if (!catHabits.length) return;
+    let missStreak = 0;
+    let d = new Date();
+    for (let i = 0; i < 30; i++) {
+      const k = new Date(d.getTime() - i * 86400000).toISOString().split("T")[0];
+      const allMissed = catHabits.every(h => !logs[k]?.[h.id]?.done);
+      if (allMissed) missStreak++;
+      else break;
+    }
+    if (missStreak >= 3) {
+      const isMajor = missStreak >= 7;
+      demons.push({
+        cat, missStreak, isMajor,
+        name: isMajor ? `The ${cat.charAt(0).toUpperCase() + cat.slice(1)} Devourer` : `${cat.charAt(0).toUpperCase() + cat.slice(1)} Shadow`,
+        hp: Math.min(100, Math.round((missStreak / 14) * 100)),
+        color: COLORS[cat] || C.muted,
+        taunt: isMajor
+          ? `${missStreak} days of silence. It's getting stronger.`
+          : `${missStreak} days missed. Don't let it grow.`,
+      });
+    }
+  });
+  return demons;
+}
+
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 function useLS(key, def) {
   const [val, setVal] = useState(() => {
@@ -843,8 +873,11 @@ export default function App() {
   const [haircarePlan, setHaircarePlan] = useLS("anant_v3_haircare_plan", DEFAULT_HAIRCARE);
   const [spiritualPlan, setSpiritualPlan] = useLS("anant_v3_spiritual_plan", DEFAULT_SPIRITUAL);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [shadowMode, setShadowMode] = useState(false);
+  useEffect(() => { window.__shadowMode = shadowMode; }, [shadowMode]);
   const [checkinLogs, setCheckinLogs] = useLS("anant_v3_checkin", {});
   const [xpToast, setXpToast] = useState(null);
+  const [rankUpData, setRankUpData] = useState(null);
   const [selectedRoutine, setSelectedRoutine] = useState(null);
   const [subView, setSubView] = useState(null);
   const [selectedDate, setSelectedDate] = useState(todayKey());
@@ -901,8 +934,17 @@ const [showCheckin, setShowCheckin] = useState(false);
       const multiplier = streak >= 90 ? 5 : streak >= 30 ? 3 : streak >= 7 ? 2 : 1;
       const earned = baseXP * multiplier;
       setXpLogs(p => ({ ...p, [today]: (p[today] || 0) + earned }));
-      setXpToast(`+${earned} XP`);
-      setTimeout(() => setXpToast(null), 2000);
+      const oldRank = getCurrentRank(getTotalXP(xpLogs));
+      const newTotalXP = getTotalXP(xpLogs) + earned;
+      const newRank = getCurrentRank(newTotalXP);
+      const isRankUp = newRank.rank !== oldRank.rank;
+      if (isRankUp) {
+        setRankUpData(newRank);
+        setTimeout(() => setRankUpData(null), 3500);
+      } else {
+        setXpToast(`+${earned} XP`);
+        setTimeout(() => setXpToast(null), 2000);
+      }
       checkAchievements(id);
     } else {
       setXpLogs(p => ({ ...p, [today]: Math.max(0, (p[today] || 0) - (XP_VALUES[id] || 10)) }));
@@ -1004,7 +1046,7 @@ const [showCheckin, setShowCheckin] = useState(false);
   if (subView === "aicoach") return <AICoachFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={getNofapStreak()} onBack={() => setSubView(null)} />;
   if (subView === "quests") return <DailyQuestsFullView quests={quests} setQuests={setQuests} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} workoutLogs={workoutLogs} foodLogs={foodLogs} onBack={() => setSubView(null)} />;
   if (subView === "sleep") return <SleepFullView sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} onBack={() => setSubView(null)} />;
- if (subView === "profile") return <ProfilePage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} />;
+ if (subView === "profile") return <ProfilePage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} shadowMode={shadowMode} setShadowMode={setShadowMode} />;
   if (subView === "settings") return <SettingsPage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} onResetOnboarding={() => { setShowOnboarding(true); setSubView(null); }} />;
   if (subView === "about") return <AboutPage onBack={() => setSubView(null)} />; if (subView === "backup") return <BackupFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={setCheckinLogs} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setQuests={setQuests} onBack={() => setSubView(null)} />;
 
@@ -1192,6 +1234,25 @@ const [showCheckin, setShowCheckin] = useState(false);
           {xpToast}
         </div>
       )}
+
+      {/* Rank Up Overlay */}
+      {rankUpData && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 999998, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+          <style>{`
+            @keyframes rankFlash{0%{opacity:0}10%{opacity:0.18}30%{opacity:0.12}100%{opacity:0}}
+            @keyframes rankCard{0%{opacity:0;transform:scale(0.8) translateY(20px)}20%{opacity:1;transform:scale(1.05) translateY(0)}80%{opacity:1;transform:scale(1) translateY(0)}100%{opacity:0;transform:scale(0.95) translateY(-10px)}}
+          `}</style>
+          {/* Flash */}
+          <div style={{ position: "absolute", inset: 0, background: rankUpData.color, animation: "rankFlash 3.5s ease forwards" }} />
+          {/* Card */}
+          <div style={{ position: "relative", background: "rgba(7,7,10,0.97)", border: `2px solid ${rankUpData.color}`, borderRadius: 20, padding: "36px 40px", textAlign: "center", animation: "rankCard 3.5s ease forwards", boxShadow: `0 0 60px ${rankUpData.color}60, 0 0 120px ${rankUpData.color}20` }}>
+            <div style={{ fontSize: 11, color: rankUpData.color, letterSpacing: 5, textTransform: "uppercase", marginBottom: 10 }}>Rank Up</div>
+            <div style={{ fontSize: 72, color: rankUpData.color, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, lineHeight: 1, textShadow: `0 0 30px ${rankUpData.color}` }}>{rankUpData.rank}</div>
+            <div style={{ fontSize: 18, color: "#C0C0C0", fontFamily: "'Cormorant Garamond',serif", marginTop: 8, letterSpacing: 2 }}>{rankUpData.title}</div>
+            <div style={{ fontSize: 11, color: rankUpData.color, marginTop: 16, opacity: 0.8 }}>You are becoming unstoppable.</div>
+          </div>
+        </div>
+      )}
       {showCheckin && (
   <DailyCheckin
     onComplete={(data) => {
@@ -1232,11 +1293,11 @@ function Dashboard({ logs, nofapStreak, weeklyPct, todayPct, getStreak, setView,
   const doneTodayCount = HABITS.filter(h => todayLogs[h.id]?.done).length;
   const topStreaks = HABITS.map(h => ({ ...h, streak: getStreak(h.id) })).sort((a, b) => b.streak - a.streak).slice(0, 3);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "center", padding: "4px 0 8px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 12px" }}>
         <Ring value={todayPct} size={120} color={C.skincare} label={`${doneTodayCount}/${HABITS.length}`} sublabel="done" />
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         <Stat label="NoFap"   value={`${nofapStreak}d`}                  color={C.nofap} />
         <Stat label="Weekly"  value={`${weeklyPct}%`}                    color={C.workout} />
         <Stat label="Calories" value={Math.round(todayMacros.calories)} color={C.diet} />
@@ -1269,6 +1330,23 @@ function Dashboard({ logs, nofapStreak, weeklyPct, todayPct, getStreak, setView,
           </div>
         </div>
       </div>
+{/* Demons */}
+      {(() => {
+        const demons = getDemonData(logs);
+        if (!demons.length) return null;
+        return (
+          <div style={{ background: C.surface, border: `1px solid ${C.nofap}25`, borderRadius: 14, padding: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div>
+                <div style={{ fontSize: 9, color: C.nofap, letterSpacing: 3, textTransform: "uppercase", marginBottom: 3 }}>Active Threats</div>
+                <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700 }}>Your Demons</div>
+              </div>
+              <div style={{ fontSize: 22, color: C.nofap, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{demons.length}</div>
+            </div>
+            {demons.map(d => <DemonCard key={d.cat} demon={d} />)}
+          </div>
+        );
+      })()}
       {/* Streaks */}
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
         <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 10 }}>Streaks</div>
@@ -1308,9 +1386,9 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
   function removeHabit(id) { setHabits(p => p.filter(h => h.id !== id)); }
   function updateHabit(id, field, val) { setHabits(p => p.map(h => h.id === id ? { ...h, [field]: val } : h)); }
 
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+ return (
+    <div style={{ paddingBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
         <div style={{ fontSize: 10, color: C.muted, letterSpacing: 3, textTransform: "uppercase" }}>Today</div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ fontSize: 12, color: C.skincare }}>{done}/{habits.length}</div>
@@ -1320,18 +1398,21 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
       {categories.map(cat => {
         const catH = habits.filter(h => h.category === cat);
         return (
-          <div key={cat} style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 9, color: COLORS[cat] || C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>{cat}</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          <div key={cat} style={{ marginBottom: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <div style={{ width: 3, height: 14, borderRadius: 2, background: COLORS[cat] || C.muted }} />
+              <div style={{ fontSize: 9, color: COLORS[cat] || C.muted, letterSpacing: 3, textTransform: "uppercase" }}>{cat}</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {catH.map(h => {
                 const log = todayLogs[h.id] || {};
                 const streak = getStreak(h.id);
                 return (
-                 <div key={h.id} className="habit-row" style={{ background: log.done ? `${COLORS[h.category] || C.muted}0E` : C.surface, border: `1px solid ${log.done ? (COLORS[h.category] || C.muted) + "35" : C.border}`, borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}
+                 <div key={h.id} className="habit-row" style={{ background: log.done ? `${COLORS[h.category] || C.muted}0E` : C.surface, border: `1px solid ${log.done ? (COLORS[h.category] || C.muted) + "35" : C.border}`, borderRadius: 12, padding: "15px 16px", display: "flex", alignItems: "center", gap: 14, minHeight: 64 }}
                     onClick={() => !editing && h.type === "binary" && toggleHabit(h.id)}>
                     {!editing && (
-                      <button onClick={e => { e.stopPropagation(); toggleHabit(h.id); }} style={{ width: 24, height: 24, borderRadius: 6, background: log.done ? COLORS[h.category] : "transparent", border: `2px solid ${log.done ? COLORS[h.category] : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        {log.done && <span style={{ color: "#000", fontSize: 11, fontWeight: 700 }}>✓</span>}
+                      <button onClick={e => { e.stopPropagation(); toggleHabit(h.id); }} style={{ width: 28, height: 28, borderRadius: 8, background: log.done ? COLORS[h.category] : "transparent", border: `2px solid ${log.done ? COLORS[h.category] : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.2s ease" }}>
+                        {log.done && <span style={{ color: "#000", fontSize: 12, fontWeight: 700 }}>✓</span>}
                       </button>
                     )}
                     <div style={{ flex: 1 }}>
@@ -1339,8 +1420,8 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
                         <input style={{ ...editInput, fontSize: 12 }} value={h.label} onChange={e => updateHabit(h.id, "label", e.target.value)} />
                       ) : (
                         <>
-                          <div style={{ fontSize: 12, color: log.done ? C.text : "#666" }}>{h.label}</div>
-                          {streak > 0 && <div style={{ fontSize: 10, color: COLORS[h.category], marginTop: 2, opacity: 0.7 }}>{streak}d streak</div>}
+                         <div style={{ fontSize: 13, color: log.done ? C.text : "#777", fontWeight: log.done ? 500 : 400 }}>{h.label}</div>
+                          {streak > 0 && <div style={{ fontSize: 10, color: COLORS[h.category], marginTop: 3, opacity: 0.8 }}>{streak}d streak 🔥</div>}
                         </>
                       )}
                     </div>
@@ -2305,8 +2386,42 @@ function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLo
   );
 }
 
+// ─── DEMON CARD ───────────────────────────────────────────────────────────────
+function DemonCard({ demon }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div onClick={() => setExpanded(e => !e)} style={{ background: C.surface, border: `1px solid ${demon.color}40`, borderRadius: 14, padding: 16, marginBottom: 8, cursor: "pointer" }}>
+      <style>{`@keyframes demonPulse{0%,100%{box-shadow:0 0 0 0 ${demon.color}30}50%{box-shadow:0 0 0 6px ${demon.color}10}}`}</style>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, animation: demon.isMajor ? "demonPulse 2s ease infinite" : "none" }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: `${demon.color}15`, border: `1px solid ${demon.color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
+          {demon.isMajor ? "👹" : "👤"}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <div style={{ fontSize: 13, color: demon.color, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{demon.name}</div>
+            <div style={{ fontSize: 10, color: C.muted }}>{demon.missStreak}d missed</div>
+          </div>
+          {/* HP Bar */}
+          <div style={{ background: C.faint, borderRadius: 3, height: 5, marginBottom: 4 }}>
+            <div style={{ width: `${demon.hp}%`, height: "100%", background: `linear-gradient(90deg, ${demon.color}, ${demon.color}80)`, borderRadius: 3, transition: "width 0.8s ease" }} />
+          </div>
+          <div style={{ fontSize: 9, color: C.muted }}>Power: {demon.hp}/100</div>
+        </div>
+      </div>
+      {expanded && (
+        <div style={{ marginTop: 12, padding: "10px 12px", background: `${demon.color}10`, borderRadius: 8, border: `1px solid ${demon.color}25` }}>
+          <div style={{ fontSize: 12, color: demon.color, fontStyle: "italic", lineHeight: 1.6, marginBottom: 8 }}>"{demon.taunt}"</div>
+          <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.6 }}>
+            Defeat this demon by completing <span style={{ color: demon.color }}>{demon.cat}</span> habits for 3 consecutive days.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── PROFILE PAGE ─────────────────────────────────────────────────────────────
-function ProfilePage({ userProfile, setUserProfile, onBack, isFemale }) {
+function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode, setShadowMode }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...userProfile });
   const theme = isFemale ? THEME_FEMALE : THEME_MALE;
@@ -2426,7 +2541,7 @@ function ProfilePage({ userProfile, setUserProfile, onBack, isFemale }) {
           </div>
         )}
       </div>
-
+{/* Shadow Mode — needs to be passed as prop */}
       {/* Goals */}
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
         <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>My Goals</div>
@@ -2451,6 +2566,20 @@ function ProfilePage({ userProfile, setUserProfile, onBack, isFemale }) {
         )}
       </div>
     </div>
+{/* Shadow Mode */}
+      <div style={{ marginTop: 16, background: shadowMode ? "#020204" : C.surface, border: `2px solid ${shadowMode ? "#FF0000" : C.border}`, borderRadius: 16, padding: 20 }}>
+        <div style={{ fontSize: 9, color: shadowMode ? "#FF0000" : C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>
+          {shadowMode ? "⚠ SHADOW MODE ACTIVE" : "Shadow Mode"}
+        </div>
+        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.7, marginBottom: 14 }}>
+          {shadowMode
+            ? "The shadow self has taken over. All systems operating at maximum intensity."
+            : `Activate your alter ego. ${userProfile.alterEgo?.name ? `Become ${userProfile.alterEgo.name}.` : "Become who you were meant to be."} Dark UI, intense voice, no mercy.`}
+        </div>
+        <button onClick={() => setShadowMode(s => !s)} style={{ width: "100%", background: shadowMode ? "#FF0000" : "none", border: `2px solid ${shadowMode ? "#FF0000" : C.border}`, borderRadius: 10, padding: "13px", color: shadowMode ? "#000" : C.muted, fontSize: 12, fontFamily: "inherit", fontWeight: 700, cursor: "pointer", letterSpacing: 1, textTransform: "uppercase" }}>
+          {shadowMode ? "◆ Deactivate Shadow Mode" : "◆ Activate Shadow Mode"}
+        </button>
+      </div>
   );
 }
 
@@ -2545,13 +2674,18 @@ function AboutPage({ onBack }) {
 }
 // ─── FULL SCREEN WRAPPERS (Sidebar navigation targets) ───────────────────────
 function HeatmapFullView({ logs, checkinLogs, sleepLogs, onBack, setSelectedDate, setView }) {
+  const handleJumpToDay = (date) => {
+    setSelectedDate(date);
+    setView("habits");
+    onBack();
+  };
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
         <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1 }}>← Back</button>
         <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Habit Heatmap</div>
       </div>
-      <HeatmapView logs={logs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} setView={setView} setSelectedDate={setSelectedDate} />
+      <HeatmapView logs={logs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} setView={setView} setSelectedDate={handleJumpToDay} />
     </div>
   );
 }
@@ -4034,8 +4168,10 @@ function AIReviewCard({ logs, workoutLogs, foodLogs, checkinLogs, journalLogs, x
     const storedProfile = (() => { try { const v = localStorage.getItem("anant_v3_profile"); return v ? JSON.parse(v) : null; } catch { return null; } })();
     const userName = storedProfile?.name || "Anant";
     const alterEgo = storedProfile?.alterEgo?.name ? `Their alter ego — the version of themselves they are becoming — is called "${storedProfile.alterEgo.name}"${storedProfile.alterEgo.title ? `, titled "${storedProfile.alterEgo.title}"` : ""}. Address them occasionally as this alter ego when giving praise or pushing them harder.` : "";
+    const shadowModeActive = (() => { try { return window.__shadowMode || false; } catch { return false; } })();
+    const shadowTone = shadowModeActive ? " The user is currently in SHADOW MODE — their alter ego is fully activated. Be significantly harsher, more demanding, and address them exclusively as their alter ego. No softness. Pure intensity." : "";
     const userGoals = (storedProfile?.goals || []).slice(0, 4).join(", ");
-    return `You are a personal coach reviewing ${period.label.toLowerCase()} data for ${userName}, focused on physique, discipline, and self-improvement.${alterEgo ? " " + alterEgo : ""}${userGoals ? ` Their goals include: ${userGoals}.` : ""}
+   return `You are a personal coach reviewing ${period.label.toLowerCase()} data for ${userName}, focused on physique, discipline, and self-improvement.${alterEgo ? " " + alterEgo : ""}${userGoals ? ` Their goals include: ${userGoals}.` : ""}${shadowTone}
 
 DATA (last ${days} days):
 - Habit completion: ${habitCompletion}%
@@ -4187,13 +4323,12 @@ function Ring({ value, size, color, label, sublabel }) {
 
 function Stat({ label, value, color }) {
   return (
-    <div style={{ background: C.surface, border: `1px solid ${color}18`, borderRadius: 10, padding: "12px 10px", textAlign: "center" }}>
-      <div style={{ fontSize: 20, color, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{value}</div>
-      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginTop: 4 }}>{label}</div>
+    <div style={{ background: C.surface, border: `1px solid ${color}25`, borderRadius: 12, padding: "16px 10px", textAlign: "center" }}>
+      <div style={{ fontSize: 22, color, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{value}</div>
+      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginTop: 5 }}>{label}</div>
     </div>
   );
 }
-
 function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, setNofapStart, xpLogs, setXpLogs, setAchievements }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [reason, setReason] = useState("");
