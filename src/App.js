@@ -826,7 +826,7 @@ export default function App() {
 
   useEffect(() => {
     if (!userProfile?.onboardingComplete) setShowOnboarding(true);
-  }, []);
+  }, []); // eslint-disable-line
 
   const [view, setView] = useState("dashboard");
   const [logs, setLogs] = useLS("anant_v3_logs", {});
@@ -1061,7 +1061,7 @@ const [showCheckin, setShowCheckin] = useState(false);
         {view === "dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
         {view === "habits"    && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
         {view === "routines"  && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} workoutPlan={workoutPlan} setWorkoutPlan={setWorkoutPlan} skincarePlan={skincarePlan} setSkincarePlan={setSkincarePlan} dietPlan={dietPlan} setDietPlan={setDietPlan} haircarePlan={haircarePlan} setHaircarePlan={setHaircarePlan} spiritualPlan={spiritualPlan} setSpiritualPlan={setSpiritualPlan} />}
-        {view === "log" && <ErrorBoundary><LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} setJournalLogs={setJournalLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} setAchievements={setAchievements} achievements={achievements} sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} measurements={measurements} setMeasurements={setMeasurements} quests={quests} setQuests={setQuests} /></ErrorBoundary>}
+        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} setJournalLogs={setJournalLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} setAchievements={setAchievements} achievements={achievements} sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} measurements={measurements} setMeasurements={setMeasurements} quests={quests} setQuests={setQuests} />}
         {view === "stats"     && <StatsView xpLogs={xpLogs} achievements={achievements} logs={logs} getStreak={getStreak} nofapStreak={getNofapStreak()} />}
       </div>
 
