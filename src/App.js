@@ -125,12 +125,32 @@ function last30() { return Array.from({ length: 30 }, (_, i) => dateKey(-(29 - i
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 function useLS(key, def) {
   const [val, setVal] = useState(() => {
-    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; }
+    try {
+      const v = localStorage.getItem(key);
+      if (!v) return def;
+      const parsed = JSON.parse(v);
+      return parsed;
+    } catch {
+      console.warn(`useLS: corrupted key "${key}", resetting to default`);
+      try { localStorage.removeItem(key); } catch {}
+      return def;
+    }
   });
-  useEffect(() => { localStorage.setItem(key, JSON.stringify(val)); }, [val, key]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify(val));
+    } catch (e) {
+      // localStorage full (common on iPhone) — try clearing old keys
+      console.warn(`useLS: failed to save "${key}"`, e);
+      try {
+        // remove oldest AI reviews to free space
+        localStorage.removeItem("anant_v3_ai_reviews");
+        localStorage.setItem(key, JSON.stringify(val));
+      } catch {}
+    }
+  }, [val, key]);
   return [val, setVal];
 }
-
 // ─── AI FOOD SEARCH ───────────────────────────────────────────────────────────
 async function searchFoodNutrition(query) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
