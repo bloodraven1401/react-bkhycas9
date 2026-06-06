@@ -2146,10 +2146,16 @@ function RoutinesView({ selected, setSelected, nofapStreak, setNofapStart, nofap
       {selected === "skincare"  && <SkincarePlan  plan={skincarePlan}  setPlan={setSkincarePlan} />}
       {selected === "diet"      && <DietPlan      plan={dietPlan}      setPlan={setDietPlan} />}
       {selected === "nofap"     && <NofapPlan     nofapStreak={nofapStreak} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} />}
-      {selected === "haircare"  && <HaircarePlan  plan={haircarePlan}  setPlan={setHaircarePlan} />}
+     {selected === "haircare"  && <HaircarePlan  plan={haircarePlan}  setPlan={setHaircarePlan} />}
       {selected === "spiritual" && <SpiritualPlan plan={spiritualPlan} setPlan={setSpiritualPlan} />}
+      {!["workout","skincare","diet","nofap","haircare","spiritual"].includes(selected) && (
+        <CustomPlanEditor planId={selected} planList={planList} setPlanList={setPlanList} />
+      )}
+    </div>
+  );
+}
 
-      // ─── CUSTOM PLAN EDITOR ───────────────────────────────────────────────────────
+// ─── CUSTOM PLAN EDITOR ───────────────────────────────────────────────────────
 function CustomPlanEditor({ planId, planList, setPlanList }) {
   const plan = planList.find(p => p.id === planId);
   const [customPlans, setCustomPlans] = useLS("anant_v3_custom_plans", {});
