@@ -1,16 +1,57 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, createContext, useContext } from "react";
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
-const C = {
+const THEME_MALE = {
   bg: "#07070A", surface: "#0D0D12", border: "#16161E", faint: "#0F0F16",
   text: "#E8E4DC", muted: "#3A3A48", dim: "#555566",
   workout: "#5B8DEF", skincare: "#C9A96E", diet: "#E07B5A",
-  nofap: "#E05A7B", haircare: "#7EB8A4", spiritual: "#C9A96E"
+  nofap: "#E05A7B", haircare: "#7EB8A4", spiritual: "#C9A96E",
+  accent: "#C9A96E", accentAlt: "#5B8DEF",
+  navActive: "#C9A96E", navInactive: "#3A3A48",
+  ring: "#C9A96E", ringBg: "#0F0F16",
+  btnPrimary: "#C9A96E", btnPrimaryText: "#000",
+  statHealth: "#E07B5A", statProductivity: "#A07EE0", statAnalytics: "#C9A96E",
+  glowAccent: "rgba(201,169,110,0.12)",
 };
-const COLORS = {
-  workout: C.workout, skincare: C.skincare, diet: C.diet,
-  nofap: C.nofap, haircare: C.haircare, spiritual: C.skincare, productivity: "#A07EE0", sleep: "#7c6fa0"
+
+const THEME_FEMALE = {
+  bg: "#050507", surface: "#101018", border: "#232332", faint: "#14141D",
+  text: "#E8E6E2", muted: "#686C7A", dim: "#4D5160",
+  workout: "#A18AC4", skincare: "#C98C9C", diet: "#C98C9C",
+  nofap: "#A18AC4", haircare: "#C7CBD6", spiritual: "#D8D5CE",
+  accent: "#A18AC4", accentAlt: "#C98C9C",
+  navActive: "#D8D5CE", navInactive: "#5E6170",
+  ring: "#A18AC4", ringBg: "#1D1D2A",
+  btnPrimary: "#A18AC4", btnPrimaryText: "#050507",
+  statHealth: "#C98C9C", statProductivity: "#A18AC4", statAnalytics: "#D8D5CE",
+  glowAccent: "rgba(161,138,196,0.12)",
+  elevated: "#1A1A25",
+  activeBorder: "#A18AC4",
+  secondaryText: "#A5A8B5",
+  champagne: "#D8D5CE",
+  pearl: "#C7CBD6",
+  rose: "#C98C9C",
+  lavender: "#A18AC4",
 };
+
+// Will be set dynamically — default to male
+let C = { ...THEME_MALE };
+
+const ThemeContext = createContext({ theme: THEME_MALE, isFemale: false });
+const useTheme = () => useContext(ThemeContext);
+
+const COLORS_MALE = {
+  workout: THEME_MALE.workout, skincare: THEME_MALE.skincare, diet: THEME_MALE.diet,
+  nofap: THEME_MALE.nofap, haircare: THEME_MALE.haircare, spiritual: THEME_MALE.skincare,
+  productivity: "#A07EE0", sleep: "#7c6fa0"
+};
+const COLORS_FEMALE = {
+  workout: THEME_FEMALE.workout, skincare: THEME_FEMALE.skincare, diet: THEME_FEMALE.diet,
+  nofap: THEME_FEMALE.nofap, haircare: THEME_FEMALE.haircare, spiritual: THEME_FEMALE.spiritual,
+  productivity: "#A18AC4", sleep: "#C7CBD6"
+};
+
+let COLORS = { ...COLORS_MALE };
 // ─── XP SYSTEM ────────────────────────────────────────────────────────────────
 const XP_VALUES = {
   h1: 15, h2: 15, h3: 10, h4: 50, h5: 20, h6: 15,
@@ -70,6 +111,27 @@ const HABITS = [
 { id: "h13", label: "Sleep Schedule", category: "sleep", type: "binary", icon: "☽" },
 ];
 
+// ─── ONBOARDING DATA ──────────────────────────────────────────────────────────
+const STRUGGLE_OPTIONS = [
+  "Low motivation", "Anxiety & overthinking", "Poor sleep", "Procrastination",
+  "Social media addiction", "Lack of discipline", "Brain fog", "Low confidence",
+  "Stress", "Unhealthy eating", "No workout consistency", "Spiritual disconnection",
+  "Negative self-talk", "Phone addiction", "Loneliness",
+];
+
+const GOAL_OPTIONS = [
+  "Build muscle & physique", "Lose weight", "Improve skin & appearance",
+  "Master discipline", "Spiritual growth", "Learn guitar / music",
+  "Career & productivity focus", "Better sleep schedule", "Clean eating",
+  "NoFap / mental clarity", "Build confidence", "Reduce stress & anxiety",
+  "Daily journaling", "Morning routine", "Read more books",
+];
+
+const DEFAULT_PROFILE = {
+  name: "", gender: null, age: "", height: "", weight: "",
+  struggles: [], goals: [], alterEgo: { name: "", title: "" },
+  onboardingComplete: false,
+};
 const MOOD_LABELS = ["Dead Inside", "Struggling", "Holding On", "Locked In", "Unstoppable"];
 const ENERGY_LABELS = ["Drained", "Low", "Decent", "Charged", "On Fire"];
 const SLEEP_LABELS = ["<4h", "4-5h", "5-6h", "6-7h", "7-8h", "8h+"];
@@ -424,6 +486,281 @@ const DEFAULT_SPIRITUAL = [
 ];
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
+// ─── ONBOARDING ───────────────────────────────────────────────────────────────
+function OnboardingFlow({ onComplete }) {
+  const [step, setStep] = useState(0);
+  const [profile, setProfile] = useState({ ...DEFAULT_PROFILE });
+  const TOTAL_STEPS = 6;
+
+  const isFemale = profile.gender === "female";
+  const OC = isFemale ? THEME_FEMALE : THEME_MALE;
+
+  const next = () => setStep(s => s + 1);
+  const back = () => setStep(s => Math.max(0, s - 1));
+
+  const containerStyle = {
+    position: "fixed", inset: 0, background: OC.bg, zIndex: 999999,
+    display: "flex", flexDirection: "column", alignItems: "center",
+    justifyContent: "flex-end", fontFamily: "'DM Mono',monospace", color: OC.text,
+    padding: 0,
+  };
+
+  const sheetStyle = {
+    width: "100%", maxWidth: 480, background: OC.surface,
+    borderRadius: "24px 24px 0 0", padding: "32px 24px 52px",
+    display: "flex", flexDirection: "column", gap: 20,
+    maxHeight: "90vh", overflowY: "auto",
+  };
+
+  const btnPrimary = {
+    width: "100%", background: OC.btnPrimary || OC.accent,
+    border: "none", borderRadius: 12, padding: "14px",
+    color: OC.btnPrimaryText || "#000", fontSize: 13,
+    fontFamily: "inherit", fontWeight: 600, cursor: "pointer",
+    letterSpacing: 0.5,
+  };
+
+  const btnSecondary = {
+    width: "100%", background: "none",
+    border: `1px solid ${OC.border}`, borderRadius: 12, padding: "12px",
+    color: OC.muted, fontSize: 12, fontFamily: "inherit", cursor: "pointer",
+  };
+
+  const chipStyle = (selected, color) => ({
+    padding: "8px 14px", borderRadius: 20, fontSize: 11,
+    fontFamily: "inherit", cursor: "pointer",
+    background: selected ? `${color}20` : OC.faint,
+    border: `1px solid ${selected ? color : OC.border}`,
+    color: selected ? color : OC.muted,
+    transition: "all 0.2s",
+  });
+
+  const inputStyle = {
+    background: OC.faint, border: `1px solid ${OC.border}`,
+    borderRadius: 10, padding: "12px 14px", color: OC.text,
+    fontFamily: "inherit", fontSize: 13, outline: "none", width: "100%",
+  };
+
+  const labelStyle = { fontSize: 9, color: OC.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 };
+
+  // Progress dots
+  const ProgressDots = () => (
+    <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 4 }}>
+      {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+        <div key={i} style={{
+          width: i === step ? 20 : 6, height: 4, borderRadius: 2,
+          background: i <= step ? (OC.accent || OC.skincare) : OC.border,
+          transition: "all 0.3s",
+        }} />
+      ))}
+    </div>
+  );
+
+  const Heading = ({ children }) => (
+    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, lineHeight: 1.2, color: OC.text }}>
+      {children}
+    </div>
+  );
+
+  const Sub = ({ children }) => (
+    <div style={{ fontSize: 12, color: OC.muted, lineHeight: 1.7, marginTop: -8 }}>
+      {children}
+    </div>
+  );
+
+  // ── Step 0: Welcome ──
+  if (step === 0) return (
+    <div style={containerStyle}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32, textAlign: "center" }}>
+        <div style={{ fontSize: 52, marginBottom: 16 }}>⚡</div>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: OC.text, marginBottom: 10, lineHeight: 1 }}>
+          Self System
+        </div>
+        <div style={{ fontSize: 13, color: OC.muted, lineHeight: 1.8, maxWidth: 300 }}>
+          Your personal operating system for discipline, growth, and becoming who you're meant to be.
+        </div>
+      </div>
+      <div style={{ ...sheetStyle, borderRadius: "24px 24px 0 0" }}>
+        <ProgressDots />
+        <Heading>Let's build your system.</Heading>
+        <Sub>This takes 2 minutes. Your data stays on your device.</Sub>
+        <button onClick={next} style={btnPrimary}>Begin →</button>
+      </div>
+    </div>
+  );
+
+  // ── Step 1: Gender ──
+  if (step === 1) return (
+    <div style={containerStyle}>
+      <div style={{ flex: 1 }} />
+      <div style={sheetStyle}>
+        <ProgressDots />
+        <Heading>You are...</Heading>
+        <Sub>This personalizes your theme and experience.</Sub>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {[
+            { value: "male", label: "Male", icon: "◆", desc: "Dark · Iron · Focused" },
+            { value: "female", label: "Female", icon: "✦", desc: "Elegant · Soft · Powerful" },
+          ].map(opt => {
+            const selected = profile.gender === opt.value;
+            const accent = opt.value === "male" ? THEME_MALE.skincare : THEME_FEMALE.lavender;
+            return (
+              <div key={opt.value} onClick={() => setProfile(p => ({ ...p, gender: opt.value }))}
+                style={{ background: selected ? `${accent}15` : OC.faint, border: `2px solid ${selected ? accent : OC.border}`, borderRadius: 14, padding: "20px 16px", textAlign: "center", cursor: "pointer", transition: "all 0.2s" }}>
+                <div style={{ fontSize: 24, color: accent, marginBottom: 8 }}>{opt.icon}</div>
+                <div style={{ fontSize: 14, color: selected ? accent : OC.text, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, marginBottom: 4 }}>{opt.label}</div>
+                <div style={{ fontSize: 10, color: OC.muted }}>{opt.desc}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={back} style={btnSecondary}>← Back</button>
+          <button onClick={() => { if (profile.gender) next(); }} style={{ ...btnPrimary, opacity: profile.gender ? 1 : 0.4 }}>Continue →</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Step 2: Basic Info ──
+  if (step === 2) return (
+    <div style={containerStyle}>
+      <div style={{ flex: 1 }} />
+      <div style={sheetStyle}>
+        <ProgressDots />
+        <Heading>About you.</Heading>
+        <Sub>Used to personalize your targets and insights.</Sub>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <div style={labelStyle}>Your Name</div>
+            <input style={inputStyle} placeholder="What should we call you?" value={profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+            {[
+              { label: "Age", key: "age", placeholder: "21", suffix: "yrs" },
+              { label: "Height", key: "height", placeholder: "175", suffix: "cm" },
+              { label: "Weight", key: "weight", placeholder: "70", suffix: "kg" },
+            ].map(({ label, key, placeholder, suffix }) => (
+              <div key={key}>
+                <div style={labelStyle}>{label}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, background: OC.faint, border: `1px solid ${OC.border}`, borderRadius: 10, padding: "10px 10px" }}>
+                  <input type="number" style={{ background: "transparent", border: "none", color: OC.text, fontFamily: "inherit", fontSize: 14, outline: "none", width: "100%" }} placeholder={placeholder} value={profile[key]} onChange={e => setProfile(p => ({ ...p, [key]: e.target.value }))} />
+                  <span style={{ fontSize: 9, color: OC.muted, flexShrink: 0 }}>{suffix}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={back} style={btnSecondary}>← Back</button>
+          <button onClick={() => { if (profile.name.trim()) next(); }} style={{ ...btnPrimary, opacity: profile.name.trim() ? 1 : 0.4 }}>Continue →</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Step 3: Struggles ──
+  if (step === 3) return (
+    <div style={containerStyle}>
+      <div style={{ flex: 1 }} />
+      <div style={sheetStyle}>
+        <ProgressDots />
+        <Heading>What are you fighting?</Heading>
+        <Sub>Select everything that resonates. No judgment.</Sub>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {STRUGGLE_OPTIONS.map(s => {
+            const selected = profile.struggles.includes(s);
+            const color = isFemale ? THEME_FEMALE.rose : THEME_MALE.nofap;
+            return (
+              <button key={s} onClick={() => setProfile(p => ({ ...p, struggles: selected ? p.struggles.filter(x => x !== s) : [...p.struggles, s] }))} style={chipStyle(selected, color)}>
+                {s}
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={back} style={btnSecondary}>← Back</button>
+          <button onClick={next} style={btnPrimary}>Continue →</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Step 4: Goals ──
+  if (step === 4) return (
+    <div style={containerStyle}>
+      <div style={{ flex: 1 }} />
+      <div style={sheetStyle}>
+        <ProgressDots />
+        <Heading>What are you building?</Heading>
+        <Sub>Select your primary goals. You can add more later.</Sub>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {GOAL_OPTIONS.map(g => {
+            const selected = profile.goals.includes(g);
+            const color = isFemale ? THEME_FEMALE.lavender : THEME_MALE.workout;
+            return (
+              <button key={g} onClick={() => setProfile(p => ({ ...p, goals: selected ? p.goals.filter(x => x !== g) : [...p.goals, g] }))} style={chipStyle(selected, color)}>
+                {g}
+              </button>
+            );
+          })}
+        </div>
+        <div>
+          <div style={labelStyle}>Custom Goal</div>
+          <input style={inputStyle} placeholder="Add your own goal..." onKeyDown={e => {
+            if (e.key === "Enter" && e.target.value.trim()) {
+              setProfile(p => ({ ...p, goals: [...p.goals, e.target.value.trim()] }));
+              e.target.value = "";
+            }
+          }} />
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={back} style={btnSecondary}>← Back</button>
+          <button onClick={next} style={btnPrimary}>Continue →</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Step 5: Alter Ego ──
+  if (step === 5) return (
+    <div style={containerStyle}>
+      <div style={{ flex: 1 }} />
+      <div style={sheetStyle}>
+        <ProgressDots />
+        <Heading>Your Alter Ego.</Heading>
+        <Sub>Who is the version of you that has already won? Name them. Become them.</Sub>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <div style={labelStyle}>Alter Ego Name</div>
+            <input style={inputStyle} placeholder={isFemale ? "e.g. The Empress, Dark Rose..." : "e.g. The Shadow, Iron King..."} value={profile.alterEgo.name} onChange={e => setProfile(p => ({ ...p, alterEgo: { ...p.alterEgo, name: e.target.value } }))} />
+          </div>
+          <div>
+            <div style={labelStyle}>Title / Rank</div>
+            <input style={inputStyle} placeholder={isFemale ? "e.g. Sovereign of the Night..." : "e.g. The Unbreakable, SSS Ranked..."} value={profile.alterEgo.title} onChange={e => setProfile(p => ({ ...p, alterEgo: { ...p.alterEgo, title: e.target.value } }))} />
+          </div>
+          <div style={{ background: OC.faint, border: `1px solid ${OC.border}`, borderRadius: 12, padding: "14px 16px" }}>
+            <div style={{ fontSize: 9, color: OC.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Preview</div>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: isFemale ? THEME_FEMALE.lavender : THEME_MALE.skincare }}>
+              {profile.alterEgo.name || (isFemale ? "The Empress" : "The Shadow")}
+            </div>
+            <div style={{ fontSize: 11, color: OC.muted, marginTop: 3 }}>
+              {profile.alterEgo.title || (isFemale ? "Sovereign of the Night" : "The Unbreakable")}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={back} style={btnSecondary}>← Back</button>
+          <button onClick={() => onComplete({ ...profile, onboardingComplete: true })} style={btnPrimary}>
+            {isFemale ? "Enter the Empire ✦" : "Enter the System ◆"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return null;
+}
 function StorageGuard() {
   useEffect(() => {
     const KEYS = [
@@ -477,6 +814,20 @@ class ErrorBoundary extends React.Component {
 }
 
 export default function App() {
+  const [userProfile, setUserProfile] = useLS("anant_v3_profile", DEFAULT_PROFILE);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Determine theme from profile
+  const isFemale = userProfile?.gender === "female";
+  const activeTheme = isFemale ? THEME_FEMALE : THEME_MALE;
+  // Mutate global C and COLORS to match current theme
+  Object.assign(C, activeTheme);
+  Object.assign(COLORS, isFemale ? COLORS_FEMALE : COLORS_MALE);
+
+  useEffect(() => {
+    if (!userProfile?.onboardingComplete) setShowOnboarding(true);
+  }, []);
+
   const [view, setView] = useState("dashboard");
   const [logs, setLogs] = useLS("anant_v3_logs", {});
   const [workoutLogs, setWorkoutLogs] = useLS("anant_v3_workout", {});
@@ -635,7 +986,18 @@ const [showCheckin, setShowCheckin] = useState(false);
   if (subView === "analytics")  return <AnalyticsView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} nofapStreak={getNofapStreak()} weightLogs={weightLogs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} onBack={() => setSubView(null)} setView={setView} setSelectedDate={setSelectedDate} />;
   if (subView === "measurements") return <MeasurementsView measurements={measurements} setMeasurements={setMeasurements} onBack={() => setSubView(null)} />;
 
+  if (showOnboarding) return (
+    <ThemeContext.Provider value={{ theme: activeTheme, isFemale }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:wght@600;700&display=swap'); *{box-sizing:border-box;margin:0;padding:0} button{cursor:pointer;font-family:inherit}`}</style>
+      <OnboardingFlow onComplete={(data) => {
+        setUserProfile(data);
+        setShowOnboarding(false);
+      }} />
+    </ThemeContext.Provider>
+  );
+
   return (
+    <ThemeContext.Provider value={{ theme: activeTheme, isFemale }}>
     <div style={{ minHeight: "100dvh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", width: "100vw", maxWidth: "100%", margin: "0 auto", paddingBottom: 80, overflowX: "hidden", position: "relative" }}>
       <StorageGuard />
       <style>{`
@@ -656,7 +1018,7 @@ const [showCheckin, setShowCheckin] = useState(false);
       <div style={{ padding: "60px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div>
           <div style={{ fontSize: 10, letterSpacing: 4, color: C.muted, textTransform: "uppercase" }}>Self System</div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 30, fontWeight: 700, lineHeight: 1, marginTop: 4 }}>Anant</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 30, fontWeight: 700, lineHeight: 1, marginTop: 4 }}>{userProfile?.name || "Anant"}</div>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -713,6 +1075,7 @@ const [showCheckin, setShowCheckin] = useState(false);
         ))}
       </nav>
     </div>
+    </ThemeContext.Provider>
   );
 }
 
