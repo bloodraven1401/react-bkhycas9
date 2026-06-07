@@ -1096,7 +1096,7 @@ const [showCheckin, setShowCheckin] = useState(false);
       `}</style>
 
       {/* Header */}
-      <div style={{ padding: "60px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+      <div style={{ padding: "60px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderBottom: shadowMode ? "1px solid #FF000030" : "none", paddingBottom: shadowMode ? 12 : 0 }}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
           <button onClick={() => setSidebarOpen(true)} style={{ background: "none", border: "none", padding: "0 0 4px 0", cursor: "pointer", display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ width: 20, height: 2, background: C.muted, borderRadius: 2 }} />
@@ -1121,7 +1121,7 @@ const [showCheckin, setShowCheckin] = useState(false);
           {(() => {
             const totalXP = getTotalXP(xpLogs);
             const rank = getCurrentRank(totalXP);
-            return <div style={{ fontSize: 9, color: rank.color, letterSpacing: 1, marginTop: 2, textShadow: `0 0 8px ${rank.color}` }}>[{rank.rank}] {rank.title}</div>;
+            return <div style={{ fontSize: 9, color: shadowMode ? "#FF0000" : rank.color, letterSpacing: 1, marginTop: 2, textShadow: `0 0 8px ${shadowMode ? "#FF0000" : rank.color}` }}>{shadowMode ? "⚠ SHADOW MODE" : `[${rank.rank}] ${rank.title}`}</div>;
           })()}
         </div>
       </div>
@@ -1305,9 +1305,9 @@ const [showCheckin, setShowCheckin] = useState(false);
       </div>
 
       {/* Bottom Nav */}
-      <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, width: "100%", background: "rgba(7,7,10,0.97)", backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "12px 0 env(safe-area-inset-bottom, 16px)", zIndex: 9999 }}>
+      <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, width: "100%", background: shadowMode ? "rgba(2,2,4,0.98)" : "rgba(7,7,10,0.97)", backdropFilter: "blur(16px)", borderTop: `1px solid ${shadowMode ? "#FF000030" : C.border}`, display: "flex", padding: "12px 0 env(safe-area-inset-bottom, 16px)", zIndex: 9999 }}>
         {[["dashboard","◎","Home"],["habits","◉","Today"],["log","◈","Log"],["routines","◆","Plans"],["stats","★","Rank"]].map(([key, icon, label]) => (
-          <button key={key} className="press" onClick={() => setView(key)} style={{ flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, color: view === key ? C.skincare : C.muted }}>
+          <button key={key} className="press" onClick={() => setView(key)} style={{ flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, color: view === key ? (shadowMode ? "#FF0000" : C.skincare) : C.muted }}>
             <span style={{ fontSize: 17 }}>{icon}</span>
             <span style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase" }}>{label}</span>
           </button>
@@ -3357,13 +3357,16 @@ function RoutinesView({ selected, setSelected, nofapStreak, setNofapStart, nofap
 
   if (!selected) return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <div style={{ fontSize: 10, color: C.muted, letterSpacing: 3, textTransform: "uppercase" }}>All Plans</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+        <div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, lineHeight: 1 }}>Your Plans</div>
+          <div style={{ fontSize: 10, color: C.muted, letterSpacing: 2, marginTop: 4 }}>Tap to view or edit any plan</div>
+        </div>
         <button onClick={() => setEditing(e => !e)} style={editBtnStyle(editing)}>{editing ? "✓ Done" : "✎ Edit"}</button>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {planList.map(r => (
-          <div key={r.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, display: "flex", alignItems: "center", gap: 14 }}>
+          <div key={r.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 18, display: "flex", alignItems: "center", gap: 14 }}>
             {editing ? (
               <>
                 <span style={{ color: r.color, fontSize: 20, width: 24, flexShrink: 0 }}>{r.icon}</span>
@@ -3374,14 +3377,16 @@ function RoutinesView({ selected, setSelected, nofapStreak, setNofapStart, nofap
                 <RemoveBtn onClick={() => removePlan(r.id)} />
               </>
             ) : (
-              <button className="press" onClick={() => setSelected(r.id)} style={{ display: "flex", alignItems: "center", gap: 14, background: "none", border: "none", color: C.text, textAlign: "left", flex: 1, padding: 0 }}>
-                <span style={{ color: r.color, fontSize: 20, width: 24 }}>{r.icon}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontFamily: "'Cormorant Garamond',serif", fontWeight: 600 }}>{r.label}</div>
-                  <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>{r.meta}</div>
+             <button className="press" onClick={() => setSelected(r.id)} style={{ display: "flex", alignItems: "center", gap: 14, background: "none", border: "none", color: C.text, textAlign: "left", flex: 1, padding: 0 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: `${r.color}15`, border: `1px solid ${r.color}30`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ color: r.color, fontSize: 18 }}>{r.icon}</span>
                 </div>
-                <span style={{ color: C.muted, fontSize: 14 }}>›</span>
-              </button>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontFamily: "'Cormorant Garamond',serif", fontWeight: 600 }}>{r.label}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{r.meta}</div>
+                </div>
+                <span style={{ color: C.muted, fontSize: 16 }}>›</span>
+              </button> 
             )}
           </div>
         ))}
