@@ -329,25 +329,9 @@ function useLS(key, def) {
       });
     } catch {}
   }, [val, key]);
-  
-      // Storage full — aggressively free space then retry
-      const EVICTABLE = [
-        "anant_v3_ai_reviews",
-        "anant_v3_journal",
-        "anant_v3_checkin",
-        "anant_v3_quests",
-      ];
-      for (const k of EVICTABLE) {
-        if (k !== key) {
-          try { localStorage.removeItem(k); } catch {}
-        }
-      }
-      try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-    }
-  }, [val, key]);
-
   return [val, setVal];
 }
+
 // ─── AI FOOD SEARCH ───────────────────────────────────────────────────────────
 async function searchFoodNutrition(query) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
