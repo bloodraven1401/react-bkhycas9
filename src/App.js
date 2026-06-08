@@ -1535,9 +1535,9 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
   const categories = [...new Set(habits.map(h => h.category))];
   const ALL_CATEGORIES = ["skincare","workout","diet","nofap","haircare","spiritual","productivity","sleep"];
 
-  function addHabit(cat) {
+  function addHabit(cat, label = "New Habit") {
     const newId = `custom_${Date.now()}`;
-    setHabits(p => [...p, { id: newId, label: "New Habit", category: cat, type: "binary", icon: "◉" }]);
+    setHabits(p => [...p, { id: newId, label, category: cat, type: "binary", icon: "◉" }]);
   }
   function removeHabit(id) { setHabits(p => p.filter(h => h.id !== id)); }
   function updateHabit(id, field, val) { setHabits(p => p.map(h => h.id === id ? { ...h, [field]: val } : h)); }
@@ -1599,14 +1599,60 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
       })}
       {editing && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Add habit to new category</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Add habit to existing category</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
             {ALL_CATEGORIES.filter(c => !categories.includes(c)).map(c => (
               <button key={c} onClick={() => addHabit(c)} style={{ background: C.faint, border: `1px dashed ${COLORS[c] || C.muted}60`, borderRadius: 6, padding: "5px 10px", color: COLORS[c] || C.muted, fontSize: 10, fontFamily: "inherit" }}>+ {c}</button>
             ))}
           </div>
+          <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Create new category</div>
+          <NewCategoryInput onAdd={(catName) => {
+            const normalized = catName.toLowerCase().trim();
+            if (!normalized) return;
+            addHabit(normalized);
+          }} />
         </div>
       )}
+    </div>
+  );
+}
+
+function NewCategoryInput({ onAdd }) {
+  const [name, setName] = useState("");
+  const [firstHabit, setFirstHabit] = useState("");
+  const [open, setOpen] = useState(false);
+
+  function handleAdd() {
+    if (!name.trim()) return;
+    onAdd(name.trim(), firstHabit.trim() || "New Habit");
+    setName(""); setFirstHabit(""); setOpen(false);
+  }
+
+  if (!open) return (
+    <button onClick={() => setOpen(true)} style={{ width: "100%", background: C.faint, border: `1px dashed ${C.accent}60`, borderRadius: 8, padding: "9px", color: C.accent, fontSize: 11, fontFamily: "inherit", cursor: "pointer" }}>
+      + Create New Category
+    </button>
+  );
+
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.accent}30`, borderRadius: 10, padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ fontSize: 9, color: C.accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>New Category</div>
+      <input
+        placeholder="Category name (e.g. reading, coding...)"
+        value={name}
+        onChange={e => setName(e.target.value)}
+        style={{ background: C.faint, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", color: C.text, fontFamily: "inherit", fontSize: 12, outline: "none" }}
+      />
+      <input
+        placeholder="First habit name (optional)"
+        value={firstHabit}
+        onChange={e => setFirstHabit(e.target.value)}
+        style={{ background: C.faint, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", color: C.text, fontFamily: "inherit", fontSize: 12, outline: "none" }}
+      />
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => { setOpen(false); setName(""); setFirstHabit(""); }} style={{ flex: 1, background: "none", border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px", color: C.muted, fontSize: 11, fontFamily: "inherit", cursor: "pointer" }}>Cancel</button>
+        <button onClick={handleAdd} style={{ flex: 2, background: C.accent, border: "none", borderRadius: 8, padding: "8px", color: "#000", fontSize: 11, fontFamily: "inherit", cursor: "pointer", fontWeight: 600 }}>+ Add Category</button>
+      </div>
     </div>
   );
 }
