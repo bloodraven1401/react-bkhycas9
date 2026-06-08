@@ -1,6 +1,33 @@
 import React, { useState, useEffect, useRef, createContext, useContext, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 const supabase = createClient("https://xxhmytltastgfgrjrrnf.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4aG15dGx0YXN0Z2Zncmpycm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NzE4MjgsImV4cCI6MjA5NjM0NzgyOH0.2Qjm0tzIFhIXj3FjCO9Mxy_FdM84huDarSNdy6w5PpA");
+// ─── SYNC ─────────────────────────────────────────────────────────────────────
+async function pushToCloud(userId, key, value) {
+  const col = {
+    anant_v3_logs: "logs", anant_v3_workout: "workout_logs",
+    anant_v3_food: "food_logs", anant_v3_weight: "weight_logs",
+    anant_v3_xp: "xp_logs", anant_v3_achievements: "achievements",
+    anant_v3_sleep: "sleep_logs", anant_v3_measurements: "measurements",
+    anant_v3_checkin: "checkin_logs", anant_v3_journal: "journal_logs",
+    anant_v3_quests: "quests", anant_v3_profile: "profile",
+  }[key];
+  if (!col) return;
+  await supabase.from("user_data").upsert({ user_id: userId, [col]: value, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+}
+
+async function pullFromCloud(userId, setters) {
+  const { data, error } = await supabase.from("user_data").select("*").eq("user_id", userId).single();
+  if (error || !data) return;
+  const map = {
+    logs: setters.setLogs, workout_logs: setters.setWorkoutLogs,
+    food_logs: setters.setFoodLogs, weight_logs: setters.setWeightLogs,
+    xp_logs: setters.setXpLogs, achievements: setters.setAchievements,
+    sleep_logs: setters.setSleepLogs, measurements: setters.setMeasurements,
+    checkin_logs: setters.setCheckinLogs, journal_logs: setters.setJournalLogs,
+    quests: setters.setQuests, profile: setters.setUserProfile,
+  };
+  Object.entries(map).forEach(([col, setter]) => { if (data[col] && setter) setter(data[col]); });
+}
 
 // ─── AUTH MODAL ───────────────────────────────────────────────────────────────
 function AuthModal({ onClose }) {
@@ -278,10 +305,31 @@ function useLS(key, def) {
     }
   });
 
-  useEffect(() => {
+ useEffect(() => {
     try {
       localStorage.setItem(key, JSON.stringify(val));
     } catch (e) {
+      const EVICTABLE = [
+        "anant_v3_ai_reviews",
+        "anant_v3_journal",
+        "anant_v3_checkin",
+        "anant_v3_quests",
+      ];
+      for (const k of EVICTABLE) {
+        if (k !== key) {
+          try { localStorage.removeItem(k); } catch {}
+        }
+      }
+      try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+    }
+    try {
+      const session = supabase.auth.getSession();
+      session.then(({ data: { session } }) => {
+        if (session?.user) pushToCloud(session.user.id, key, val);
+      });
+    } catch {}
+  }, [val, key]);
+  
       // Storage full — aggressively free space then retry
       const EVICTABLE = [
         "anant_v3_ai_reviews",
@@ -902,9 +950,11 @@ const [showAuthModal, setShowAuthModal] = useState(false);
 useEffect(() => {
   supabase.auth.getSession().then(({ data: { session } }) => {
     setSupaUser(session?.user ?? null);
+    if (session?.user) pullFromCloud(session.user.id, { setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setQuests, setUserProfile });
   });
   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
     setSupaUser(session?.user ?? null);
+    if (session?.user) pullFromCloud(session.user.id, { setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setQuests, setUserProfile });
   });
   return () => subscription.unsubscribe();
 }, []);
