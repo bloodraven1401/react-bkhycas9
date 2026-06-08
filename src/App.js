@@ -2,6 +2,55 @@ import React, { useState, useEffect, useRef, createContext, useContext, useMemo 
 import { createClient } from "@supabase/supabase-js";
 const supabase = createClient("https://xxhmytltastgfgrjrrnf.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4aG15dGx0YXN0Z2Zncmpycm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NzE4MjgsImV4cCI6MjA5NjM0NzgyOH0.2Qjm0tzIFhIXj3FjCO9Mxy_FdM84huDarSNdy6w5PpA");
 
+// ─── AUTH MODAL ───────────────────────────────────────────────────────────────
+function AuthModal({ onClose }) {
+  const [mode, setMode] = useState("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function handleSubmit() {
+    setLoading(true); setMsg("");
+    if (mode === "signup") {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) setMsg(error.message);
+      else setMsg("Check your email to confirm your account.");
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setMsg(error.message);
+      else onClose();
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(7,7,10,0.92)", zIndex: 999999, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#0D0D12", borderRadius: "20px 20px 0 0", padding: "28px 24px 48px", fontFamily: "'DM Mono',monospace" }}>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: "#E8E4DC", marginBottom: 4 }}>
+          {mode === "signin" ? "Welcome back." : "Create account."}
+        </div>
+        <div style={{ fontSize: 11, color: "#3A3A48", marginBottom: 20 }}>
+          {mode === "signin" ? "Sign in to sync your data across devices." : "Sign up to back up and sync your progress."}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+          <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={{ background: "#0F0F16", border: "1px solid #16161E", borderRadius: 10, padding: "12px 14px", color: "#E8E4DC", fontFamily: "inherit", fontSize: 13, outline: "none" }} />
+          <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ background: "#0F0F16", border: "1px solid #16161E", borderRadius: 10, padding: "12px 14px", color: "#E8E4DC", fontFamily: "inherit", fontSize: 13, outline: "none" }} />
+        </div>
+        {msg && <div style={{ fontSize: 11, color: msg.includes("Check") ? "#7EB8A4" : "#E05A7B", marginBottom: 12 }}>{msg}</div>}
+        <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", background: "#C9A96E", border: "none", borderRadius: 10, padding: "13px", color: "#000", fontSize: 13, fontFamily: "inherit", fontWeight: 600, marginBottom: 12, opacity: loading ? 0.6 : 1 }}>
+          {loading ? "..." : mode === "signin" ? "Sign In" : "Sign Up"}
+        </button>
+        <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); }} style={{ width: "100%", background: "none", border: "1px solid #16161E", borderRadius: 10, padding: "11px", color: "#3A3A48", fontSize: 12, fontFamily: "inherit" }}>
+          {mode === "signin" ? "No account? Sign up" : "Have an account? Sign in"}
+        </button>
+        <button onClick={onClose} style={{ width: "100%", background: "none", border: "none", color: "#3A3A48", fontSize: 11, fontFamily: "inherit", marginTop: 10 }}>
+          Continue as guest →
+        </button>
+      </div>
+    </div>
+  );
+}
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const THEME_MALE = {
   bg: "#07070A", surface: "#0D0D12", border: "#16161E", faint: "#0F0F16",
@@ -848,6 +897,17 @@ class ErrorBoundary extends React.Component {
 export default function App() {
   const [userProfile, setUserProfile] = useLS("anant_v3_profile", DEFAULT_PROFILE);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [supaUser, setSupaUser] = useState(null);
+const [showAuthModal, setShowAuthModal] = useState(false);
+useEffect(() => {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    setSupaUser(session?.user ?? null);
+  });
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    setSupaUser(session?.user ?? null);
+  });
+  return () => subscription.unsubscribe();
+}, []);
 
   // Determine theme from profile
   const isFemale = userProfile?.gender === "female";
@@ -1106,7 +1166,12 @@ const [showCheckin, setShowCheckin] = useState(false);
             <div style={{ width: 17, height: 2, background: C.muted, borderRadius: 2 }} />
           </button>
           <div>
-            <div style={{ fontSize: 10, letterSpacing: 4, color: C.muted, textTransform: "uppercase" }}>Self System</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+  <div style={{ fontSize: 10, letterSpacing: 4, color: C.muted, textTransform: "uppercase" }}>Self System</div>
+  <button onClick={() => setShowAuthModal(true)} style={{ background: "none", border: `1px solid ${supaUser ? "#7EB8A4" : C.border}`, borderRadius: 6, padding: "2px 8px", color: supaUser ? "#7EB8A4" : C.muted, fontSize: 9, fontFamily: "inherit", letterSpacing: 1 }}>
+    {supaUser ? "☁ Synced" : "☁ Sync"}
+  </button>
+</div>
             <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 30, fontWeight: 700, lineHeight: 1, marginTop: 4 }}>{userProfile?.name || "Anant"}</div>
           </div>
         </div>
@@ -1285,6 +1350,7 @@ const [showCheckin, setShowCheckin] = useState(false);
           </div>
         </div>
       )}
+{showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
       {showCheckin && (
   <DailyCheckin
     onComplete={(data) => {
