@@ -939,10 +939,20 @@ useEffect(() => {
     if (session?.user) pullFromCloud(session.user.id, { setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setQuests, setUserProfile });
     if (session?.user) pushToCloud(session.user.id, "anant_v3_logs", logs);
   });
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+ const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
     setSupaUser(session?.user ?? null);
-    if (session?.user) pullFromCloud(session.user.id, { setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setQuests, setUserProfile });
-    if (session?.user) pushToCloud(session.user.id, "anant_v3_logs", logs);
+    if (session?.user) {
+      pullFromCloud(session.user.id, { setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setQuests, setUserProfile });
+      const allKeys = [
+        ["anant_v3_logs", logs], ["anant_v3_workout", workoutLogs],
+        ["anant_v3_food", foodLogs], ["anant_v3_weight", weightLogs],
+        ["anant_v3_xp", xpLogs], ["anant_v3_achievements", achievements],
+        ["anant_v3_sleep", sleepLogs], ["anant_v3_measurements", measurements],
+        ["anant_v3_checkin", checkinLogs], ["anant_v3_journal", journalLogs],
+        ["anant_v3_quests", quests], ["anant_v3_profile", userProfile],
+      ];
+      allKeys.forEach(([key, val]) => pushToCloud(session.user.id, key, val));
+    }
   });
   return () => subscription.unsubscribe();
 }, []);
