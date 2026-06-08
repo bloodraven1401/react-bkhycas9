@@ -79,6 +79,7 @@ function AuthModal({ onClose }) {
     </div>
   );
 }
+
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const THEME_MALE = {
   bg: "#07070A", surface: "#0D0D12", border: "#16161E", faint: "#0F0F16",
@@ -131,6 +132,7 @@ const COLORS_FEMALE = {
 };
 
 let COLORS = { ...COLORS_MALE };
+
 // ─── XP SYSTEM ────────────────────────────────────────────────────────────────
 const XP_VALUES = {
   h1: 15, h2: 15, h3: 10, h4: 50, h5: 20, h6: 15,
@@ -2807,6 +2809,7 @@ function AboutPage({ onBack }) {
     </div>
   );
 }
+
 // ─── FULL SCREEN WRAPPERS (Sidebar navigation targets) ───────────────────────
 function HeatmapFullView({ logs, checkinLogs, sleepLogs, onBack, setSelectedDate, setView }) {
   const handleJumpToDay = (date) => {
@@ -2884,6 +2887,7 @@ function BackupFullView({ logs, workoutLogs, foodLogs, weightLogs, xpLogs, achie
     </div>
   );
 }
+
 // ─── WORKOUT LOGGER ───────────────────────────────────────────────────────────
 function WorkoutLogger({ workoutLogs, setWorkoutLogs, workoutPlan: plan, onBack }) {
   const [selectedWorkoutDate, setSelectedWorkoutDate] = useState(todayKey());
@@ -3222,6 +3226,7 @@ function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
     </div>
   );
 }
+
 // ─── ANALYTICS ────────────────────────────────────────────────────────────────
 function AnalyticsView({ logs, workoutLogs, foodLogs, nofapStreak, weightLogs, checkinLogs, sleepLogs, onBack, setView, setSelectedDate }) {
   const [period, setPeriod] = useState("weekly");
