@@ -323,8 +323,7 @@ function useLS(key, def) {
       try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
     }
     try {
-      const session = supabase.auth.getSession();
-      session.then(({ data: { session } }) => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) pushToCloud(session.user.id, key, val);
       });
     } catch {}
@@ -935,10 +934,12 @@ useEffect(() => {
   supabase.auth.getSession().then(({ data: { session } }) => {
     setSupaUser(session?.user ?? null);
     if (session?.user) pullFromCloud(session.user.id, { setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setQuests, setUserProfile });
+    if (session?.user) pushToCloud(session.user.id, "anant_v3_logs", logs);
   });
   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
     setSupaUser(session?.user ?? null);
     if (session?.user) pullFromCloud(session.user.id, { setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setQuests, setUserProfile });
+    if (session?.user) pushToCloud(session.user.id, "anant_v3_logs", logs);
   });
   return () => subscription.unsubscribe();
 }, []);
