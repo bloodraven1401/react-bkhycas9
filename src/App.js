@@ -1159,20 +1159,30 @@ const [showCheckin, setShowCheckin] = useState(false);
   if (subView === "aicoach") return <AICoachFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={getNofapStreak()} onBack={() => setSubView(null)} />;
   if (subView === "quests") return <DailyQuestsFullView quests={quests} setQuests={setQuests} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} workoutLogs={workoutLogs} foodLogs={foodLogs} onBack={() => setSubView(null)} />;
   if (subView === "sleep") return <SleepFullView sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} onBack={() => setSubView(null)} />;
- if (subView === "profile") return <ProfilePage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} shadowMode={shadowMode} setShadowMode={setShadowMode} />;
+ if (subView === "profile") return <ProfilePage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} shadowMode={shadowMode} setShadowMode={setShadowMode} supaUser={supaUser} />;
   if (subView === "settings") return <SettingsPage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} onResetOnboarding={() => { setShowOnboarding(true); setSubView(null); }} />;
   if (subView === "about") return <AboutPage onBack={() => setSubView(null)} />; if (subView === "backup") return <BackupFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={setCheckinLogs} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setQuests={setQuests} onBack={() => setSubView(null)} />;
 
   if (showOnboarding) return (
     <ThemeContext.Provider value={{ theme: activeTheme, isFemale }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:wght@600;700&display=swap'); *{box-sizing:border-box;margin:0;padding:0} button{cursor:pointer;font-family:inherit}`}</style>
-      <OnboardingFlow onComplete={(data) => {
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+      {!showAuthModal && !supaUser && (
+        <div style={{ position: "fixed", inset: 0, background: "#07070A", zIndex: 999998, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", fontFamily: "'DM Mono',monospace" }}>
+          <div style={{ width: "100%", maxWidth: 480, background: "#0D0D12", borderRadius: "20px 20px 0 0", padding: "32px 24px 52px", display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: "#E8E4DC" }}>Before we begin.</div>
+            <div style={{ fontSize: 12, color: "#3A3A48", lineHeight: 1.7 }}>Sign in to sync your progress across devices, or continue as a guest. Your data stays on this device either way.</div>
+            <button onClick={() => setShowAuthModal(true)} style={{ width: "100%", background: "#C9A96E", border: "none", borderRadius: 10, padding: "13px", color: "#000", fontSize: 13, fontFamily: "inherit", fontWeight: 600 }}>Sign In / Sign Up</button>
+            <button onClick={() => setShowAuthModal(false)} style={{ width: "100%", background: "none", border: "1px solid #16161E", borderRadius: 10, padding: "12px", color: "#3A3A48", fontSize: 12, fontFamily: "inherit" }}>Continue as Guest →</button>
+          </div>
+        </div>
+      )}
+      {(supaUser || !showAuthModal) && <OnboardingFlow onComplete={(data) => {
         setUserProfile(data);
         setShowOnboarding(false);
-      }} />
+      }} />}
     </ThemeContext.Provider>
   );
-
   return (
     <ThemeContext.Provider value={{ theme: activeTheme, isFemale }}>
     <div style={{ minHeight: "100dvh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", width: "100vw", maxWidth: "100%", margin: "0 auto", paddingBottom: 80, overflowX: "hidden", position: "relative" }}>
@@ -2557,7 +2567,7 @@ function DemonCard({ demon }) {
 }
 
 // ─── PROFILE PAGE ─────────────────────────────────────────────────────────────
-function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode, setShadowMode }) {
+function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode, setShadowMode, supaUser }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...userProfile });
   const theme = isFemale ? THEME_FEMALE : THEME_MALE;
@@ -2701,6 +2711,17 @@ function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode
           </div>
         )}
       </div>
+
+{/* Account */}
+      {supaUser && (
+        <div style={{ marginBottom: 16, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
+          <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>Account</div>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>{supaUser.email}</div>
+          <button onClick={() => { supabase.auth.signOut(); onBack(); }} style={{ width: "100%", background: "none", border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px", color: C.nofap, fontSize: 12, fontFamily: "inherit", cursor: "pointer" }}>
+            Sign Out
+          </button>
+        </div>
+      )}
 
       {/* Shadow Mode */}
       <div style={{ marginTop: 16, background: shadowMode ? "#020204" : C.surface, border: `2px solid ${shadowMode ? "#FF0000" : C.border}`, borderRadius: 16, padding: 20 }}>
