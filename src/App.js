@@ -11,11 +11,15 @@ async function pushToCloud(userId, key, value) {
     anant_v3_sleep: "sleep_logs", anant_v3_measurements: "measurements",
     anant_v3_checkin: "checkin_logs", anant_v3_journal: "journal_logs",
     anant_v3_quests: "quests", anant_v3_profile: "profile",
+    anant_v3_workout_plan: "workout_plan", anant_v3_skincare_plan: "skincare_plan",
+    anant_v3_diet_plan: "diet_plan", anant_v3_haircare_plan: "haircare_plan",
+    anant_v3_spiritual_plan: "spiritual_plan", anant_v3_nofap_history: "nofap_history",
+    anant_v3_custom_habits: "custom_habits", anant_v3_plan_list: "plan_list",
+    anant_v3_custom_plans: "custom_plans", anant_v3_seasons: "seasons",
   }[key];
   if (!col) return;
   await supabase.from("user_data").upsert({ user_id: userId, [col]: value, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
 }
-
 async function pullFromCloud(userId, setters) {
   const { data, error } = await supabase.from("user_data").select("*").eq("user_id", userId).single();
   if (error || !data) return;
@@ -26,6 +30,11 @@ async function pullFromCloud(userId, setters) {
     sleep_logs: setters.setSleepLogs, measurements: setters.setMeasurements,
     checkin_logs: setters.setCheckinLogs, journal_logs: setters.setJournalLogs,
     quests: setters.setQuests, profile: setters.setUserProfile,
+    workout_plan: setters.setWorkoutPlan, skincare_plan: setters.setSkincarePlan,
+    diet_plan: setters.setDietPlan, haircare_plan: setters.setHaircarePlan,
+    spiritual_plan: setters.setSpiritualPlan, nofap_history: setters.setNofapHistory,
+    custom_habits: setters.setCustomHabits, plan_list: setters.setPlanList,
+    seasons: setters.setSeasons,
   };
   Object.entries(map).forEach(([col, setter]) => { if (data[col] && setter) setter(data[col]); });
 }
@@ -950,6 +959,9 @@ useEffect(() => {
         ["anant_v3_sleep", sleepLogs], ["anant_v3_measurements", measurements],
         ["anant_v3_checkin", checkinLogs], ["anant_v3_journal", journalLogs],
         ["anant_v3_quests", quests], ["anant_v3_profile", userProfile],
+        ["anant_v3_workout_plan", workoutPlan], ["anant_v3_skincare_plan", skincarePlan],
+        ["anant_v3_diet_plan", dietPlan], ["anant_v3_haircare_plan", haircarePlan],
+        ["anant_v3_spiritual_plan", spiritualPlan], ["anant_v3_nofap_history", nofapHistory],
       ];
       allKeys.forEach(([key, val]) => pushToCloud(session.user.id, key, val));
     }
