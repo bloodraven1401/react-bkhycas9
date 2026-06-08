@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, createContext, useContext, useMemo } from "react";
+import { createClient } from "@supabase/supabase-js";
+const supabase = createClient("https://xxhmytltastgfgrjrrnf.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4aG15dGx0YXN0Z2Zncmpycm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NzE4MjgsImV4cCI6MjA5NjM0NzgyOH0.2Qjm0tzIFhIXj3FjCO9Mxy_FdM84huDarSNdy6w5PpA");
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const THEME_MALE = {
