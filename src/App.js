@@ -4225,7 +4225,6 @@ function StatsView({ xpLogs, achievements, logs, getStreak, nofapStreak }) {
 function DailyCheckin({ onComplete, onSkip }) {
     const [step, setStep] = useState(0);
   const [data, setData] = useState({ mood: null, energy: null, sleep: null, stress: null, focus: null, motivation: null });
-  const canGoBack = step > 0 && step < fields.length;
   const fields = [
     { key: "mood",       label: "How are you feeling?",     labels: MOOD_LABELS,       color: C.skincare },
     { key: "energy",     label: "Energy level?",            labels: ENERGY_LABELS,     color: C.workout },
@@ -4251,16 +4250,16 @@ function DailyCheckin({ onComplete, onSkip }) {
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(7,7,10,0.97)", zIndex: 99998, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div style={{ width: "100%", maxWidth: 480, background: C.surface, borderRadius: "20px 20px 0 0", padding: "28px 24px 48px" }}>
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(7,7,10,0.97)", zIndex: 99998, display: "flex", alignItems: "flex-end", justifyContent: "center", transform: "translateZ(0)", WebkitTransform: "translateZ(0)" }}>
+      <div style={{ width: "100%", maxWidth: 480, background: C.surface, borderRadius: "20px 20px 0 0", padding: "28px 24px 48px", transform: "translateZ(0)", WebkitTransform: "translateZ(0)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <div style={{ display: "flex", gap: 4 }}>
-            {fields.map((_, i) => (
-              <div key={i} style={{ width: i === step ? 20 : 6, height: 4, borderRadius: 2, background: i <= step ? current.color : C.muted, transition: "all 0.3s" }} />
-            ))}
-          </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={() => setStep(s => Math.max(0, s - 1))} style={{ background: "none", border: "none", color: step > 0 ? C.muted : "transparent", fontSize: 18, fontFamily: "inherit", padding: "0 4px" }}>‹</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button onClick={() => { if (step > 0) setStep(s => s - 1); }} style={{ background: "none", border: "none", color: step > 0 ? C.muted : "transparent", fontSize: 20, fontFamily: "inherit", padding: "0 2px", cursor: step > 0 ? "pointer" : "default", lineHeight: 1 }}>‹</button>
+            <div style={{ display: "flex", gap: 4 }}>
+              {fields.map((_, i) => (
+                <div key={i} style={{ width: i === step ? 20 : 6, height: 4, borderRadius: 2, background: i <= step ? current.color : C.muted, transition: "all 0.3s" }} />
+              ))}
+            </div>
           </div>
           <button onClick={onSkip} style={{ background: "none", border: "none", color: C.muted, fontSize: 11, fontFamily: "inherit" }}>skip</button>
         </div>
@@ -4282,7 +4281,6 @@ function DailyCheckin({ onComplete, onSkip }) {
       </div>
     </div>
   );
-}
 
 // ─── JOURNAL CARD ─────────────────────────────────────────────────────────────
 function JournalCard({ journalLogs, setJournalLogs, checkinLogs, logs, workoutLogs }) {
