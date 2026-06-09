@@ -4223,8 +4223,9 @@ function StatsView({ xpLogs, achievements, logs, getStreak, nofapStreak }) {
 
 // ─── DAILY CHECK-IN POPUP ─────────────────────────────────────────────────────
 function DailyCheckin({ onComplete, onSkip }) {
-  const [step, setStep] = useState(0);
+    const [step, setStep] = useState(0);
   const [data, setData] = useState({ mood: null, energy: null, sleep: null, stress: null, focus: null, motivation: null });
+  const canGoBack = step > 0 && step < fields.length;
   const fields = [
     { key: "mood",       label: "How are you feeling?",     labels: MOOD_LABELS,       color: C.skincare },
     { key: "energy",     label: "Energy level?",            labels: ENERGY_LABELS,     color: C.workout },
@@ -4257,6 +4258,9 @@ function DailyCheckin({ onComplete, onSkip }) {
             {fields.map((_, i) => (
               <div key={i} style={{ width: i === step ? 20 : 6, height: 4, borderRadius: 2, background: i <= step ? current.color : C.muted, transition: "all 0.3s" }} />
             ))}
+          </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={() => setStep(s => Math.max(0, s - 1))} style={{ background: "none", border: "none", color: step > 0 ? C.muted : "transparent", fontSize: 18, fontFamily: "inherit", padding: "0 4px" }}>‹</button>
           </div>
           <button onClick={onSkip} style={{ background: "none", border: "none", color: C.muted, fontSize: 11, fontFamily: "inherit" }}>skip</button>
         </div>
