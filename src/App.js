@@ -1680,13 +1680,9 @@ function NewCategoryInput({ onAdd }) {
 
 function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }) {
   const today = todayKey();
-  const entry = sleepLogs[today] || {};
   const SLEEP_COLOR = "#7c6fa0";
   const XP_AMOUNT = 20;
-  const sleptOnTime = entry.sleptOnTime || false;
-  const wokeOnTime = entry.wokeOnTime || false;
 
-  // AM/PM time picker state — reactive to entry
   const parseTime = (t) => {
     if (!t) return { h: "", m: "", ampm: "PM" };
     const [hStr, mStr] = t.split(":");
@@ -1705,32 +1701,48 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
     return `${String(hour).padStart(2, "0")}:${m || "00"}`;
   };
 
+  // Always derive from sleepLogs[today] directly — no stale state
+  const entry = sleepLogs[today] || {};
+  const sleptOnTime = entry.sleptOnTime || false;
+  const wokeOnTime = entry.wokeOnTime || false;
+
   const [bed, setBed] = useState(() => parseTime(entry.bedtime));
   const [wake, setWake] = useState(() => parseTime(entry.wakeTime));
+  const [displayDate, setDisplayDate] = useState(today);
 
-  // Reset local state when date changes
+  // Reset pickers when TODAY changes (new day) OR when user navigates dates
   useEffect(() => {
-    const e = sleepLogs[today] || {};
+    const e = sleepLogs[displayDate] || {};
     setBed(parseTime(e.bedtime));
     setWake(parseTime(e.wakeTime));
+  }, [displayDate]); // eslint-disable-line
+
+  // Also reset when today changes (midnight rollover)
+  useEffect(() => {
+    setDisplayDate(today);
   }, [today]); // eslint-disable-line
 
-  const grantXP = () => {
-    setXpLogs(p => ({ ...p, [today]: (p[today] || 0) + XP_AMOUNT }));
-    setLogs(p => ({ ...p, [today]: { ...(p[today] || {}), h13: { done: true } } }));
+  const currentEntry = sleepLogs[displayDate] || {};
+  const currentSleptOnTime = currentEntry.sleptOnTime || false;
+  const currentWokeOnTime = currentEntry.wokeOnTime || false;
+
+  const grantXP = (date) => {
+    setXpLogs(p => ({ ...p, [date]: (p[date] || 0) + XP_AMOUNT }));
+    setLogs(p => ({ ...p, [date]: { ...(p[date] || {}), h13: { done: true } } }));
   };
-  const revokeXP = () => {
-    setXpLogs(p => ({ ...p, [today]: Math.max(0, (p[today] || 0) - XP_AMOUNT) }));
-    setLogs(p => ({ ...p, [today]: { ...(p[today] || {}), h13: { done: false } } }));
+  const revokeXP = (date) => {
+    setXpLogs(p => ({ ...p, [date]: Math.max(0, (p[date] || 0) - XP_AMOUNT) }));
+    setLogs(p => ({ ...p, [date]: { ...(p[date] || {}), h13: { done: false } } }));
   };
 
   const updateEntry = (patch) => {
-    const updated = { ...entry, ...patch };
-    setSleepLogs(p => ({ ...p, [today]: updated }));
+    const current = sleepLogs[displayDate] || {};
+    const updated = { ...current, ...patch };
+    setSleepLogs(p => ({ ...p, [displayDate]: updated }));
     const bothDone = updated.sleptOnTime && updated.wokeOnTime;
-    const wasBothDone = entry.sleptOnTime && entry.wokeOnTime;
-    if (bothDone && !wasBothDone) grantXP();
-    if (!bothDone && wasBothDone) revokeXP();
+    const wasBothDone = current.sleptOnTime && current.wokeOnTime;
+    if (bothDone && !wasBothDone) grantXP(displayDate);
+    if (!bothDone && wasBothDone) revokeXP(displayDate);
   };
 
   const updateBedtime = (newBed) => {
@@ -1755,7 +1767,6 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
     updateEntry({ wakeTime: "" });
   };
 
-  // Duration calc
   const getDuration = () => {
     const bt = toTime24(bed.h, bed.m, bed.ampm);
     const wt = toTime24(wake.h, wake.m, wake.ampm);
@@ -1768,7 +1779,6 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
   };
   const duration = getDuration();
 
-  // Last 7 days chart
   const last7Data = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (6 - i));
     const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
@@ -1817,7 +1827,6 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
           <div style={{ fontSize: 13, color: C.muted, marginBottom: 10 }}>Not set</div>
         )}
         <div style={{ display: "flex", gap: 8 }}>
-          {/* Hours */}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 8, color: C.muted, letterSpacing: 1, marginBottom: 5 }}>HOUR</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
@@ -1826,7 +1835,6 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
               ))}
             </div>
           </div>
-          {/* Minutes */}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 8, color: C.muted, letterSpacing: 1, marginBottom: 5 }}>MIN</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
@@ -1835,7 +1843,6 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
               ))}
             </div>
           </div>
-          {/* AM/PM */}
           <div>
             <div style={{ fontSize: 8, color: C.muted, letterSpacing: 1, marginBottom: 5 }}>AM/PM</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -1863,6 +1870,16 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
         </div>
       </div>
 
+      {/* Date navigator */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, background: C.faint, borderRadius: 10, padding: "8px 12px" }}>
+        <button onClick={() => { const d = new Date(displayDate); d.setDate(d.getDate() - 1); setDisplayDate(d.toISOString().split("T")[0]); }} style={{ background: "none", border: "none", color: C.muted, fontSize: 18, cursor: "pointer" }}>‹</button>
+        <div style={{ flex: 1, textAlign: "center", fontSize: 11, color: displayDate === today ? C.muted : SLEEP_COLOR }}>
+          {new Date(displayDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
+          {displayDate === today && <span style={{ fontSize: 9, color: C.muted }}> · Today</span>}
+        </div>
+        <button onClick={() => { const d = new Date(displayDate); d.setDate(d.getDate() + 1); const next = d.toISOString().split("T")[0]; if (next <= today) setDisplayDate(next); }} style={{ background: "none", border: "none", color: displayDate === today ? C.dim : C.muted, fontSize: 18, cursor: displayDate === today ? "default" : "pointer" }}>›</button>
+      </div>
+
       {/* Target */}
       <div style={{ background: `${SLEEP_COLOR}12`, border: `1px solid ${SLEEP_COLOR}20`, borderRadius: 8, padding: "8px 12px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ fontSize: 11, color: C.muted }}>Target</div>
@@ -1878,7 +1895,7 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
 
       {/* Checkboxes */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-        {[{ key: "sleptOnTime", val: sleptOnTime, label: "Slept by 11:00 PM" }, { key: "wokeOnTime", val: wokeOnTime, label: "Woke at 6:00 AM" }].map(({ key, val, label }) => (
+        {[{ key: "sleptOnTime", val: currentSleptOnTime, label: "Slept by 11:00 PM" }, { key: "wokeOnTime", val: currentWokeOnTime, label: "Woke at 6:00 AM" }].map(({ key, val, label }) => (
           <div key={key} onClick={() => updateEntry({ [key]: !val })} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 10, cursor: "pointer", background: val ? `${SLEEP_COLOR}12` : C.faint, border: `1px solid ${val ? SLEEP_COLOR + "40" : C.border}`, transition: "all 0.2s" }}>
             <div style={{ width: 22, height: 22, borderRadius: 6, background: val ? SLEEP_COLOR : "transparent", border: `2px solid ${val ? SLEEP_COLOR : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               {val && <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</span>}
@@ -1903,9 +1920,9 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
         </div>
       )}
 
-      {sleptOnTime && wokeOnTime && (
+      {currentSleptOnTime && currentWokeOnTime && (
         <div style={{ background: `${SLEEP_COLOR}15`, border: `1px solid ${SLEEP_COLOR}30`, borderRadius: 8, padding: "8px 14px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 11, color: C.muted }}>XP earned today</span>
+          <span style={{ fontSize: 11, color: C.muted }}>XP earned</span>
           <span style={{ fontSize: 13, color: SLEEP_COLOR }}>+{XP_AMOUNT} XP ✦</span>
         </div>
       )}
@@ -1915,11 +1932,11 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
         <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Last 7 Nights</div>
         <div style={{ display: "flex", gap: 4 }}>
           {last7Data.map((d, i) => (
-            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-              <div style={{ width: "100%", height: 36, borderRadius: 5, background: d.both ? `${SLEEP_COLOR}70` : C.faint, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${d.both ? SLEEP_COLOR + "50" : C.border}` }}>
+            <div key={i} onClick={() => setDisplayDate(d.k)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer" }}>
+              <div style={{ width: "100%", height: 36, borderRadius: 5, background: d.both ? `${SLEEP_COLOR}70` : C.faint, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${d.k === displayDate ? SLEEP_COLOR : d.both ? SLEEP_COLOR + "50" : C.border}` }}>
                 {d.hours > 0 && <span style={{ fontSize: 8, color: d.both ? "#fff" : C.muted }}>{d.hours}h</span>}
               </div>
-              <div style={{ fontSize: 8, color: d.k === today ? SLEEP_COLOR : C.muted }}>{d.label}</div>
+              <div style={{ fontSize: 8, color: d.k === displayDate ? SLEEP_COLOR : C.muted }}>{d.label}</div>
             </div>
           ))}
         </div>
