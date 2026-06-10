@@ -195,6 +195,15 @@ const COLORS_FEMALE = {
 };
 
 let COLORS = { ...COLORS_MALE };
+// Auto-add colors for any custom categories not in the base COLORS
+const CUSTOM_CATEGORY_COLORS = ["#A07EE0","#E07B5A","#7EB8A4","#5B8DEF","#FFD700","#FF5722","#4CAF50","#E91E63","#00BCD4","#FF9800"];
+function ensureColor(cat) {
+  if (!COLORS[cat]) {
+    const idx = Object.keys(COLORS).length % CUSTOM_CATEGORY_COLORS.length;
+    COLORS[cat] = CUSTOM_CATEGORY_COLORS[idx];
+  }
+  return COLORS[cat];
+}
 
 // ─── XP SYSTEM ────────────────────────────────────────────────────────────────
 const XP_VALUES = {
@@ -254,7 +263,17 @@ const HABITS = [
   { id: "h12", label: "Pooja", category: "spiritual", type: "binary", icon: "✦" },
 { id: "h13", label: "Sleep Schedule", category: "sleep", type: "binary", icon: "☽" },
 ];
-
+// ─── DYNAMIC HABITS READER ────────────────────────────────────────────────────
+function getActiveHabits() {
+  try {
+    const stored = localStorage.getItem("anant_v3_custom_habits");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return HABITS;
+}
 // ─── ONBOARDING DATA ──────────────────────────────────────────────────────────
 const STRUGGLE_OPTIONS = [
   "Low motivation", "Anxiety & overthinking", "Poor sleep", "Procrastination",
@@ -298,7 +317,8 @@ function getNextRank(xp) {
 }
 // FIX: reads from logs (habit objects) not xpLogs (numbers)
 function getCategoryXP(logs, category) {
-  const catHabits = HABITS.filter(h => h.category === category);
+  const activeHabits = getActiveHabits();
+  const catHabits = activeHabits.filter(h => h.category === category);
   let total = 0;
   Object.values(logs).forEach(dayLogs => {
     if (typeof dayLogs === "object") {
@@ -330,12 +350,14 @@ function last30() { return Array.from({ length: 30 }, (_, i) => dateKey(-(29 - i
 
 // ─── DEMON SYSTEM ─────────────────────────────────────────────────────────────
 function getDemonData(logs) {
+  const activeHabits = getActiveHabits();
   const demons = [];
-  Object.keys(COLORS).forEach(cat => {
-    const catHabits = HABITS.filter(h => h.category === cat);
+  const cats = [...new Set(activeHabits.map(h => h.category))];
+  cats.forEach(cat => {
+    const catHabits = activeHabits.filter(h => h.category === cat);
     if (!catHabits.length) return;
     let missStreak = 0;
-    let d = new Date();
+    const d = new Date();
     for (let i = 0; i < 30; i++) {
       const k = new Date(d.getTime() - i * 86400000).toISOString().split("T")[0];
       const allMissed = catHabits.every(h => !logs[k]?.[h.id]?.done);
@@ -344,14 +366,13 @@ function getDemonData(logs) {
     }
     if (missStreak >= 3) {
       const isMajor = missStreak >= 7;
+      const color = COLORS[cat] || "#888888";
       demons.push({
         cat, missStreak, isMajor,
         name: isMajor ? `The ${cat.charAt(0).toUpperCase() + cat.slice(1)} Devourer` : `${cat.charAt(0).toUpperCase() + cat.slice(1)} Shadow`,
         hp: Math.min(100, Math.round((missStreak / 14) * 100)),
-        color: COLORS[cat] || C.muted,
-        taunt: isMajor
-          ? `${missStreak} days of silence. It's getting stronger.`
-          : `${missStreak} days missed. Don't let it grow.`,
+        color,
+        taunt: isMajor ? `${missStreak} days of silence. It's getting stronger.` : `${missStreak} days missed. Don't let it grow.`,
       });
     }
   });
@@ -929,7 +950,67 @@ function OnboardingFlow({ onComplete }) {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={back} style={btnSecondary}>← Back</button>
-          <button onClick={() => onComplete({ ...profile, onboardingComplete: true })} style={btnPrimary}>
+          <button onClick={() => {
+            const isFem = profile.gender === "female";
+            const femaleDefaults = isFem ? {
+              workoutPlan: [
+                { day: "Day 1", focus: "FULL BODY — Strength", sections: [
+                  { title: "Lower Body", exercises: ["Squats — 3×12","Lunges — 3×10 each","Glute Bridges — 3×15"] },
+                  { title: "Upper Body", exercises: ["Push-ups — 3×10","Dumbbell Rows — 3×12","Shoulder Press — 3×10"] },
+                  { title: "Core", exercises: ["Plank — 3×45s","Crunches — 3×20"] },
+                ]},
+                { day: "Day 2", focus: "CARDIO + CORE", sections: [
+                  { title: "Cardio", exercises: ["30 min walk/jog/cycling"] },
+                  { title: "Core", exercises: ["Dead Bug — 3×12","Leg Raises — 3×15","Russian Twists — 3×20"] },
+                ]},
+                { day: "Day 3", focus: "LOWER BODY — Glutes & Legs", sections: [
+                  { title: "Glutes", exercises: ["Hip Thrusts — 4×12","Romanian Deadlift — 3×10","Cable Kickbacks — 3×15 each"] },
+                  { title: "Legs", exercises: ["Leg Press — 3×12","Leg Curl — 3×12","Calf Raises — 3×20"] },
+                ]},
+                { day: "Day 4", focus: "REST / ACTIVE RECOVERY", sections: [] },
+                { day: "Day 5", focus: "UPPER BODY — Tone & Strength", sections: [
+                  { title: "Push", exercises: ["Incline DB Press — 3×12","Lateral Raises — 3×15","Tricep Pushdowns — 3×12"] },
+                  { title: "Pull", exercises: ["Lat Pulldown — 3×12","Face Pulls — 3×15","Bicep Curls — 3×12"] },
+                ]},
+                { day: "Day 6", focus: "FULL BODY — Light Pump", sections: [
+                  { title: "Circuit", exercises: ["Bodyweight Squats — 3×20","Push-ups — 3×15","Plank — 3×45s","Jump Rope — 3×60s"] },
+                ]},
+                { day: "Day 7", focus: "REST", sections: [] },
+              ],
+              dietPlan: {
+                target: "~2000 kcal/day · ~120g protein/day",
+                meals: [
+                  { time: "8:00 AM",  label: "Meal 1 — Breakfast", items: ["2 eggs + 1 egg white","1 slice whole grain toast","1 cup Greek yogurt","Berries or banana"], macros: "~30g P · ~420 kcal" },
+                  { time: "12:00 PM", label: "Meal 2 — Lunch",     items: ["Grilled chicken / paneer 100g","Salad with olive oil dressing","1 small roti or ½ cup rice"], macros: "~35g P · ~500 kcal" },
+                  { time: "3:30 PM",  label: "Meal 3 — Snack",     items: ["Handful of nuts","1 fruit","Green tea or black coffee"], macros: "~8g P · ~200 kcal" },
+                  { time: "6:30 PM",  label: "Meal 4 — Post Workout", items: ["Protein shake or 100g cottage cheese","1 banana"], macros: "~25g P · ~300 kcal" },
+                  { time: "8:30 PM",  label: "Meal 5 — Dinner",    items: ["Fish / chicken / daal 150g","Vegetables stir-fry","1 cup brown rice or 2 roti"], macros: "~35g P · ~480 kcal" },
+                  { time: "10:00 PM", label: "Meal 6 — Before Bed",items: ["1 glass warm milk","1 tsp honey"], macros: "~8g P · ~120 kcal" },
+                ],
+              },
+              skincarePlan: {
+                morning: [
+                  { step: 1, task: "Gentle Cleanser", note: "Lukewarm water. No harsh scrubbing." },
+                  { step: 2, task: "Vitamin C Serum", note: "3-4 drops, press gently into skin." },
+                  { step: 3, task: "Moisturizer with SPF 50", note: "Non-negotiable every single morning." },
+                  { step: 4, task: "Lip balm", note: "SPF lip balm preferred." },
+                ],
+                night: [
+                  { step: 1, task: "Micellar water / makeup remover", note: "Remove all traces of sunscreen and makeup." },
+                  { step: 2, task: "Gentle Cleanser", note: "Double cleanse on heavy makeup days." },
+                  { step: 3, task: "Retinol or Niacinamide", note: "Alternate nights. Start slow." },
+                  { step: 4, task: "Rich moisturizer", note: "More generous than morning application." },
+                  { step: 5, task: "Lip mask", note: "Overnight repair." },
+                ],
+                toBuy: [
+                  { item: "Vitamin C Serum", price: "~₹400–600" },
+                  { item: "SPF 50 moisturizer", price: "~₹300–500" },
+                  { item: "Retinol serum", price: "~₹500–800" },
+                ],
+              },
+            } : {};
+            onComplete({ ...profile, onboardingComplete: true, ...femaleDefaults });
+          }} style={btnPrimary}>
             {isFemale ? "Enter the Empire ✦" : "Enter the System ◆"}
           </button>
         </div>
@@ -1285,6 +1366,9 @@ const [showCheckin, setShowCheckin] = useState(false);
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:wght@600;700&display=swap'); *{box-sizing:border-box;margin:0;padding:0} button{cursor:pointer;font-family:inherit}`}</style>
       <OnboardingFlow onComplete={(data) => {
         setUserProfile(data);
+        if (data.workoutPlan) setWorkoutPlan(data.workoutPlan);
+        if (data.dietPlan) setDietPlan(data.dietPlan);
+        if (data.skincarePlan) setSkincarePlan(data.skincarePlan);
         setShowOnboarding(false);
       }} />
     </ThemeContext.Provider>
@@ -1652,8 +1736,8 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
         return (
           <div key={cat} style={{ marginBottom: 24 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <div style={{ width: 3, height: 14, borderRadius: 2, background: COLORS[cat] || C.muted }} />
-              <div style={{ fontSize: 9, color: COLORS[cat] || C.muted, letterSpacing: 3, textTransform: "uppercase" }}>{cat}</div>
+              <div style={{ width: 3, height: 14, borderRadius: 2, background: ensureColor(cat) }} />
+              <div style={{ fontSize: 9, color: ensureColor(cat), letterSpacing: 3, textTransform: "uppercase" }}>{cat}</div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {catH.map(h => {
@@ -2318,11 +2402,12 @@ function HeatmapView({ logs, checkinLogs, sleepLogs, setView, setSelectedDate })
   }
 
   function getDayValue(date) {
+    const activeHabits = getActiveHabits();
     if (mode === "overall") {
-      const done = HABITS.filter(h => logs[date]?.[h.id]?.done).length;
-      return done / HABITS.length;
+      const done = activeHabits.filter(h => logs[date]?.[h.id]?.done).length;
+      return activeHabits.length ? done / activeHabits.length : 0;
     } else {
-      const catH = HABITS.filter(h => h.category === selectedCat);
+      const catH = activeHabits.filter(h => h.category === selectedCat);
       if (!catH.length) return 0;
       const done = catH.filter(h => logs[date]?.[h.id]?.done).length;
       return done / catH.length;
@@ -2406,8 +2491,9 @@ function HeatmapView({ logs, checkinLogs, sleepLogs, setView, setSelectedDate })
         const dayLogs = logs[popup] || {};
         const checkin = checkinLogs[popup];
         const sleep = sleepLogs[popup];
-        const done = HABITS.filter(h => dayLogs[h.id]?.done);
-        const notDone = HABITS.filter(h => !dayLogs[h.id]?.done);
+       const activeHabits = getActiveHabits();
+        const done = activeHabits.filter(h => dayLogs[h.id]?.done);
+        const notDone = activeHabits.filter(h => !dayLogs[h.id]?.done);
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(7,7,10,0.85)", zIndex: 99998, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setPopup(null)}>
             <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: C.surface, borderRadius: "20px 20px 0 0", padding: "24px 20px 48px", maxHeight: "80vh", overflowY: "auto" }}>
@@ -3531,13 +3617,18 @@ function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
 // ─── ANALYTICS ────────────────────────────────────────────────────────────────
 function AnalyticsView({ logs, workoutLogs, foodLogs, nofapStreak, weightLogs, checkinLogs, sleepLogs, onBack, setView, setSelectedDate }) {
   const [period, setPeriod] = useState("weekly");
-  function getHabitData(range) { return range.map(d => ({ date: d, label: new Date(d + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short" }), pct: Math.round((HABITS.filter(h => logs[d]?.[h.id]?.done).length / HABITS.length) * 100) })); }
+  function getHabitData(range) {
+    const activeHabits = getActiveHabits();
+    return range.map(d => ({ date: d, label: new Date(d + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short" }), pct: activeHabits.length ? Math.round((activeHabits.filter(h => logs[d]?.[h.id]?.done).length / activeHabits.length) * 100) : 0 }));
+  }
   function getProteinData(range) { return range.map(d => { const e = Array.isArray(foodLogs[d]) ? foodLogs[d] : []; return { date: d, label: new Date(d + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short" }), value: Math.round(e.reduce((a, x) => a + (x.protein || 0), 0)) }; }); }
   function getCalorieData(range) { return range.map(d => { const e = Array.isArray(foodLogs[d]) ? foodLogs[d] : []; return { date: d, label: new Date(d + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short" }), value: Math.round(e.reduce((a, x) => a + (x.calories || 0), 0)) }; }); }
   function getWorkoutVolume(range) { return range.map(d => { const dayLog = workoutLogs[d] || {}; const sets = Object.values(dayLog).reduce((a, ex) => a + (ex.sets?.length || 0), 0); return { date: d, label: new Date(d + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short" }), value: sets }; }); }
   function getCatConsistency(range) {
-    return Object.keys(COLORS).map(cat => {
-      const catH = HABITS.filter(h => h.category === cat);
+    const activeHabits = getActiveHabits();
+    const cats = [...new Set(activeHabits.map(h => h.category))];
+    return cats.map(cat => {
+      const catH = activeHabits.filter(h => h.category === cat);
       if (!catH.length) return null;
       let total = 0, done = 0;
       range.forEach(d => catH.forEach(h => { total++; if (logs[d]?.[h.id]?.done) done++; }));
@@ -4435,7 +4526,7 @@ function StatsView({ xpLogs, achievements, logs, getStreak, nofapStreak }) {
 
 // ─── DAILY CHECK-IN POPUP ─────────────────────────────────────────────────────
 function DailyCheckin({ onComplete, onSkip }) {
-    const [step, setStep] = useState(0);
+  const [step, setStep] = useState(0);
   const [data, setData] = useState({ mood: null, energy: null, sleep: null, stress: null, focus: null, motivation: null });
   const fields = [
     { key: "mood",       label: "How are you feeling?",     labels: MOOD_LABELS,       color: C.skincare },
@@ -4448,44 +4539,53 @@ function DailyCheckin({ onComplete, onSkip }) {
   const current = fields[step];
   const allDone = step >= fields.length;
 
-  if (allDone) {
-    return (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(7,7,10,0.97)", zIndex: 99998, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>⚡</div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Day logged.</div>
-          <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>Your baseline is set. Now execute.</div>
-          <button onClick={() => onComplete(data)} style={{ width: "100%", background: C.skincare, border: "none", borderRadius: 10, padding: 14, color: "#000", fontSize: 13, fontFamily: "inherit", fontWeight: 600 }}>Let's go →</button>
-        </div>
+  if (allDone) return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(7,7,10,0.97)", zIndex: 99998, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}>
+      <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>⚡</div>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, marginBottom: 8, color: C.text }}>Day logged.</div>
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>Your baseline is set. Now execute.</div>
+        <button onClick={() => onComplete(data)} style={{ width: "100%", background: C.skincare, border: "none", borderRadius: 10, padding: 14, color: "#000", fontSize: 13, fontFamily: "inherit", fontWeight: 600 }}>Let's go →</button>
+        <button onClick={() => setStep(fields.length - 1)} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontSize: 11, fontFamily: "inherit", marginTop: 12, cursor: "pointer" }}>← Change last answer</button>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(7,7,10,0.97)", zIndex: 99998, display: "flex", alignItems: "flex-end", justifyContent: "center", WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}>
       <div style={{ width: "100%", maxWidth: 480, background: C.surface, borderRadius: "20px 20px 0 0", padding: "28px 24px 48px", WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={() => { if (step > 0) setStep(s => s - 1); }} style={{ background: "none", border: "none", color: step > 0 ? C.muted : "transparent", fontSize: 22, fontFamily: "inherit", padding: "0 4px", lineHeight: 1, cursor: step > 0 ? "pointer" : "default" }}>‹</button>
-            <div style={{ display: "flex", gap: 4 }}>
-              {fields.map((_, i) => (
-                <div key={i} style={{ width: i === step ? 20 : 6, height: 4, borderRadius: 2, background: i <= step ? current.color : C.muted, transition: "all 0.3s" }} />
-              ))}
-            </div>
+        {/* Header row: back arrow + dots + skip */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <button
+            onClick={() => { if (step > 0) setStep(s => s - 1); }}
+            style={{ background: "none", border: `1px solid ${step > 0 ? C.border : "transparent"}`, borderRadius: 8, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", color: step > 0 ? C.muted : "transparent", fontSize: 18, cursor: step > 0 ? "pointer" : "default", flexShrink: 0 }}
+          >‹</button>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            {fields.map((f, i) => (
+              <div key={i} style={{ width: i === step ? 22 : 7, height: 7, borderRadius: 4, background: i < step ? current.color : i === step ? current.color : C.border, transition: "all 0.3s", cursor: i < step ? "pointer" : "default", opacity: i < step ? 0.6 : 1 }} onClick={() => { if (i < step) setStep(i); }} />
+            ))}
           </div>
-          <button onClick={onSkip} style={{ background: "none", border: "none", color: C.muted, fontSize: 11, fontFamily: "inherit" }}>skip</button>
+          <button onClick={onSkip} style={{ background: "none", border: "none", color: C.muted, fontSize: 11, fontFamily: "inherit", cursor: "pointer" }}>skip</button>
         </div>
-        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 24, marginTop: 16 }}>{current.label}</div>
+
+        {/* Step counter */}
+        <div style={{ fontSize: 9, color: current.color, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>{step + 1} of {fields.length}</div>
+
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20, color: C.text }}>{current.label}</div>
+
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {current.labels.map((label, i) => {
             const selected = data[current.key] === i;
             return (
               <button key={i} onClick={() => {
                 setData(p => ({ ...p, [current.key]: i }));
-                setTimeout(() => setStep(s => s + 1), 300);
-              }} style={{ background: selected ? `${current.color}20` : C.faint, border: `1px solid ${selected ? current.color : C.border}`, borderRadius: 10, padding: "13px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", color: selected ? current.color : C.text, fontSize: 13, fontFamily: "inherit", transition: "all 0.2s" }}>
+                setTimeout(() => setStep(s => s + 1), 280);
+              }} style={{ background: selected ? `${current.color}22` : C.faint, border: `2px solid ${selected ? current.color : C.border}`, borderRadius: 10, padding: "13px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", color: selected ? current.color : C.text, fontSize: 13, fontFamily: "inherit", transition: "all 0.15s", cursor: "pointer" }}>
                 <span>{label}</span>
-                <span style={{ fontSize: 11, color: C.muted }}>{i + 1}/5</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {selected && <span style={{ fontSize: 12, color: current.color }}>✓</span>}
+                  <span style={{ fontSize: 10, color: C.muted }}>{i + 1}/{current.labels.length}</span>
+                </div>
               </button>
             );
           })}
@@ -4493,7 +4593,7 @@ function DailyCheckin({ onComplete, onSkip }) {
       </div>
     </div>
   );
-}   //
+}
 
 // ─── JOURNAL CARD ─────────────────────────────────────────────────────────────
 function JournalCard({ journalLogs, setJournalLogs, checkinLogs, logs, workoutLogs }) {
@@ -4602,8 +4702,22 @@ function AIReviewCard({ logs, workoutLogs, foodLogs, checkinLogs, journalLogs, x
     const range = getRange(days);
     const habitCompletion = Math.round((range.reduce((a, d) => a + HABITS.filter(h => logs[d]?.[h.id]?.done).length, 0) / (HABITS.length * days)) * 100);
     const workoutDays = range.filter(d => Object.values(workoutLogs[d] || {}).some(ex => ex.sets?.length > 0)).length;
-    const guitarDays = range.filter(d => logs[d]?.h10?.done).length;
-    const nofapDays = range.filter(d => logs[d]?.h9?.done).length;
+   const activeHabits = getActiveHabits();
+    const habitCompletion = Math.round((range.reduce((a, d) => a + activeHabits.filter(h => logs[d]?.[h.id]?.done).length, 0) / (activeHabits.length * days)) * 100);
+    const workoutDays = range.filter(d => Object.values(workoutLogs[d] || {}).some(ex => ex.sets?.length > 0)).length;
+    const nofapHabit = activeHabits.find(h => h.category === "nofap");
+    const nofapDays = nofapHabit ? range.filter(d => logs[d]?.[nofapHabit.id]?.done).length : 0;
+    const customHabitStats = [...new Set(activeHabits.map(h => h.category))].map(cat => {
+      const catH = activeHabits.filter(h => h.category === cat);
+      const doneDays = range.filter(d => catH.some(h => logs[d]?.[h.id]?.done)).length;
+      return `${cat}: ${doneDays}/${days} days`;
+    }).join(", ");
+    const avgMood = (() => { const vals = range.map(d => checkinLogs[d]?.mood).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
+    const avgEnergy = (() => { const vals = range.map(d => checkinLogs[d]?.energy).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
+    const avgSleep = (() => { const vals = range.map(d => checkinLogs[d]?.sleep).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
+    const journalEntries = range.filter(d => journalLogs[d]).map(d => { const e = journalLogs[d]; return `${d}: Good: ${e.good || "-"} | Bad: ${e.bad || "-"} | Lesson: ${e.lesson || "-"}`; }).join("\n");
+    const totalXP = getTotalXP(xpLogs);
+    const totalSets = range.reduce((a, d) => a + Object.values(workoutLogs[d] || {}).reduce((b, ex) => b + (ex.sets?.length || 0), 0), 0);
     const avgMood = (() => { const vals = range.map(d => checkinLogs[d]?.mood).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
     const avgEnergy = (() => { const vals = range.map(d => checkinLogs[d]?.energy).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
     const avgSleep = (() => { const vals = range.map(d => checkinLogs[d]?.sleep).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
@@ -4623,10 +4737,10 @@ function AIReviewCard({ logs, workoutLogs, foodLogs, checkinLogs, journalLogs, x
    return `You are a personal coach reviewing ${period.label.toLowerCase()} data for ${userName}, focused on physique, discipline, and self-improvement.${alterEgo ? " " + alterEgo : ""}${userGoals ? ` Their goals include: ${userGoals}.` : ""}${shadowTone}
 
 DATA (last ${days} days):
-- Habit completion: ${habitCompletion}%
-- Workout days: ${workoutDays}/${days}
-- Guitar practice days: ${guitarDays}/${days}
+- Overall habit completion: ${habitCompletion}%
+- Workout sessions logged: ${workoutDays}/${days}
 - NoFap days: ${nofapDays}/${days}
+- Category breakdown: ${customHabitStats}
 - Total workout sets: ${totalSets}
 - NoFap streak: ${nofapStreak} days
 - Total XP: ${totalXP}
