@@ -2962,10 +2962,10 @@ function DailyQuestsFullView({ quests, setQuests, logs, setLogs, xpLogs, setXpLo
   );
 }
 // ─── SLEEP FULL VIEW ─────────────────────────────────────────────────────────
-function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs, onBack }) {
-  const today = todayKey();
+function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs, onBack, selectedDate }) {
+  const dateKey = selectedDate || todayKey();   // ← This fixes the date switcher issue
   
-  const saved = sleepLogs[today] || {};
+  const saved = sleepLogs[dateKey] || {};
   
   const [bedtimeHour, setBedtimeHour] = useState(saved.bedtimeHour || 23);
   const [bedtimeMin, setBedtimeMin] = useState(saved.bedtimeMin || 0);
@@ -2994,7 +2994,7 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
     
     setSleepLogs(prev => ({
       ...prev,
-      [today]: {
+      [dateKey]: {
         sleptBy: `${bedtimeHour}:${bedtimeMin.toString().padStart(2, '0')} ${bedtimeAMPM}`,
         wokeAt: `${wakeHour}:${wakeMin.toString().padStart(2, '0')} ${wakeAMPM}`,
         bedtimeHour, bedtimeMin, bedtimeAMPM,
@@ -3003,16 +3003,14 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
       }
     }));
 
-    // Give XP once per day
-    if (!sleepLogs[today]) {
-      setXpLogs(p => ({ ...p, [today]: (p[today] || 0) + 20 }));
+    if (!sleepLogs[dateKey]) {
+      setXpLogs(p => ({ ...p, [dateKey]: (p[dateKey] || 0) + 20 }));
     }
 
-    // Mark sleep habit as done
     setLogs(p => ({
       ...p,
-      [today]: {
-        ...(p[today] || {}),
+      [dateKey]: {
+        ...(p[dateKey] || {}),
         h13: { done: true }
       }
     }));
@@ -3025,9 +3023,10 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
       <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 28, marginBottom: 10 }}>←</button>
       
       <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 4 }}>Rest & Recovery</div>
-      <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>Log on the date you woke up</div>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>
+        {new Date(dateKey + "T12:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
+      </div>
 
-      {/* Target */}
       <div style={{ background: C.surface, borderRadius: 12, padding: 16, marginBottom: 20, display: "flex", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: 11, color: C.haircare }}>TARGET</div>
@@ -3038,11 +3037,8 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
         </div>
       </div>
 
-      {/* Bedtime */}
       <div style={{ background: C.surface, borderRadius: 12, padding: 16, marginBottom: 16 }}>
         <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>BEDTIME (PREVIOUS NIGHT)</div>
-        {/* You can keep your existing hour/min/AMPM picker UI here */}
-        {/* For now, using simple time input for reliability */}
         <input 
           type="time" 
           value={`${bedtimeHour.toString().padStart(2,'0')}:${bedtimeMin.toString().padStart(2,'0')}`} 
@@ -3056,7 +3052,6 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
         />
       </div>
 
-      {/* Wake Time */}
       <div style={{ background: C.surface, borderRadius: 12, padding: 16, marginBottom: 20 }}>
         <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>WAKE TIME (THIS MORNING)</div>
         <input 
@@ -3081,19 +3076,6 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
     </div>
   );
 }
-
-function BackupFullView({ logs, workoutLogs, foodLogs, weightLogs, xpLogs, achievements, sleepLogs, measurements, checkinLogs, journalLogs, aiReviews, quests, setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setAiReviews, setQuests, onBack }) {
-  return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1 }}>← Back</button>
-        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Data Backup</div>
-      </div>
-      <DataBackupCard logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} nofapHistory={[]} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={setCheckinLogs} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setNofapHistory={() => {}} setQuests={setQuests} />
-    </div>
-  );
-}
-
 // ─── WORKOUT LOGGER ───────────────────────────────────────────────────────────
 function WorkoutLogger({ workoutLogs, setWorkoutLogs, workoutPlan: plan, onBack }) {
   const [selectedWorkoutDate, setSelectedWorkoutDate] = useState(todayKey());
