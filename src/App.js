@@ -4687,29 +4687,3 @@ function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs,
     </button>
   );
 }
-
-// ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
-function Ring({ value, size, color, label, sublabel }) {
-  const r = (size - 14) / 2, circ = 2 * Math.PI * r, offset = circ - (value / 100) * circ;
-  return (
-    <div style={{ position: "relative", width: size, height: size }}>
-      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={C.faint} strokeWidth={7} />
-        <circle className="ring-track" cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={7} strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset} />
-      </svg>
-      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ fontSize: 20, color, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{label}</div>
-        <div style={{ fontSize: 9, color: C.muted, letterSpacing: 1.5, marginTop: 2 }}>{sublabel?.toUpperCase()}</div>
-      </div>
-    </div>
-  );
-}
-
-function Stat({ label, value, color }) {
-  return (
-    <div style={{ background: C.surface, border: `1px solid ${color}25`, borderRadius: 12, padding: "16px 10px", textAlign: "center" }}>
-      <div style={{ fontSize: 22, color, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{value}</div>
-      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginTop: 5 }}>{label}</div>
-    </div>
-  );
-}
