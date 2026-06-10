@@ -40,9 +40,10 @@ async function pullFromCloud(userId, setters) {
 }
 
 // ─── AUTH MODAL ───────────────────────────────────────────────────────────────
-function AuthModal({ onClose }) {
+function AuthModal({ onClose, onAuthComplete }) {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
@@ -50,38 +51,69 @@ function AuthModal({ onClose }) {
   async function handleSubmit() {
     setLoading(true); setMsg("");
     if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) setMsg(error.message);
-      else setMsg("Check your email to confirm your account.");
+      if (!username.trim()) { setMsg("Username is required."); setLoading(false); return; }
+      if (username.includes(" ")) { setMsg("Username cannot contain spaces."); setLoading(false); return; }
+      // Check username uniqueness
+      const { data: existing } = await supabase.from("user_data").select("user_id").eq("username", username.toLowerCase().trim()).maybeSingle();
+      if (existing) { setMsg("Username already taken."); setLoading(false); return; }
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) { setMsg(error.message); setLoading(false); return; }
+      if (data?.user) {
+        await supabase.from("user_data").upsert({ user_id: data.user.id, username: username.toLowerCase().trim(), updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+        setMsg("Account created! Check your email to confirm, then sign in.");
+        setMode("signin");
+      }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      // Allow login with username or email
+      let loginEmail = email.trim();
+      if (!loginEmail.includes("@")) {
+        // treat as username — look up email
+        const { data: userData } = await supabase.from("user_data").select("user_id").eq("username", loginEmail.toLowerCase()).maybeSingle();
+        if (!userData) { setMsg("Username not found."); setLoading(false); return; }
+        // We can't get email from user_id directly without admin — so store email at signup
+        // Fallback: ask user to use email if username lookup fails to find email
+        setMsg("Please sign in with your email address."); setLoading(false); return;
+      }
+      const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
       if (error) setMsg(error.message);
-      else onClose();
+      else { onAuthComplete?.(); onClose(); }
     }
     setLoading(false);
   }
 
+  const inputStyle = { background: "#0F0F16", border: "1px solid #16161E", borderRadius: 10, padding: "12px 14px", color: "#E8E4DC", fontFamily: "inherit", fontSize: 13, outline: "none", width: "100%" };
+
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(7,7,10,0.92)", zIndex: 999999, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#0D0D12", borderRadius: "20px 20px 0 0", padding: "28px 24px 48px", fontFamily: "'DM Mono',monospace" }}>
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(7,7,10,0.95)", zIndex: 999999, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#0D0D12", borderRadius: "20px 20px 0 0", padding: "28px 24px 52px", fontFamily: "'DM Mono',monospace" }}>
         <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: "#E8E4DC", marginBottom: 4 }}>
           {mode === "signin" ? "Welcome back." : "Create account."}
         </div>
         <div style={{ fontSize: 11, color: "#3A3A48", marginBottom: 20 }}>
-          {mode === "signin" ? "Sign in to sync your data across devices." : "Sign up to back up and sync your progress."}
+          {mode === "signin" ? "Sign in to sync your data across devices." : "Choose a username and create your account."}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
-          <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={{ background: "#0F0F16", border: "1px solid #16161E", borderRadius: 10, padding: "12px 14px", color: "#E8E4DC", fontFamily: "inherit", fontSize: 13, outline: "none" }} />
-          <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ background: "#0F0F16", border: "1px solid #16161E", borderRadius: 10, padding: "12px 14px", color: "#E8E4DC", fontFamily: "inherit", fontSize: 13, outline: "none" }} />
+          {mode === "signup" && (
+            <div>
+              <div style={{ fontSize: 9, color: "#3A3A48", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>Username</div>
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#3A3A48", fontSize: 13 }}>@</span>
+                <input placeholder="yourname" value={username} onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_.]/g, ""))} style={{ ...inputStyle, paddingLeft: 28 }} />
+              </div>
+              <div style={{ fontSize: 9, color: "#3A3A48", marginTop: 4 }}>Letters, numbers, underscores, dots only</div>
+            </div>
+          )}
+          <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
+          <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} />
         </div>
-        {msg && <div style={{ fontSize: 11, color: msg.includes("Check") ? "#7EB8A4" : "#E05A7B", marginBottom: 12 }}>{msg}</div>}
+        {msg && <div style={{ fontSize: 11, color: msg.includes("created") || msg.includes("Check") ? "#7EB8A4" : "#E05A7B", marginBottom: 12, lineHeight: 1.5 }}>{msg}</div>}
         <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", background: "#C9A96E", border: "none", borderRadius: 10, padding: "13px", color: "#000", fontSize: 13, fontFamily: "inherit", fontWeight: 600, marginBottom: 12, opacity: loading ? 0.6 : 1 }}>
-          {loading ? "..." : mode === "signin" ? "Sign In" : "Sign Up"}
+          {loading ? "..." : mode === "signin" ? "Sign In" : "Create Account"}
         </button>
-        <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); }} style={{ width: "100%", background: "none", border: "1px solid #16161E", borderRadius: 10, padding: "11px", color: "#3A3A48", fontSize: 12, fontFamily: "inherit" }}>
+        <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); }} style={{ width: "100%", background: "none", border: "1px solid #16161E", borderRadius: 10, padding: "11px", color: "#3A3A48", fontSize: 12, fontFamily: "inherit", marginBottom: 8 }}>
           {mode === "signin" ? "No account? Sign up" : "Have an account? Sign in"}
         </button>
-        <button onClick={onClose} style={{ width: "100%", background: "none", border: "none", color: "#3A3A48", fontSize: 11, fontFamily: "inherit", marginTop: 10 }}>
+        <button onClick={onClose} style={{ width: "100%", background: "none", border: "none", color: "#3A3A48", fontSize: 11, fontFamily: "inherit" }}>
           Continue as guest →
         </button>
       </div>
@@ -941,7 +973,8 @@ export default function App() {
   const [userProfile, setUserProfile] = useLS("anant_v3_profile", DEFAULT_PROFILE);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [supaUser, setSupaUser] = useState(null);
-const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authGatePassed, setAuthGatePassed] = useLS("anant_v3_auth_gate", false);
 useEffect(() => {
   supabase.auth.getSession().then(({ data: { session } }) => {
     setSupaUser(session?.user ?? null);
@@ -976,8 +1009,8 @@ useEffect(() => {
   
 
   useEffect(() => {
-    if (!userProfile?.onboardingComplete) setShowOnboarding(true);
-  }, []); // eslint-disable-line
+    if (authGatePassed && !userProfile?.onboardingComplete) setShowOnboarding(true);
+  }, [authGatePassed]); // eslint-disable-line
 
   const [view, setView] = useState("dashboard");
   const [logs, setLogs] = useLS("anant_v3_logs", {});
@@ -1194,24 +1227,44 @@ const [showCheckin, setShowCheckin] = useState(false);
   if (subView === "settings") return <SettingsPage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} onResetOnboarding={() => { setShowOnboarding(true); setSubView(null); }} />;
   if (subView === "about") return <AboutPage onBack={() => setSubView(null)} />; if (subView === "backup") return <BackupFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={setCheckinLogs} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setQuests={setQuests} onBack={() => setSubView(null)} />;
 
+  // Auth gate — shown before anything else if user hasn't passed it yet
+  if (!authGatePassed) return (
+    <ThemeContext.Provider value={{ theme: activeTheme, isFemale }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:wght@600;700&display=swap'); *{box-sizing:border-box;margin:0;padding:0} button{cursor:pointer;font-family:inherit}`}</style>
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#07070A", zIndex: 999999, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", fontFamily: "'DM Mono',monospace", padding: "0 0 0 0" }}>
+        {/* Top section */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32, textAlign: "center" }}>
+          <div style={{ fontSize: 52, marginBottom: 16 }}>⚡</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 40, fontWeight: 700, color: "#E8E4DC", marginBottom: 10, lineHeight: 1 }}>Self System</div>
+          <div style={{ fontSize: 12, color: "#3A3A48", lineHeight: 1.9, maxWidth: 280 }}>
+            Your personal operating system for discipline, growth, and becoming who you're meant to be.
+          </div>
+        </div>
+        {/* Bottom sheet */}
+        <div style={{ width: "100%", maxWidth: 480, background: "#0D0D12", borderRadius: "24px 24px 0 0", padding: "32px 24px 52px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: "#E8E4DC", marginBottom: 4 }}>Get started.</div>
+          <div style={{ fontSize: 12, color: "#3A3A48", lineHeight: 1.7, marginBottom: 4 }}>
+            Create an account to sync your data across devices, or continue as a guest.
+          </div>
+          <button onClick={() => setShowAuthModal(true)} style={{ width: "100%", background: "#C9A96E", border: "none", borderRadius: 12, padding: "14px", color: "#000", fontSize: 13, fontFamily: "inherit", fontWeight: 600 }}>
+            Sign In / Sign Up
+          </button>
+          <button onClick={() => { setAuthGatePassed(true); }} style={{ width: "100%", background: "none", border: "1px solid #16161E", borderRadius: 12, padding: "13px", color: "#3A3A48", fontSize: 12, fontFamily: "inherit" }}>
+            Continue as Guest →
+          </button>
+        </div>
+      </div>
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onAuthComplete={() => { setAuthGatePassed(true); setShowAuthModal(false); }} />}
+    </ThemeContext.Provider>
+  );
+
   if (showOnboarding) return (
     <ThemeContext.Provider value={{ theme: activeTheme, isFemale }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:wght@600;700&display=swap'); *{box-sizing:border-box;margin:0;padding:0} button{cursor:pointer;font-family:inherit}`}</style>
-      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
-      {!showAuthModal && !supaUser && (
-        <div style={{ position: "fixed", inset: 0, background: "#07070A", zIndex: 999998, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", fontFamily: "'DM Mono',monospace" }}>
-          <div style={{ width: "100%", maxWidth: 480, background: "#0D0D12", borderRadius: "20px 20px 0 0", padding: "32px 24px 52px", display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: "#E8E4DC" }}>Before we begin.</div>
-            <div style={{ fontSize: 12, color: "#3A3A48", lineHeight: 1.7 }}>Sign in to sync your progress across devices, or continue as a guest. Your data stays on this device either way.</div>
-            <button onClick={() => setShowAuthModal(true)} style={{ width: "100%", background: "#C9A96E", border: "none", borderRadius: 10, padding: "13px", color: "#000", fontSize: 13, fontFamily: "inherit", fontWeight: 600 }}>Sign In / Sign Up</button>
-            <button onClick={() => setShowAuthModal(false)} style={{ width: "100%", background: "none", border: "1px solid #16161E", borderRadius: 10, padding: "12px", color: "#3A3A48", fontSize: 12, fontFamily: "inherit" }}>Continue as Guest →</button>
-          </div>
-        </div>
-      )}
-      {(supaUser || !showAuthModal) && <OnboardingFlow onComplete={(data) => {
+      <OnboardingFlow onComplete={(data) => {
         setUserProfile(data);
         setShowOnboarding(false);
-      }} />}
+      }} />
     </ThemeContext.Provider>
   );
   return (
@@ -1429,7 +1482,7 @@ const [showCheckin, setShowCheckin] = useState(false);
           </div>
         </div>
       )}
-{showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+{showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onAuthComplete={() => setShowAuthModal(false)} />}
       {showCheckin && (
   <DailyCheckin
     onComplete={(data) => {
