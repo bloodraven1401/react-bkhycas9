@@ -2962,12 +2962,12 @@ function DailyQuestsFullView({ quests, setQuests, logs, setLogs, xpLogs, setXpLo
   );
 }
 // ─── SLEEP FULL VIEW ─────────────────────────────────────────────────────────
-// ─── SLEEP FULL VIEW ─────────────────────────────────────────────────────────
 function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs, onBack, selectedDate }) {
-  const currentDate = selectedDate || todayKey();   // This is the key fix
+  const currentDate = selectedDate || todayKey();
 
   const saved = sleepLogs[currentDate] || {};
 
+  // Reset form when date changes
   const [bedtimeHour, setBedtimeHour] = useState(saved.bedtimeHour || 23);
   const [bedtimeMin, setBedtimeMin] = useState(saved.bedtimeMin || 0);
   const [bedtimeAMPM, setBedtimeAMPM] = useState(saved.bedtimeAMPM || "PM");
@@ -2976,11 +2976,21 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
   const [wakeMin, setWakeMin] = useState(saved.wakeMin || 0);
   const [wakeAMPM, setWakeAMPM] = useState(saved.wakeAMPM || "AM");
 
+  // Important: Reset fields when selectedDate changes
+  useEffect(() => {
+    setBedtimeHour(saved.bedtimeHour || 23);
+    setBedtimeMin(saved.bedtimeMin || 0);
+    setBedtimeAMPM(saved.bedtimeAMPM || "PM");
+    setWakeHour(saved.wakeHour || 6);
+    setWakeMin(saved.wakeMin || 0);
+    setWakeAMPM(saved.wakeAMPM || "AM");
+  }, [currentDate, saved]);
+
   function calculateDuration() {
     let bh = bedtimeHour;
     if (bedtimeAMPM === "PM" && bh !== 12) bh += 12;
     if (bedtimeAMPM === "AM" && bh === 12) bh = 0;
-
+    
     let wh = wakeHour;
     if (wakeAMPM === "PM" && wh !== 12) wh += 12;
     if (wakeAMPM === "AM" && wh === 12) wh = 0;
@@ -2992,7 +3002,7 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
 
   function saveSleep() {
     const duration = parseFloat(calculateDuration());
-
+    
     setSleepLogs(prev => ({
       ...prev,
       [currentDate]: {
@@ -3025,10 +3035,9 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
       
       <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 4 }}>Rest & Recovery</div>
       <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>
-        {new Date(currentDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
+        {new Date(currentDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
       </div>
 
-      {/* Target */}
       <div style={{ background: C.surface, borderRadius: 12, padding: 16, marginBottom: 20, display: "flex", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: 11, color: C.haircare }}>TARGET</div>
@@ -3040,7 +3049,7 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
       </div>
 
       <div style={{ background: C.surface, borderRadius: 12, padding: 16, marginBottom: 16 }}>
-        <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>BEDTIME</div>
+        <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>BEDTIME (PREVIOUS NIGHT)</div>
         <input 
           type="time" 
           value={`${bedtimeHour.toString().padStart(2,'0')}:${bedtimeMin.toString().padStart(2,'0')}`} 
@@ -3054,7 +3063,7 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
       </div>
 
       <div style={{ background: C.surface, borderRadius: 12, padding: 16, marginBottom: 20 }}>
-        <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>WAKE TIME</div>
+        <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>WAKE TIME (THIS MORNING)</div>
         <input 
           type="time" 
           value={`${wakeHour.toString().padStart(2,'0')}:${wakeMin.toString().padStart(2,'0')}`} 
@@ -3071,7 +3080,7 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
         onClick={saveSleep}
         style={{ width: "100%", background: C.haircare, color: "#000", padding: "16px", borderRadius: 12, fontSize: 15, fontWeight: 600 }}
       >
-        Save for this date
+        Save Sleep Log
       </button>
     </div>
   );
