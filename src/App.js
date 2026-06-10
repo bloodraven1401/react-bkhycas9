@@ -2967,7 +2967,6 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
 
   const saved = sleepLogs[currentDate] || {};
 
-  // Reset form when date changes
   const [bedtimeHour, setBedtimeHour] = useState(saved.bedtimeHour || 23);
   const [bedtimeMin, setBedtimeMin] = useState(saved.bedtimeMin || 0);
   const [bedtimeAMPM, setBedtimeAMPM] = useState(saved.bedtimeAMPM || "PM");
@@ -2976,7 +2975,7 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
   const [wakeMin, setWakeMin] = useState(saved.wakeMin || 0);
   const [wakeAMPM, setWakeAMPM] = useState(saved.wakeAMPM || "AM");
 
-  // Important: Reset fields when selectedDate changes
+  // Reset form when date changes
   useEffect(() => {
     setBedtimeHour(saved.bedtimeHour || 23);
     setBedtimeMin(saved.bedtimeMin || 0);
@@ -2984,7 +2983,7 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
     setWakeHour(saved.wakeHour || 6);
     setWakeMin(saved.wakeMin || 0);
     setWakeAMPM(saved.wakeAMPM || "AM");
-  }, [currentDate, saved]);
+  }, [currentDate]);
 
   function calculateDuration() {
     let bh = bedtimeHour;
