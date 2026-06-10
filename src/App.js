@@ -50,13 +50,16 @@ function AuthModal({ onClose, onAuthComplete }) {
 
   async function handleSubmit() {
     setLoading(true); setMsg("");
+
+    if (!username.trim()) { setMsg("Username is required."); setLoading(false); return; }
+    if (username.includes(" ")) { setMsg("Username cannot contain spaces."); setLoading(false); return; }
+
     if (mode === "signup") {
-      if (!username.trim()) { setMsg("Username is required."); setLoading(false); return; }
-      if (username.includes(" ")) { setMsg("Username cannot contain spaces."); setLoading(false); return; }
+      if (!email.trim()) { setMsg("Email is required."); setLoading(false); return; }
       // Check username uniqueness
       const { data: existing } = await supabase.from("user_data").select("user_id").eq("username", username.toLowerCase().trim()).maybeSingle();
-      if (existing) { setMsg("Username already taken."); setLoading(false); return; }
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (existing) { setMsg("Username already taken. Choose another."); setLoading(false); return; }
+      const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
       if (error) { setMsg(error.message); setLoading(false); return; }
       if (data?.user) {
         await supabase.from("user_data").upsert({ user_id: data.user.id, username: username.toLowerCase().trim(), updated_at: new Date().toISOString() }, { onConflict: "user_id" });
@@ -64,19 +67,30 @@ function AuthModal({ onClose, onAuthComplete }) {
         setMode("signin");
       }
     } else {
-      // Allow login with username or email
+      // signin — resolve username to email
       let loginEmail = email.trim();
       if (!loginEmail.includes("@")) {
-        // treat as username — look up email
-        const { data: userData } = await supabase.from("user_data").select("user_id").eq("username", loginEmail.toLowerCase()).maybeSingle();
-        if (!userData) { setMsg("Username not found."); setLoading(false); return; }
-        // We can't get email from user_id directly without admin — so store email at signup
-        // Fallback: ask user to use email if username lookup fails to find email
-        setMsg("Please sign in with your email address."); setLoading(false); return;
+        setMsg("Please enter your email address to sign in."); setLoading(false); return;
       }
-      const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
-      if (error) setMsg(error.message);
-      else { onAuthComplete?.(); onClose(); }
+      // Verify the username matches this account after sign in
+      const { data: authData, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
+      if (error) { setMsg(error.message); setLoading(false); return; }
+      if (authData?.user) {
+        // Check username matches
+        const { data: userData } = await supabase.from("user_data").select("username").eq("user_id", authData.user.id).maybeSingle();
+        if (userData?.username && userData.username !== username.toLowerCase().trim()) {
+          await supabase.auth.signOut();
+          setMsg("Username does not match this account."); setLoading(false); return;
+        }
+        // If no username set yet (old account), set it now
+        if (!userData?.username) {
+          const { data: taken } = await supabase.from("user_data").select("user_id").eq("username", username.toLowerCase().trim()).maybeSingle();
+          if (taken) { await supabase.auth.signOut(); setMsg("Username already taken. Choose another."); setLoading(false); return; }
+          await supabase.from("user_data").upsert({ user_id: authData.user.id, username: username.toLowerCase().trim(), updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+        }
+        onAuthComplete?.();
+        onClose();
+      }
     }
     setLoading(false);
   }
@@ -90,27 +104,35 @@ function AuthModal({ onClose, onAuthComplete }) {
           {mode === "signin" ? "Welcome back." : "Create account."}
         </div>
         <div style={{ fontSize: 11, color: "#3A3A48", marginBottom: 20 }}>
-          {mode === "signin" ? "Sign in to sync your data across devices." : "Choose a username and create your account."}
+          {mode === "signin" ? "Enter your username and email to sign in." : "Choose a unique username to get started."}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
-          {mode === "signup" && (
-            <div>
-              <div style={{ fontSize: 9, color: "#3A3A48", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>Username</div>
-              <div style={{ position: "relative" }}>
-                <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#3A3A48", fontSize: 13 }}>@</span>
-                <input placeholder="yourname" value={username} onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_.]/g, ""))} style={{ ...inputStyle, paddingLeft: 28 }} />
-              </div>
-              <div style={{ fontSize: 9, color: "#3A3A48", marginTop: 4 }}>Letters, numbers, underscores, dots only</div>
+          {/* Username — always shown */}
+          <div>
+            <div style={{ fontSize: 9, color: "#3A3A48", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>Username</div>
+            <div style={{ position: "relative" }}>
+              <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#3A3A48", fontSize: 13 }}>@</span>
+              <input
+                placeholder="yourname"
+                value={username}
+                onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_.]/g, "").toLowerCase())}
+                style={{ ...inputStyle, paddingLeft: 28 }}
+              />
             </div>
-          )}
+            <div style={{ fontSize: 9, color: "#3A3A48", marginTop: 4 }}>Letters, numbers, _ and . only</div>
+          </div>
           <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
           <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} />
         </div>
-        {msg && <div style={{ fontSize: 11, color: msg.includes("created") || msg.includes("Check") ? "#7EB8A4" : "#E05A7B", marginBottom: 12, lineHeight: 1.5 }}>{msg}</div>}
+        {msg && (
+          <div style={{ fontSize: 11, color: msg.includes("created") || msg.includes("Check") ? "#7EB8A4" : "#E05A7B", marginBottom: 12, lineHeight: 1.5, background: msg.includes("created") ? "#7EB8A415" : "#E05A7B15", borderRadius: 8, padding: "8px 12px" }}>
+            {msg}
+          </div>
+        )}
         <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", background: "#C9A96E", border: "none", borderRadius: 10, padding: "13px", color: "#000", fontSize: 13, fontFamily: "inherit", fontWeight: 600, marginBottom: 12, opacity: loading ? 0.6 : 1 }}>
           {loading ? "..." : mode === "signin" ? "Sign In" : "Create Account"}
         </button>
-        <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); }} style={{ width: "100%", background: "none", border: "1px solid #16161E", borderRadius: 10, padding: "11px", color: "#3A3A48", fontSize: 12, fontFamily: "inherit", marginBottom: 8 }}>
+        <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); setUsername(""); setEmail(""); setPassword(""); }} style={{ width: "100%", background: "none", border: "1px solid #16161E", borderRadius: 10, padding: "11px", color: "#3A3A48", fontSize: 12, fontFamily: "inherit", marginBottom: 8 }}>
           {mode === "signin" ? "No account? Sign up" : "Have an account? Sign in"}
         </button>
         <button onClick={onClose} style={{ width: "100%", background: "none", border: "none", color: "#3A3A48", fontSize: 11, fontFamily: "inherit" }}>
@@ -1357,7 +1379,7 @@ const [showCheckin, setShowCheckin] = useState(false);
                     <div style={{ background: C.border, borderRadius: 3, height: 3, marginBottom: 12 }}>
                       <div style={{ width: `${pct}%`, height: "100%", background: rank.color, borderRadius: 3 }} />
                     </div>
-                    <button onClick={() => { setShowOnboarding(true); setSidebarOpen(false); }} style={{ width: "100%", background: "none", border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px", color: C.muted, fontSize: 11, fontFamily: "inherit", cursor: "pointer" }}>✎ Edit Profile</button>
+                    <button onClick={() => { setSubView("profile"); setSidebarOpen(false); }} style={{ width: "100%", background: "none", border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px", color: C.muted, fontSize: 11, fontFamily: "inherit", cursor: "pointer" }}>✎ Edit Profile</button>
                   </div>
                 );
               })()}
@@ -1500,7 +1522,7 @@ const [showCheckin, setShowCheckin] = useState(false);
         {view === "dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
         {view === "habits"    && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
         {view === "routines"  && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} workoutPlan={workoutPlan} setWorkoutPlan={setWorkoutPlan} skincarePlan={skincarePlan} setSkincarePlan={setSkincarePlan} dietPlan={dietPlan} setDietPlan={setDietPlan} haircarePlan={haircarePlan} setHaircarePlan={setHaircarePlan} spiritualPlan={spiritualPlan} setSpiritualPlan={setSpiritualPlan} />}
-        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} setJournalLogs={setJournalLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} setAchievements={setAchievements} achievements={achievements} sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} measurements={measurements} setMeasurements={setMeasurements} quests={quests} setQuests={setQuests} />}
+        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} setJournalLogs={setJournalLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} setAchievements={setAchievements} achievements={achievements} sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} measurements={measurements} setMeasurements={setMeasurements} quests={quests} setQuests={setQuests} selectedDate={selectedDate} />}
         {view === "stats"     && <StatsView xpLogs={xpLogs} achievements={achievements} logs={logs} getStreak={getStreak} nofapStreak={getNofapStreak()} />}
       </div>
 
@@ -2053,9 +2075,11 @@ function generateDailyQuests(logs, checkinLogs, sleepLogs, workoutLogs, foodLogs
   return picked;
 }
 
-function DailyQuestsCard({ quests, setQuests, logs, setLogs, xpLogs, setXpLogs, checkinLogs, sleepLogs, workoutLogs, foodLogs }) {
+function DailyQuestsCard({ quests, setQuests, logs, setLogs, xpLogs, setXpLogs, checkinLogs, sleepLogs, workoutLogs, foodLogs, viewDate }) {
   const today = todayKey();
-  const todayQuests = quests[today];
+  const displayDate = viewDate || today;
+  const isToday = displayDate === today;
+  const todayQuests = quests[displayDate];
 
   useEffect(() => {
     if (!quests[today]) {
@@ -2064,13 +2088,23 @@ function DailyQuestsCard({ quests, setQuests, logs, setLogs, xpLogs, setXpLogs, 
     }
   }, []); // eslint-disable-line
 
-  // Auto-complete quests based on habit state
+  // Generate quests for displayDate if viewing a past date that has none but has log data
   useEffect(() => {
-    if (!todayQuests) return;
+    if (!quests[displayDate] && displayDate !== today) {
+      const generated = generateDailyQuests(logs, checkinLogs, sleepLogs, workoutLogs, foodLogs);
+      // Use deterministic generation based on the display date
+      setQuests(p => ({ ...p, [displayDate]: generated.map(q => ({ ...q, completed: false, xpAwarded: false })) }));
+    }
+  }, [displayDate]); // eslint-disable-line
+
+  // Auto-complete quests based on habit state — only for today
+  useEffect(() => {
+    if (!isToday) return;
+    const currentQuests = quests[today];
+    if (!currentQuests) return;
     let changed = false;
-    const updated = todayQuests.map(q => {
+    const updated = currentQuests.map(q => {
       if (q.completed) return q;
-      // Rehydrate check function from QUEST_POOL since functions can't be stored in localStorage
       const poolQuest = QUEST_POOL.find(p => p.id === q.id);
       if (!poolQuest?.check) return q;
       const done = poolQuest.check(logs, today, workoutLogs, foodLogs, sleepLogs);
@@ -2078,9 +2112,8 @@ function DailyQuestsCard({ quests, setQuests, logs, setLogs, xpLogs, setXpLogs, 
       return q;
     });
     if (changed) {
-      // Award XP for newly completed
       updated.forEach((q, i) => {
-        if (q.completed && !todayQuests[i].xpAwarded) {
+        if (q.completed && !currentQuests[i].xpAwarded) {
           setXpLogs(p => ({ ...p, [today]: (p[today] || 0) + q.xp }));
           updated[i] = { ...q, xpAwarded: true };
         }
@@ -2091,14 +2124,16 @@ function DailyQuestsCard({ quests, setQuests, logs, setLogs, xpLogs, setXpLogs, 
 
   if (!todayQuests) return null;
   const completedCount = todayQuests.filter(q => q.completed).length;
-  const SLEEP_COLOR = "#7c6fa0";
 
   return (
     <div style={{ background: C.surface, border: `1px solid #FFD70025`, borderRadius: 14, padding: 16, marginBottom: 4 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
         <div>
           <div style={{ fontSize: 10, color: "#FFD700", letterSpacing: 3, textTransform: "uppercase", marginBottom: 4 }}>Daily Quests</div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, lineHeight: 1 }}>Today's Challenges</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, lineHeight: 1 }}>
+            {isToday ? "Today's Challenges" : new Date(displayDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
+          </div>
+          {!isToday && <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>Past day — read only</div>}
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 22, color: "#FFD700", fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{completedCount}/3</div>
@@ -2106,7 +2141,7 @@ function DailyQuestsCard({ quests, setQuests, logs, setLogs, xpLogs, setXpLogs, 
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {todayQuests.map((q, i) => (
+        {todayQuests.map((q) => (
           <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 10, background: q.completed ? `#FFD70010` : C.faint, border: `1px solid ${q.completed ? "#FFD70040" : C.border}`, transition: "all 0.3s" }}>
             <div style={{ width: 22, height: 22, borderRadius: 6, background: q.completed ? "#FFD700" : "transparent", border: `2px solid ${q.completed ? "#FFD700" : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               {q.completed && <span style={{ color: "#000", fontSize: 11, fontWeight: 700 }}>✓</span>}
@@ -2531,7 +2566,7 @@ function DataBackupCard({ logs, workoutLogs, foodLogs, weightLogs, xpLogs, achie
        
           
 // ─── LOG HUB ──────────────────────────────────────────────────────────────────
-function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs, setXpLogs, checkinLogs, journalLogs, setJournalLogs, aiReviews, setAiReviews, setAchievements, achievements, sleepLogs, setSleepLogs, measurements, setMeasurements, quests, setQuests }) {
+function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs, setXpLogs, checkinLogs, journalLogs, setJournalLogs, aiReviews, setAiReviews, setAchievements, achievements, sleepLogs, setSleepLogs, measurements, setMeasurements, quests, setQuests, selectedDate }) {
   const today = todayKey();
   const todayW = workoutLogs[today] || {};
   const totalSets = Object.values(todayW).reduce((a, ex) => a + (ex.sets?.length || 0), 0);
@@ -2665,7 +2700,7 @@ function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLo
         </div>
         <span style={{ color: C.muted, fontSize: 14 }}>›</span>
       </button>
-      <DailyQuestsCard quests={quests} setQuests={setQuests} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} workoutLogs={workoutLogs} foodLogs={foodLogs} />
+      <DailyQuestsCard quests={quests} setQuests={setQuests} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} workoutLogs={workoutLogs} foodLogs={foodLogs} viewDate={selectedDate} />
       <button className="press" onClick={() => setSubView("measurements")} style={{ background: C.surface, border: `1px solid ${C.haircare}25`, borderRadius: 14, padding: 16, display: "flex", alignItems: "center", gap: 14, color: C.text, textAlign: "left" }}>
         <span style={{ color: C.haircare, fontSize: 22 }}>◈</span>
         <div style={{ flex: 1 }}>
