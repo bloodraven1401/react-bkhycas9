@@ -4250,11 +4250,11 @@ function DailyCheckin({ onComplete, onSkip }) {
   }
 
   return (
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(7,7,10,0.97)", zIndex: 99998, display: "flex", alignItems: "flex-end", justifyContent: "center", transform: "translateZ(0)", WebkitTransform: "translateZ(0)" }}>
-      <div style={{ width: "100%", maxWidth: 480, background: C.surface, borderRadius: "20px 20px 0 0", padding: "28px 24px 48px", transform: "translateZ(0)", WebkitTransform: "translateZ(0)" }}>
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(7,7,10,0.97)", zIndex: 99998, display: "flex", alignItems: "flex-end", justifyContent: "center", WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}>
+      <div style={{ width: "100%", maxWidth: 480, background: C.surface, borderRadius: "20px 20px 0 0", padding: "28px 24px 48px", WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <button onClick={() => { if (step > 0) setStep(s => s - 1); }} style={{ background: "none", border: "none", color: step > 0 ? C.muted : "transparent", fontSize: 20, fontFamily: "inherit", padding: "0 2px", cursor: step > 0 ? "pointer" : "default", lineHeight: 1 }}>‹</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={() => { if (step > 0) setStep(s => s - 1); }} style={{ background: "none", border: "none", color: step > 0 ? C.muted : "transparent", fontSize: 22, fontFamily: "inherit", padding: "0 4px", lineHeight: 1, cursor: step > 0 ? "pointer" : "default" }}>‹</button>
             <div style={{ display: "flex", gap: 4 }}>
               {fields.map((_, i) => (
                 <div key={i} style={{ width: i === step ? 20 : 6, height: 4, borderRadius: 2, background: i <= step ? current.color : C.muted, transition: "all 0.3s" }} />
@@ -4687,3 +4687,214 @@ function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs,
   );
 }
 
+// ─── JOURNAL CARD ─────────────────────────────────────────────────────────────
+function JournalCard({ journalLogs, setJournalLogs, checkinLogs, logs, workoutLogs }) {
+  const [expanded, setExpanded] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(todayKey());
+  const entry = journalLogs[selectedDate] || {};
+  const checkin = checkinLogs[selectedDate];
+  function getPrompts() {
+    const fixed = [
+      { key: "good",   label: "What went well today?" },
+      { key: "bad",    label: "What got in the way?" },
+      { key: "lesson", label: "What did you learn?" },
+    ];
+    const dynamic = [];
+    const dayLogs = logs[selectedDate] || {};
+    const workoutDone = Object.values(workoutLogs[selectedDate] || {}).some(ex => ex.sets?.length > 0);
+    const habitsDone = HABITS.filter(h => dayLogs[h.id]?.done).length;
+    const guitarDone = dayLogs["h10"]?.done;
+    if (!workoutDone) dynamic.push({ key: "workout_miss", label: "You skipped the gym. What happened?" });
+    if (!guitarDone)  dynamic.push({ key: "guitar_miss",  label: "No guitar today. What got in the way?" });
+    if (habitsDone < HABITS.length * 0.5) dynamic.push({ key: "low_day", label: "Tough day — what drained you?" });
+    if (checkin?.mood <= 1) dynamic.push({ key: "mood_low", label: "You were struggling today. What was going on?" });
+    if (checkin?.stress >= 3) dynamic.push({ key: "stress", label: "Stress was high. What was the source?" });
+    return [...dynamic.slice(0, 2), ...fixed];
+  }
+  function updateEntry(key, val) {
+    setJournalLogs(p => ({ ...p, [selectedDate]: { ...(p[selectedDate] || {}), [key]: val } }));
+  }
+  const prompts = getPrompts();
+  const hasEntry = Object.values(entry).some(v => v?.trim?.().length > 0);
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.skincare}25`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
+      <div className="press" onClick={() => setExpanded(e => !e)} style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700 }}>Journal</div>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{hasEntry ? "Entry logged" : "No entry yet"}</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {hasEntry && <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.skincare }} />}
+          <span style={{ color: C.muted, fontSize: 14 }}>{expanded ? "↑" : "↓"}</span>
+        </div>
+      </div>
+      {expanded && (
+        <div style={{ padding: "0 16px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+            <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d.toISOString().split("T")[0]); }} style={{ background: "none", border: "none", color: C.muted, fontSize: 14 }}>‹</button>
+            <div style={{ fontSize: 10, color: selectedDate === todayKey() ? C.muted : C.nofap, flex: 1, textAlign: "center" }}>
+              {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
+            </div>
+            <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); const next = d.toISOString().split("T")[0]; if (next <= todayKey()) setSelectedDate(next); }} style={{ background: "none", border: "none", color: C.muted, fontSize: 14 }}>›</button>
+          </div>
+          {checkin && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+              {[["Mood", MOOD_LABELS[checkin.mood], C.skincare], ["Energy", ENERGY_LABELS[checkin.energy], C.workout], ["Sleep", SLEEP_LABELS[checkin.sleep], C.haircare]].map(([label, val, color]) => val && (
+                <div key={label} style={{ background: `${color}15`, border: `1px solid ${color}30`, borderRadius: 6, padding: "4px 10px", fontSize: 10, color }}>{label}: {val}</div>
+              ))}
+            </div>
+          )}
+          {prompts.map(p => (
+            <div key={p.key} style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: C.skincare, marginBottom: 6, letterSpacing: 0.5 }}>{p.label}</div>
+              <textarea value={entry[p.key] || ""} onChange={e => updateEntry(p.key, e.target.value)} placeholder="..." style={{ width: "100%", minHeight: 72, resize: "none", fontSize: 12, lineHeight: 1.6, background: C.faint, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", color: C.text, fontFamily: "inherit" }} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AI REVIEW CARD ───────────────────────────────────────────────────────────
+function AIReviewCard({ logs, workoutLogs, foodLogs, checkinLogs, journalLogs, xpLogs, aiReviews, setAiReviews, nofapStreak }) {
+  const [expanded, setExpanded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [activePeriod, setActivePeriod] = useState("weekly");
+  const PERIODS = [
+    { key: "weekly",     label: "Week",    days: 7,   minDays: 5   },
+    { key: "monthly",    label: "Month",   days: 30,  minDays: 20  },
+    { key: "quarterly",  label: "Quarter", days: 90,  minDays: 60  },
+    { key: "halfyearly", label: "6 Month", days: 180, minDays: 120 },
+    { key: "yearly",     label: "Year",    days: 365, minDays: 240 },
+  ];
+  function getRange(days) { return Array.from({ length: days }, (_, i) => dateKey(-(days - 1 - i))); }
+  function getDaysWithData(days) { return getRange(days).filter(d => Object.keys(logs[d] || {}).length > 0).length; }
+  function buildPrompt(period) {
+    const days = period.days;
+    const range = getRange(days);
+    const habitCompletion = Math.round((range.reduce((a, d) => a + HABITS.filter(h => logs[d]?.[h.id]?.done).length, 0) / (HABITS.length * days)) * 100);
+    const workoutDays = range.filter(d => Object.values(workoutLogs[d] || {}).some(ex => ex.sets?.length > 0)).length;
+    const guitarDays = range.filter(d => logs[d]?.h10?.done).length;
+    const nofapDays = range.filter(d => logs[d]?.h9?.done).length;
+    const avgMood = (() => { const vals = range.map(d => checkinLogs[d]?.mood).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
+    const avgEnergy = (() => { const vals = range.map(d => checkinLogs[d]?.energy).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
+    const avgSleep = (() => { const vals = range.map(d => checkinLogs[d]?.sleep).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
+    const journalEntries = range.filter(d => journalLogs[d]).map(d => { const e = journalLogs[d]; return `${d}: Good: ${e.good || "-"} | Bad: ${e.bad || "-"} | Lesson: ${e.lesson || "-"}`; }).join("\n");
+    const totalXP = getTotalXP(xpLogs);
+    const totalSets = range.reduce((a, d) => a + Object.values(workoutLogs[d] || {}).reduce((b, ex) => b + (ex.sets?.length || 0), 0), 0);
+    const storedProfile = (() => { try { const v = localStorage.getItem("anant_v3_profile"); return v ? JSON.parse(v) : null; } catch { return null; } })();
+    const userName = storedProfile?.name || "Anant";
+    const alterEgo = storedProfile?.alterEgo?.name ? `Their alter ego is called "${storedProfile.alterEgo.name}"${storedProfile.alterEgo.title ? `, titled "${storedProfile.alterEgo.title}"` : ""}. Address them occasionally as this alter ego.` : "";
+    const shadowModeActive = (() => { try { return window.__shadowMode || false; } catch { return false; } })();
+    const shadowTone = shadowModeActive ? " SHADOW MODE active — be significantly harsher, address them exclusively as their alter ego." : "";
+    const userGoals = (storedProfile?.goals || []).slice(0, 4).join(", ");
+    return `You are a personal coach reviewing ${period.label.toLowerCase()} data for ${userName}.${alterEgo ? " " + alterEgo : ""}${userGoals ? ` Goals: ${userGoals}.` : ""}${shadowTone}\n\nDATA (last ${days} days):\n- Habit completion: ${habitCompletion}%\n- Workout days: ${workoutDays}/${days}\n- Guitar days: ${guitarDays}/${days}\n- NoFap days: ${nofapDays}/${days}\n- Total sets: ${totalSets}\n- NoFap streak: ${nofapStreak} days\n- Total XP: ${totalXP}\n- Avg mood: ${avgMood}/4\n- Avg energy: ${avgEnergy}/4\n- Avg sleep: ${avgSleep}/5\n\nJOURNAL:\n${journalEntries || "None."}\n\nWrite a ${period.label.toLowerCase()} review. Structure:\n1. PERFORMANCE SUMMARY\n2. WHAT'S WORKING\n3. WHAT NEEDS WORK\n4. KEY INSIGHT\n5. NEXT ${period.label.toUpperCase()} FOCUS\n\nDirect, honest, no fluff.`;
+  }
+  async function generateReview(period) {
+    setLoading(true);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, messages: [{ role: "user", content: buildPrompt(period) }] }) });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || "Could not generate review.";
+      const reviewKey = `${period.key}_${todayKey()}`;
+      setAiReviews(p => ({ ...p, [reviewKey]: { text, date: todayKey(), period: period.key } }));
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  }
+  function getLatestReview(periodKey) {
+    const keys = Object.keys(aiReviews).filter(k => k.startsWith(periodKey));
+    if (!keys.length) return null;
+    keys.sort().reverse();
+    return aiReviews[keys[0]];
+  }
+  function shouldAutoGenerate(period) {
+    const latest = getLatestReview(period.key);
+    if (!latest) return true;
+    const daysSince = Math.floor((new Date(todayKey()) - new Date(latest.date)) / 86400000);
+    const thresholds = { weekly: 7, monthly: 30, quarterly: 90, halfyearly: 180, yearly: 365 };
+    return daysSince >= thresholds[period.key];
+  }
+  useEffect(() => {
+    if (expanded) {
+      const period = PERIODS.find(p => p.key === activePeriod);
+      if (period && getDaysWithData(period.days) >= period.minDays && shouldAutoGenerate(period)) generateReview(period);
+    }
+  }, [expanded, activePeriod]); // eslint-disable-line
+  const activePeriodObj = PERIODS.find(p => p.key === activePeriod);
+  const daysWithData = getDaysWithData(activePeriodObj.days);
+  const unlocked = daysWithData >= activePeriodObj.minDays;
+  const latestReview = getLatestReview(activePeriod);
+  return (
+    <div style={{ background: C.surface, border: `1px solid #A07EE025`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
+      <div className="press" onClick={() => setExpanded(e => !e)} style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700 }}>AI Coach</div>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>Performance reviews · Pattern analysis</div>
+        </div>
+        <span style={{ color: C.muted, fontSize: 14 }}>{expanded ? "↑" : "↓"}</span>
+      </div>
+      {expanded && (
+        <div style={{ padding: "0 16px 16px" }}>
+          <div style={{ display: "flex", gap: 5, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
+            {PERIODS.map(p => {
+              const days = getDaysWithData(p.days);
+              const isUnlocked = days >= p.minDays;
+              return (
+                <button key={p.key} onClick={() => isUnlocked && setActivePeriod(p.key)} style={{ background: activePeriod === p.key ? "#A07EE0" : C.faint, border: `1px solid ${activePeriod === p.key ? "#A07EE0" : C.border}`, borderRadius: 7, padding: "6px 10px", color: activePeriod === p.key ? "#000" : isUnlocked ? C.text : C.muted, fontSize: 10, whiteSpace: "nowrap", fontFamily: "inherit", opacity: isUnlocked ? 1 : 0.4 }}>
+                  {p.label}{!isUnlocked ? ` (${days}/${p.minDays}d)` : ""}
+                </button>
+              );
+            })}
+          </div>
+          {!unlocked ? (
+            <div style={{ background: C.faint, borderRadius: 10, padding: 16, textAlign: "center" }}>
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 6 }}>Not enough data yet</div>
+              <div style={{ fontSize: 11, color: C.dim }}>{daysWithData}/{activePeriodObj.minDays} days logged</div>
+              <div style={{ background: C.border, borderRadius: 3, height: 4, marginTop: 10 }}>
+                <div style={{ width: `${Math.min(100, (daysWithData / activePeriodObj.minDays) * 100)}%`, height: "100%", background: "#A07EE0", borderRadius: 3 }} />
+              </div>
+            </div>
+          ) : loading ? (
+            <div style={{ background: C.faint, borderRadius: 10, padding: 24, textAlign: "center" }}>
+              <div style={{ fontSize: 13, color: "#A07EE0", marginBottom: 8 }}>Analyzing your data...</div>
+              <div style={{ fontSize: 11, color: C.muted }}>Your coach is reviewing everything.</div>
+            </div>
+          ) : latestReview ? (
+            <div>
+              <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>Generated {new Date(latestReview.date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</div>
+              <div style={{ fontSize: 12, color: C.text, lineHeight: 1.8, whiteSpace: "pre-wrap", background: C.faint, borderRadius: 10, padding: 14 }}>{latestReview.text}</div>
+              <button onClick={() => generateReview(activePeriodObj)} style={{ marginTop: 10, width: "100%", background: "none", border: `1px solid #A07EE040`, borderRadius: 8, padding: "9px", color: "#A07EE0", fontSize: 11, fontFamily: "inherit" }}>↺ Regenerate</button>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
+function Ring({ value, size, color, label, sublabel }) {
+  const r = (size - 14) / 2, circ = 2 * Math.PI * r, offset = circ - (value / 100) * circ;
+  return (
+    <div style={{ position: "relative", width: size, height: size }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={C.faint} strokeWidth={7} />
+        <circle className="ring-track" cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={7} strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset} />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ fontSize: 20, color, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{label}</div>
+        <div style={{ fontSize: 9, color: C.muted, letterSpacing: 1.5, marginTop: 2 }}>{sublabel?.toUpperCase()}</div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, color }) {
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${color}25`, borderRadius: 12, padding: "16px 10px", textAlign: "center" }}>
+      <div style={{ fontSize: 22, color, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{value}</div>
+      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginTop: 5 }}>{label}</div>
+    </div>
+  );
+}
