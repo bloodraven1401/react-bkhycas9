@@ -1050,11 +1050,11 @@ const [showCheckin, setShowCheckin] = useState(false);
   const [quests, setQuests] = useLS("anant_v3_quests", {});
 
   useEffect(() => {
-    const key = todayKey();
-    if (!checkinLogs[key] && !checkinDone) {
-      setShowCheckin(true);
-    }
-  }, []);
+  const key = todayKey();
+  if (!checkinLogs[key] && !checkinDone) {
+    setShowCheckin(true);
+  }
+}, [todayKey()]); // This ensures it checks on new day
 
   function toggleHabit(id) {
     const currentlyDone = todayLogs[id]?.done;
@@ -2952,15 +2952,123 @@ function DailyQuestsFullView({ quests, setQuests, logs, setLogs, xpLogs, setXpLo
     </div>
   );
 }
-
+// ─── SLEEP FULL VIEW ─────────────────────────────────────────────────────────
 function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs, onBack }) {
+  const today = todayKey();
+  
+  const saved = sleepLogs[today] || {};
+  
+  const [bedtimeHour, setBedtimeHour] = useState(saved.bedtimeHour || 23);
+  const [bedtimeMin, setBedtimeMin] = useState(saved.bedtimeMin || 0);
+  const [bedtimeAMPM, setBedtimeAMPM] = useState(saved.bedtimeAMPM || "PM");
+  
+  const [wakeHour, setWakeHour] = useState(saved.wakeHour || 6);
+  const [wakeMin, setWakeMin] = useState(saved.wakeMin || 0);
+  const [wakeAMPM, setWakeAMPM] = useState(saved.wakeAMPM || "AM");
+
+  function calculateDuration() {
+    let bh = bedtimeHour;
+    if (bedtimeAMPM === "PM" && bh !== 12) bh += 12;
+    if (bedtimeAMPM === "AM" && bh === 12) bh = 0;
+    
+    let wh = wakeHour;
+    if (wakeAMPM === "PM" && wh !== 12) wh += 12;
+    if (wakeAMPM === "AM" && wh === 12) wh = 0;
+
+    let minutes = (wh * 60 + wakeMin) - (bh * 60 + bedtimeMin);
+    if (minutes < 0) minutes += 24 * 60;
+    return (minutes / 60).toFixed(1);
+  }
+
+  function saveSleep() {
+    const duration = parseFloat(calculateDuration());
+    
+    setSleepLogs(prev => ({
+      ...prev,
+      [today]: {
+        sleptBy: `${bedtimeHour}:${bedtimeMin.toString().padStart(2, '0')} ${bedtimeAMPM}`,
+        wokeAt: `${wakeHour}:${wakeMin.toString().padStart(2, '0')} ${wakeAMPM}`,
+        bedtimeHour, bedtimeMin, bedtimeAMPM,
+        wakeHour, wakeMin, wakeAMPM,
+        duration
+      }
+    }));
+
+    // Give XP once per day
+    if (!sleepLogs[today]) {
+      setXpLogs(p => ({ ...p, [today]: (p[today] || 0) + 20 }));
+    }
+
+    // Mark sleep habit as done
+    setLogs(p => ({
+      ...p,
+      [today]: {
+        ...(p[today] || {}),
+        h13: { done: true }
+      }
+    }));
+  }
+
+  const duration = calculateDuration();
+
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1 }}>← Back</button>
-        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Sleep Schedule</div>
+    <div style={{ padding: "20px 20px 100px" }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 28, marginBottom: 10 }}>←</button>
+      
+      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 4 }}>Rest & Recovery</div>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>Log on the date you woke up</div>
+
+      {/* Target */}
+      <div style={{ background: C.surface, borderRadius: 12, padding: 16, marginBottom: 20, display: "flex", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ fontSize: 11, color: C.haircare }}>TARGET</div>
+          <div style={{ fontSize: 13 }}>11:00 PM — 6:00 AM (7h)</div>
+        </div>
+        <div style={{ textAlign: "right", color: C.haircare, fontSize: 13 }}>
+          {duration}h logged
+        </div>
       </div>
-      <SleepCard sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} />
+
+      {/* Bedtime */}
+      <div style={{ background: C.surface, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>BEDTIME (PREVIOUS NIGHT)</div>
+        {/* You can keep your existing hour/min/AMPM picker UI here */}
+        {/* For now, using simple time input for reliability */}
+        <input 
+          type="time" 
+          value={`${bedtimeHour.toString().padStart(2,'0')}:${bedtimeMin.toString().padStart(2,'0')}`} 
+          onChange={(e) => {
+            const [h, m] = e.target.value.split(':').map(Number);
+            setBedtimeHour(h);
+            setBedtimeMin(m);
+            setTimeout(saveSleep, 100);
+          }}
+          style={{ width: "100%", background: C.faint, border: "none", color: C.text, fontSize: 18, padding: 12, borderRadius: 8 }}
+        />
+      </div>
+
+      {/* Wake Time */}
+      <div style={{ background: C.surface, borderRadius: 12, padding: 16, marginBottom: 20 }}>
+        <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>WAKE TIME (THIS MORNING)</div>
+        <input 
+          type="time" 
+          value={`${wakeHour.toString().padStart(2,'0')}:${wakeMin.toString().padStart(2,'0')}`} 
+          onChange={(e) => {
+            const [h, m] = e.target.value.split(':').map(Number);
+            setWakeHour(h);
+            setWakeMin(m);
+            setTimeout(saveSleep, 100);
+          }}
+          style={{ width: "100%", background: C.faint, border: "none", color: C.text, fontSize: 18, padding: 12, borderRadius: 8 }}
+        />
+      </div>
+
+      <button 
+        onClick={saveSleep}
+        style={{ width: "100%", background: C.haircare, color: "#000", padding: "16px", borderRadius: 12, fontSize: 15, fontWeight: 600 }}
+      >
+        Save Sleep Log
+      </button>
     </div>
   );
 }
