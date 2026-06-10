@@ -1180,7 +1180,16 @@ const [showCheckin, setShowCheckin] = useState(false);
   if (subView === "journal") return <JournalFullView journalLogs={journalLogs} setJournalLogs={setJournalLogs} checkinLogs={checkinLogs} logs={logs} workoutLogs={workoutLogs} onBack={() => setSubView(null)} />;
   if (subView === "aicoach") return <AICoachFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={getNofapStreak()} onBack={() => setSubView(null)} />;
   if (subView === "quests") return <DailyQuestsFullView quests={quests} setQuests={setQuests} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} workoutLogs={workoutLogs} foodLogs={foodLogs} onBack={() => setSubView(null)} />;
-  if (subView === "sleep") return <SleepFullView sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} onBack={() => setSubView(null)} />;
+  if (subView === "sleep") return <SleepFullView 
+  sleepLogs={sleepLogs} 
+  setSleepLogs={setSleepLogs} 
+  logs={logs} 
+  setLogs={setLogs} 
+  xpLogs={xpLogs} 
+  setXpLogs={setXpLogs} 
+  onBack={() => setSubView(null)} 
+  selectedDate={selectedDate} 
+/>;
  if (subView === "profile") return <ProfilePage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} shadowMode={shadowMode} setShadowMode={setShadowMode} supaUser={supaUser} />;
   if (subView === "settings") return <SettingsPage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} onResetOnboarding={() => { setShowOnboarding(true); setSubView(null); }} />;
   if (subView === "about") return <AboutPage onBack={() => setSubView(null)} />; if (subView === "backup") return <BackupFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={setCheckinLogs} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setQuests={setQuests} onBack={() => setSubView(null)} />;
