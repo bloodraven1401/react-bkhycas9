@@ -4281,6 +4281,7 @@ function DailyCheckin({ onComplete, onSkip }) {
       </div>
     </div>
   );
+}   //
 
 // ─── JOURNAL CARD ─────────────────────────────────────────────────────────────
 function JournalCard({ journalLogs, setJournalLogs, checkinLogs, logs, workoutLogs }) {
