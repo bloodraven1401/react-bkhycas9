@@ -2962,15 +2962,16 @@ function DailyQuestsFullView({ quests, setQuests, logs, setLogs, xpLogs, setXpLo
   );
 }
 // ─── SLEEP FULL VIEW ─────────────────────────────────────────────────────────
+// ─── SLEEP FULL VIEW ─────────────────────────────────────────────────────────
 function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs, onBack, selectedDate }) {
-  const dateKey = selectedDate || todayKey();   // ← This fixes the date switcher issue
-  
-  const saved = sleepLogs[dateKey] || {};
-  
+  const currentDate = selectedDate || todayKey();   // This is the key fix
+
+  const saved = sleepLogs[currentDate] || {};
+
   const [bedtimeHour, setBedtimeHour] = useState(saved.bedtimeHour || 23);
   const [bedtimeMin, setBedtimeMin] = useState(saved.bedtimeMin || 0);
   const [bedtimeAMPM, setBedtimeAMPM] = useState(saved.bedtimeAMPM || "PM");
-  
+
   const [wakeHour, setWakeHour] = useState(saved.wakeHour || 6);
   const [wakeMin, setWakeMin] = useState(saved.wakeMin || 0);
   const [wakeAMPM, setWakeAMPM] = useState(saved.wakeAMPM || "AM");
@@ -2979,7 +2980,7 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
     let bh = bedtimeHour;
     if (bedtimeAMPM === "PM" && bh !== 12) bh += 12;
     if (bedtimeAMPM === "AM" && bh === 12) bh = 0;
-    
+
     let wh = wakeHour;
     if (wakeAMPM === "PM" && wh !== 12) wh += 12;
     if (wakeAMPM === "AM" && wh === 12) wh = 0;
@@ -2991,10 +2992,10 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
 
   function saveSleep() {
     const duration = parseFloat(calculateDuration());
-    
+
     setSleepLogs(prev => ({
       ...prev,
-      [dateKey]: {
+      [currentDate]: {
         sleptBy: `${bedtimeHour}:${bedtimeMin.toString().padStart(2, '0')} ${bedtimeAMPM}`,
         wokeAt: `${wakeHour}:${wakeMin.toString().padStart(2, '0')} ${wakeAMPM}`,
         bedtimeHour, bedtimeMin, bedtimeAMPM,
@@ -3003,14 +3004,14 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
       }
     }));
 
-    if (!sleepLogs[dateKey]) {
-      setXpLogs(p => ({ ...p, [dateKey]: (p[dateKey] || 0) + 20 }));
+    if (!sleepLogs[currentDate]) {
+      setXpLogs(p => ({ ...p, [currentDate]: (p[currentDate] || 0) + 20 }));
     }
 
     setLogs(p => ({
       ...p,
-      [dateKey]: {
-        ...(p[dateKey] || {}),
+      [currentDate]: {
+        ...(p[currentDate] || {}),
         h13: { done: true }
       }
     }));
@@ -3024,9 +3025,10 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
       
       <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 4 }}>Rest & Recovery</div>
       <div style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>
-        {new Date(dateKey + "T12:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
+        {new Date(currentDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
       </div>
 
+      {/* Target */}
       <div style={{ background: C.surface, borderRadius: 12, padding: 16, marginBottom: 20, display: "flex", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: 11, color: C.haircare }}>TARGET</div>
@@ -3038,7 +3040,7 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
       </div>
 
       <div style={{ background: C.surface, borderRadius: 12, padding: 16, marginBottom: 16 }}>
-        <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>BEDTIME (PREVIOUS NIGHT)</div>
+        <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>BEDTIME</div>
         <input 
           type="time" 
           value={`${bedtimeHour.toString().padStart(2,'0')}:${bedtimeMin.toString().padStart(2,'0')}`} 
@@ -3046,14 +3048,13 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
             const [h, m] = e.target.value.split(':').map(Number);
             setBedtimeHour(h);
             setBedtimeMin(m);
-            setTimeout(saveSleep, 100);
           }}
           style={{ width: "100%", background: C.faint, border: "none", color: C.text, fontSize: 18, padding: 12, borderRadius: 8 }}
         />
       </div>
 
       <div style={{ background: C.surface, borderRadius: 12, padding: 16, marginBottom: 20 }}>
-        <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>WAKE TIME (THIS MORNING)</div>
+        <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>WAKE TIME</div>
         <input 
           type="time" 
           value={`${wakeHour.toString().padStart(2,'0')}:${wakeMin.toString().padStart(2,'0')}`} 
@@ -3061,7 +3062,6 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
             const [h, m] = e.target.value.split(':').map(Number);
             setWakeHour(h);
             setWakeMin(m);
-            setTimeout(saveSleep, 100);
           }}
           style={{ width: "100%", background: C.faint, border: "none", color: C.text, fontSize: 18, padding: 12, borderRadius: 8 }}
         />
@@ -3071,7 +3071,7 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
         onClick={saveSleep}
         style={{ width: "100%", background: C.haircare, color: "#000", padding: "16px", borderRadius: 12, fontSize: 15, fontWeight: 600 }}
       >
-        Save Sleep Log
+        Save for this date
       </button>
     </div>
   );
