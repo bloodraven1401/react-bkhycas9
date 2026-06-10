@@ -4700,9 +4700,7 @@ function AIReviewCard({ logs, workoutLogs, foodLogs, checkinLogs, journalLogs, x
   function buildPrompt(period) {
     const days = period.days;
     const range = getRange(days);
-    const habitCompletion = Math.round((range.reduce((a, d) => a + HABITS.filter(h => logs[d]?.[h.id]?.done).length, 0) / (HABITS.length * days)) * 100);
-    const workoutDays = range.filter(d => Object.values(workoutLogs[d] || {}).some(ex => ex.sets?.length > 0)).length;
-   const activeHabits = getActiveHabits();
+    const activeHabits = getActiveHabits();
     const habitCompletion = Math.round((range.reduce((a, d) => a + activeHabits.filter(h => logs[d]?.[h.id]?.done).length, 0) / (activeHabits.length * days)) * 100);
     const workoutDays = range.filter(d => Object.values(workoutLogs[d] || {}).some(ex => ex.sets?.length > 0)).length;
     const nofapHabit = activeHabits.find(h => h.category === "nofap");
@@ -4718,23 +4716,13 @@ function AIReviewCard({ logs, workoutLogs, foodLogs, checkinLogs, journalLogs, x
     const journalEntries = range.filter(d => journalLogs[d]).map(d => { const e = journalLogs[d]; return `${d}: Good: ${e.good || "-"} | Bad: ${e.bad || "-"} | Lesson: ${e.lesson || "-"}`; }).join("\n");
     const totalXP = getTotalXP(xpLogs);
     const totalSets = range.reduce((a, d) => a + Object.values(workoutLogs[d] || {}).reduce((b, ex) => b + (ex.sets?.length || 0), 0), 0);
-    const avgMood = (() => { const vals = range.map(d => checkinLogs[d]?.mood).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
-    const avgEnergy = (() => { const vals = range.map(d => checkinLogs[d]?.energy).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
-    const avgSleep = (() => { const vals = range.map(d => checkinLogs[d]?.sleep).filter(v => v != null); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "N/A"; })();
-    const journalEntries = range.filter(d => journalLogs[d]).map(d => {
-      const e = journalLogs[d];
-      return `${d}: Good: ${e.good || "-"} | Bad: ${e.bad || "-"} | Lesson: ${e.lesson || "-"}`;
-    }).join("\n");
-    const totalXP = getTotalXP(xpLogs);
-    const totalSets = range.reduce((a, d) => a + Object.values(workoutLogs[d] || {}).reduce((b, ex) => b + (ex.sets?.length || 0), 0), 0);
-
     const storedProfile = (() => { try { const v = localStorage.getItem("anant_v3_profile"); return v ? JSON.parse(v) : null; } catch { return null; } })();
     const userName = storedProfile?.name || "Anant";
-    const alterEgo = storedProfile?.alterEgo?.name ? `Their alter ego — the version of themselves they are becoming — is called "${storedProfile.alterEgo.name}"${storedProfile.alterEgo.title ? `, titled "${storedProfile.alterEgo.title}"` : ""}. Address them occasionally as this alter ego when giving praise or pushing them harder.` : "";
+    const alterEgo = storedProfile?.alterEgo?.name ? `Their alter ego is called "${storedProfile.alterEgo.name}"${storedProfile.alterEgo.title ? `, titled "${storedProfile.alterEgo.title}"` : ""}. Address them occasionally as this alter ego.` : "";
     const shadowModeActive = (() => { try { return window.__shadowMode || false; } catch { return false; } })();
-    const shadowTone = shadowModeActive ? " The user is currently in SHADOW MODE — their alter ego is fully activated. Be significantly harsher, more demanding, and address them exclusively as their alter ego. No softness. Pure intensity." : "";
+    const shadowTone = shadowModeActive ? " SHADOW MODE active — be significantly harsher, address them exclusively as their alter ego." : "";
     const userGoals = (storedProfile?.goals || []).slice(0, 4).join(", ");
-   return `You are a personal coach reviewing ${period.label.toLowerCase()} data for ${userName}, focused on physique, discipline, and self-improvement.${alterEgo ? " " + alterEgo : ""}${userGoals ? ` Their goals include: ${userGoals}.` : ""}${shadowTone}
+    return `You are a personal coach reviewing ${period.label.toLowerCase()} data for ${userName}, focused on physique, discipline, and self-improvement.${alterEgo ? " " + alterEgo : ""}${userGoals ? ` Their goals include: ${userGoals}.` : ""}${shadowTone}
 
 DATA (last ${days} days):
 - Overall habit completion: ${habitCompletion}%
@@ -4760,7 +4748,6 @@ Write a ${period.label.toLowerCase()} review. Be balanced and motivating but bru
 
 Keep it concise, direct, masculine. No fluff. Talk to him like a coach who believes in him but won't coddle him.`;
   }
-
   async function generateReview(period) {
     setLoading(true);
     try {
