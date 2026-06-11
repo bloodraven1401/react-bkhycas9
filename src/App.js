@@ -1148,6 +1148,7 @@ useEffect(() => {
   const [spiritualPlan, setSpiritualPlan] = useLS("anant_v3_spiritual_plan", DEFAULT_SPIRITUAL);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [lightMode, setLightMode] = useLS("anant_v3_light_mode", false);
+  const [shadowMode, setShadowMode] = useLS("anant_v3_shadow_mode", false);
   useEffect(() => { window.__shadowMode = shadowMode; }, [shadowMode]);
   useMemo(() => { // eslint-disable-line
     if (shadowMode) {
