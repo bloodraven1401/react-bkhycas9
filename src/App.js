@@ -1215,10 +1215,8 @@ const [showCheckin, setShowCheckin] = useState(false);
   checkNewDay();
   // Check every minute — catches midnight rollover if app stays open
   const interval = setInterval(checkNewDay, 60000);
-  return () => clearInterval(interval);
-}, []); // eslint-disable-line
-  }
-}, [todayKey()]); // This ensures it checks on new day
+ return () => clearInterval(interval);
+  }, []); // eslint-disable-line
 
   function toggleHabit(id) {
     const currentlyDone = todayLogs[id]?.done;
