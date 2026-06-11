@@ -2216,9 +2216,8 @@ function DailyQuestsCard({ quests, setQuests, logs, setLogs, xpLogs, setXpLogs, 
     }
   }, []); // eslint-disable-line
 
-  // Generate quests for displayDate if viewing a past date that has none but has log data
+ // Generate quests for displayDate if viewing a past date that has none but has log data
   useEffect(() => {
-    useEffect(() => {
     if (!quests[displayDate] && displayDate !== today) {
       // Generate quests using data up to that date, not today
       const pastRange = Array.from({ length: 14 }, (_, i) => {
@@ -3090,15 +3089,13 @@ function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode
             ? "The shadow self has taken over. All systems operating at maximum intensity."
             : ("Activate your alter ego. " + (userProfile.alterEgo?.name ? ("Become " + userProfile.alterEgo.name + ".") : "Become who you were meant to be.") + " Dark UI, intense voice, no mercy.")}
         </div>
-        <button onClick={() => setShadowMode(s => !s)} style={{ width: "100%", background: shadowMode ? "#FF0000" : "none", border: `2px solid ${shadowMode ? "#FF0000" : C.border}`, borderRadius: 10, padding: "13px", color: shadowMode ? "#000" : C.muted, fontSize: 12, fontFamily: "inherit", fontWeight: 700, cursor: "pointer", letterSpacing: 1, textTransform: "uppercase" }}>
+       <button onClick={() => setShadowMode(s => !s)} style={{ width: "100%", background: shadowMode ? "#FF0000" : "none", border: `2px solid ${shadowMode ? "#FF0000" : C.border}`, borderRadius: 10, padding: "13px", color: shadowMode ? "#000" : C.muted, fontSize: 12, fontFamily: "inherit", fontWeight: 700, cursor: "pointer", letterSpacing: 1, textTransform: "uppercase" }}>
           {shadowMode ? "◆ Deactivate Shadow Mode" : "◆ Activate Shadow Mode"}
         </button>
       </div>
-    </div>
-  );
-}
-{/* Appearance */}
-      <div style={{ marginTop: 16, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 0 }}>
+
+      {/* Appearance */}
+      <div style={{ marginTop: 16, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
         <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 14 }}>Appearance</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {[
@@ -3117,6 +3114,10 @@ function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
 
 // ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
 function SettingsPage({ userProfile, setUserProfile, onBack, isFemale, onResetOnboarding }) {
