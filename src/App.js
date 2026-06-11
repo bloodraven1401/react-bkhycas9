@@ -178,6 +178,18 @@ const THEME_FEMALE = {
 };
 
 // Will be set dynamically — default to male
+const THEME_LIGHT = {
+  bg: "#F5F3EF", surface: "#FFFFFF", border: "#E8E4DC", faint: "#F0EDE8",
+  text: "#1A1A22", muted: "#8A8A9A", dim: "#AAAABC",
+  workout: "#3A6FD8", skincare: "#B8860B", diet: "#C0522A",
+  nofap: "#C0365A", haircare: "#4A8A76", spiritual: "#B8860B",
+  accent: "#B8860B", accentAlt: "#3A6FD8",
+  navActive: "#B8860B", navInactive: "#8A8A9A",
+  ring: "#B8860B", ringBg: "#F0EDE8",
+  btnPrimary: "#B8860B", btnPrimaryText: "#FFF",
+  statHealth: "#C0522A", statProductivity: "#7050C0", statAnalytics: "#B8860B",
+  glowAccent: "rgba(184,134,11,0.10)",
+};
 let C = { ...THEME_MALE };
 
 const ThemeContext = createContext({ theme: THEME_MALE, isFemale: false });
@@ -347,6 +359,11 @@ function dateKey(offset = 0) {
 }
 function last7()  { return Array.from({ length: 7  }, (_, i) => dateKey(-(6  - i))); }
 function last30() { return Array.from({ length: 30 }, (_, i) => dateKey(-(29 - i))); }
+function getGoals(profile) {
+  const weightGoal = parseFloat(profile?.weightGoal) || 65;
+  const proteinGoal = parseFloat(profile?.proteinGoal) || (profile?.weight ? Math.round(parseFloat(profile.weight) * 2.2) : 178);
+  return { weightGoal, proteinGoal };
+}
 
 // ─── DEMON SYSTEM ─────────────────────────────────────────────────────────────
 function getDemonData(logs) {
@@ -1130,7 +1147,7 @@ useEffect(() => {
   const [haircarePlan, setHaircarePlan] = useLS("anant_v3_haircare_plan", DEFAULT_HAIRCARE);
   const [spiritualPlan, setSpiritualPlan] = useLS("anant_v3_spiritual_plan", DEFAULT_SPIRITUAL);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [shadowMode, setShadowMode] = useState(false);
+  const [lightMode, setLightMode] = useLS("anant_v3_light_mode", false);
   useEffect(() => { window.__shadowMode = shadowMode; }, [shadowMode]);
   useMemo(() => { // eslint-disable-line
     if (shadowMode) {
@@ -1141,11 +1158,14 @@ useEffect(() => {
         accent: "#FF0000", skincare: "#FF0000", workout: "#CC0000",
       });
       Object.assign(COLORS, { ...COLORS_MALE, workout: "#CC0000", skincare: "#FF0000", diet: "#AA0000", nofap: "#FF0000" });
+    } else if (lightMode) {
+      Object.assign(C, { ...THEME_LIGHT, skincare: THEME_LIGHT.skincare, nofap: THEME_LIGHT.nofap, haircare: THEME_LIGHT.haircare, workout: THEME_LIGHT.workout, diet: THEME_LIGHT.diet });
+      Object.assign(COLORS, isFemale ? COLORS_FEMALE : COLORS_MALE);
     } else {
       Object.assign(C, activeTheme);
       Object.assign(COLORS, isFemale ? COLORS_FEMALE : COLORS_MALE);
     }
-  }, [isFemale, shadowMode]); // eslint-disable-line
+  }, [isFemale, shadowMode, lightMode]); // eslint-disable-line
   const [checkinLogs, setCheckinLogs] = useLS("anant_v3_checkin", {});
   const [xpToast, setXpToast] = useState(null);
   const [rankUpData, setRankUpData] = useState(null);
@@ -1186,9 +1206,17 @@ const [showCheckin, setShowCheckin] = useState(false);
   const [quests, setQuests] = useLS("anant_v3_quests", {});
 
   useEffect(() => {
-  const key = todayKey();
-  if (!checkinLogs[key] && !checkinDone) {
-    setShowCheckin(true);
+  const checkNewDay = () => {
+    const key = todayKey();
+    if (!checkinLogs[key] && !checkinDone) {
+      setShowCheckin(true);
+    }
+  };
+  checkNewDay();
+  // Check every minute — catches midnight rollover if app stays open
+  const interval = setInterval(checkNewDay, 60000);
+  return () => clearInterval(interval);
+}, []); // eslint-disable-line
   }
 }, [todayKey()]); // This ensures it checks on new day
 
@@ -1326,7 +1354,7 @@ const [showCheckin, setShowCheckin] = useState(false);
   onBack={() => setSubView(null)} 
   selectedDate={selectedDate} 
 />;
- if (subView === "profile") return <ProfilePage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} shadowMode={shadowMode} setShadowMode={setShadowMode} supaUser={supaUser} />;
+ if (subView === "profile") return <ProfilePage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} shadowMode={shadowMode} setShadowMode={setShadowMode} supaUser={supaUser} lightMode={lightMode} setLightMode={setLightMode} />;
   if (subView === "settings") return <SettingsPage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} onResetOnboarding={() => { setShowOnboarding(true); setSubView(null); }} />;
   if (subView === "about") return <AboutPage onBack={() => setSubView(null)} />; if (subView === "backup") return <BackupFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={setCheckinLogs} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setQuests={setQuests} onBack={() => setSubView(null)} />;
 
@@ -1705,9 +1733,27 @@ function HabitsView({ todayLogs, toggleHabit, setQty, getStreak }) {
   const [editing, setEditing] = useState(false);
   const [habits, setHabits] = useLS("anant_v3_custom_habits", HABITS);
   useEffect(() => {
+    const storedProfile = (() => { try { const v = localStorage.getItem("anant_v3_profile"); return v ? JSON.parse(v) : null; } catch { return null; } })();
+    const isFem = storedProfile?.gender === "female";
+    const FEMALE_HABITS = [
+      { id: "h1",  label: "Morning Skincare",  category: "skincare",     type: "binary", icon: "✦" },
+      { id: "h2",  label: "Night Skincare",    category: "skincare",     type: "binary", icon: "✦" },
+      { id: "h3",  label: "Sunscreen",         category: "skincare",     type: "binary", icon: "✦" },
+      { id: "h4",  label: "Workout",           category: "workout",      type: "binary", icon: "◆" },
+      { id: "h5",  label: "Hit Protein Goal",  category: "diet",         type: "binary", icon: "◉" },
+      { id: "h6",  label: "Water Intake",      category: "diet",         type: "quantitative", icon: "◉", unit: "L", target: 2.5 },
+      { id: "h7",  label: "All Meals Done",    category: "diet",         type: "binary", icon: "◉" },
+      { id: "h8",  label: "Supplements Taken", category: "diet",         type: "binary", icon: "◉" },
+      { id: "h11", label: "No Junk Food",      category: "diet",         type: "binary", icon: "◉" },
+      { id: "h10", label: "Movement / Steps",  category: "productivity", type: "binary", icon: "◉" },
+      { id: "h12", label: "Meditation",        category: "spiritual",    type: "binary", icon: "✦" },
+      { id: "h13", label: "Sleep Schedule",    category: "sleep",        type: "binary", icon: "☽" },
+    ];
+    const baseHabits = isFem ? FEMALE_HABITS : HABITS;
     setHabits(p => {
+      if (p.length === 0) return baseHabits;
       const ids = p.map(h => h.id);
-      const missing = HABITS.filter(h => !ids.includes(h.id));
+      const missing = baseHabits.filter(h => !ids.includes(h.id));
       return missing.length ? [...p, ...missing] : p;
     });
   }, []); // eslint-disable-line
@@ -2174,13 +2220,42 @@ function DailyQuestsCard({ quests, setQuests, logs, setLogs, xpLogs, setXpLogs, 
 
   // Generate quests for displayDate if viewing a past date that has none but has log data
   useEffect(() => {
+    useEffect(() => {
     if (!quests[displayDate] && displayDate !== today) {
-      const generated = generateDailyQuests(logs, checkinLogs, sleepLogs, workoutLogs, foodLogs);
-      // Use deterministic generation based on the display date
-      setQuests(p => ({ ...p, [displayDate]: generated.map(q => ({ ...q, completed: false, xpAwarded: false })) }));
+      // Generate quests using data up to that date, not today
+      const pastRange = Array.from({ length: 14 }, (_, i) => {
+        const d = new Date(displayDate + "T12:00:00");
+        d.setDate(d.getDate() - (13 - i));
+        return d.toISOString().split("T")[0];
+      });
+      const catScores = {};
+      Object.keys(COLORS).forEach(cat => {
+        const catH = HABITS.filter(h => h.category === cat);
+        if (!catH.length) return;
+        let done = 0, total = 0;
+        pastRange.forEach(d => catH.forEach(h => { total++; if (logs[d]?.[h.id]?.done) done++; }));
+        catScores[cat] = total ? done / total : 0;
+      });
+      const pastWeak = Object.entries(catScores).sort((a, b) => a[1] - b[1]).map(([cat]) => cat);
+      const seed = parseInt(displayDate.replace(/-/g, "")) % 997;
+      const weighted = QUEST_POOL.map(q => ({ ...q, weight: pastWeak.indexOf(q.category) !== -1 ? (5 - Math.min(pastWeak.indexOf(q.category), 4)) : 1 }));
+      const pool = [];
+      weighted.forEach(q => { for (let i = 0; i < q.weight; i++) pool.push(q); });
+      const sorted = [...pool].sort((a, b) => ((Math.sin(seed + pool.indexOf(a)) * 10000) % 1) - ((Math.sin(seed + pool.indexOf(b)) * 10000) % 1));
+      const seen = new Set();
+      const picked = [];
+      for (const q of sorted) {
+        if (!seen.has(q.id) && picked.length < 3) { seen.add(q.id); picked.push(q); }
+      }
+      // Auto-mark completed based on that day's actual logs
+      const withStatus = picked.map(q => {
+        const poolQuest = QUEST_POOL.find(p => p.id === q.id);
+        const completed = poolQuest?.check ? poolQuest.check(logs, displayDate, workoutLogs, foodLogs, sleepLogs) : false;
+        return { ...q, completed, xpAwarded: completed };
+      });
+      setQuests(p => ({ ...p, [displayDate]: withStatus }));
     }
   }, [displayDate]); // eslint-disable-line
-
   // Auto-complete quests based on habit state — only for today
   useEffect(() => {
     if (!isToday) return;
@@ -2452,8 +2527,8 @@ function HeatmapView({ logs, checkinLogs, sleepLogs, setView, setSelectedDate })
 
       {mode === "category" && (
         <div style={{ display: "flex", gap: 5, marginBottom: 10, overflowX: "auto", paddingBottom: 4 }}>
-          {Object.keys(COLORS).map(cat => (
-            <button key={cat} onClick={() => setSelectedCat(cat)} style={{ background: selectedCat === cat ? COLORS[cat] : C.faint, border: `1px solid ${selectedCat === cat ? COLORS[cat] : C.border}`, borderRadius: 6, padding: "4px 8px", color: selectedCat === cat ? "#000" : C.muted, fontSize: 9, fontFamily: "inherit", whiteSpace: "nowrap", textTransform: "capitalize" }}>{cat}</button>
+          {[...new Set(getActiveHabits().map(h => h.category))].map(cat => (
+            <button key={cat} onClick={() => setSelectedCat(cat)} style={{ background: selectedCat === cat ? (COLORS[cat] || ensureColor(cat)) : C.faint, border: `1px solid ${selectedCat === cat ? (COLORS[cat] || ensureColor(cat)) : C.border}`, borderRadius: 6, padding: "4px 8px", color: selectedCat === cat ? "#000" : C.muted, fontSize: 9, fontFamily: "inherit", whiteSpace: "nowrap", textTransform: "capitalize" }}>{cat}</button>
           ))}
         </div>
       )}
@@ -2661,7 +2736,8 @@ function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLo
   const weights = Object.entries(weightLogs).sort((a, b) => a[0].localeCompare(b[0]));
   const latestWeight = weights.length ? weights[weights.length - 1][1] : null;
   const startWeight = weights.length ? weights[0][1] : 40;
-  const targetWeight = 65;
+  const storedProfile = (() => { try { const v = localStorage.getItem("anant_v3_profile"); return v ? JSON.parse(v) : null; } catch { return null; } })();
+  const { weightGoal: targetWeight, proteinGoal: proteinTarget } = getGoals(storedProfile);
   const progress = latestWeight ? Math.min(100, ((latestWeight - startWeight) / (targetWeight - startWeight)) * 100) : 0;
   const days = last7();
   const weekHabitPct = Math.round((days.reduce((a, d) => a + HABITS.filter(h => logs[d]?.[h.id]?.done).length, 0) / (HABITS.length * 7)) * 100);
@@ -2686,7 +2762,7 @@ function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLo
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <div>
             <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700 }}>Body Weight</div>
-            <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>Goal: 65kg</div>
+            <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>Goal: {targetWeight}kg</div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 24, color: C.haircare, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{latestWeight || "—"}<span style={{ fontSize: 12 }}>kg</span></div>
@@ -2697,7 +2773,8 @@ function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLo
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted, marginBottom: 4 }}>
             <span>{startWeight}kg start</span>
             <span>{latestWeight ? `${(targetWeight - latestWeight).toFixed(1)}kg to go` : "Log your weight"}</span>
-            <span>65kg</span>
+            <span>{targetWeight}kg</span>
+            
           </div>
           <div style={{ background: C.faint, borderRadius: 4, height: 6 }}>
             <div style={{ width: `${Math.max(0, progress)}%`, height: "100%", background: C.haircare, borderRadius: 4, transition: "width 0.6s ease" }} />
@@ -2835,7 +2912,7 @@ function DemonCard({ demon }) {
 }
 
 // ─── PROFILE PAGE ─────────────────────────────────────────────────────────────
-function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode, setShadowMode, supaUser }) {
+function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode, setShadowMode, supaUser, lightMode, setLightMode }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...userProfile });
   const theme = isFemale ? THEME_FEMALE : THEME_MALE;
@@ -2901,11 +2978,25 @@ function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode
                 <input type="number" style={inputStyle} value={form.weight} onChange={e => setForm(p => ({ ...p, weight: e.target.value }))} />
               </div>
             </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <div style={labelStyle}>Weight Goal (kg)</div>
+                <input type="number" style={inputStyle} value={form.weightGoal || ""} placeholder="e.g. 65" onChange={e => setForm(p => ({ ...p, weightGoal: e.target.value }))} />
+              </div>
+              <div>
+                <div style={labelStyle}>Protein Target (g)</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <input type="number" style={inputStyle} value={form.proteinGoal || ""} placeholder={form.weight ? String(Math.round(parseFloat(form.weight) * 2.2)) : "e.g. 178"} onChange={e => setForm(p => ({ ...p, proteinGoal: e.target.value }))} />
+                  <div style={{ fontSize: 9, color: C.muted }}>Auto: {form.weight ? Math.round(parseFloat(form.weight) * 2.2) : "—"}g (weight × 2.2)</div>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <div>
             <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, marginBottom: 4 }}>{userProfile.name || "—"}</div>
-            <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>{userProfile.gender ? userProfile.gender.charAt(0).toUpperCase() + userProfile.gender.slice(1) : "—"} · {userProfile.age ? `${userProfile.age} yrs` : "—"} · {userProfile.height ? `${userProfile.height}cm` : "—"} · {userProfile.weight ? `${userProfile.weight}kg` : "—"}</div>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{userProfile.gender ? userProfile.gender.charAt(0).toUpperCase() + userProfile.gender.slice(1) : "—"} · {userProfile.age ? `${userProfile.age} yrs` : "—"} · {userProfile.height ? `${userProfile.height}cm` : "—"} · {userProfile.weight ? `${userProfile.weight}kg` : "—"}</div>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>Goal: {userProfile.weightGoal ? `${userProfile.weightGoal}kg` : "—"} · Protein: {userProfile.proteinGoal || (userProfile.weight ? Math.round(parseFloat(userProfile.weight) * 2.2) : "—")}g/day</div>
           </div>
         )}
       </div>
@@ -3008,6 +3099,26 @@ function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode
     </div>
   );
 }
+{/* Appearance */}
+      <div style={{ marginTop: 16, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 0 }}>
+        <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 14 }}>Appearance</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[
+            { label: "Dark Mode", desc: "Deep blacks, gold accents", active: !lightMode && !shadowMode, action: () => { setLightMode(false); setShadowMode(false); } },
+            { label: "Light Mode", desc: "Clean whites, warm tones", active: lightMode && !shadowMode, action: () => { setLightMode(true); setShadowMode(false); } },
+          ].map(opt => (
+            <div key={opt.label} onClick={opt.action} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 10, cursor: "pointer", background: opt.active ? `${C.accent}15` : C.faint, border: `1px solid ${opt.active ? C.accent : C.border}`, transition: "all 0.2s" }}>
+              <div>
+                <div style={{ fontSize: 13, color: opt.active ? C.accent : C.text }}>{opt.label}</div>
+                <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{opt.desc}</div>
+              </div>
+              <div style={{ width: 20, height: 20, borderRadius: "50%", background: opt.active ? C.accent : "transparent", border: `2px solid ${opt.active ? C.accent : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {opt.active && <div style={{ width: 8, height: 8, borderRadius: "50%", background: isFemale ? "#050507" : "#000" }} />}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
 // ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
 function SettingsPage({ userProfile, setUserProfile, onBack, isFemale, onResetOnboarding }) {
@@ -3539,10 +3650,10 @@ function FoodLogger({ foodLogs, setFoodLogs, onBack }) {
         </div>
         <div style={{ marginTop: 10 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted, marginBottom: 4 }}>
-            <span>Protein</span><span>{Math.round(totalMacros.protein)}/178g</span>
+            <span>Protein</span><span>{Math.round(totalMacros.protein)}/{(() => { try { const v = localStorage.getItem("anant_v3_profile"); const p = v ? JSON.parse(v) : null; return p?.proteinGoal || (p?.weight ? Math.round(parseFloat(p.weight) * 2.2) : 178); } catch { return 178; } })()}g</span>
           </div>
           <div style={{ background: C.faint, borderRadius: 3, height: 3 }}>
-            <div style={{ width: `${Math.min(100, (totalMacros.protein / 178) * 100)}%`, height: "100%", background: C.diet, borderRadius: 3 }} />
+            <div style={{ width: `${Math.min(100, (totalMacros.protein / (() => { try { const v = localStorage.getItem("anant_v3_profile"); const p = v ? JSON.parse(v) : null; return p?.proteinGoal || (p?.weight ? Math.round(parseFloat(p.weight) * 2.2) : 178); } catch { return 178; } })()) * 100)}%`, height: "100%", background: C.diet, borderRadius: 3 }} />
           </div>
         </div>
       </div>
