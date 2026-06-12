@@ -426,9 +426,11 @@ function useLS(key, def) {
       }
       try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
     }
-    try {
+   try {
       supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) pushToCloud(session.user.id, key, val);
+        if (session?.user) {
+          pushToCloud(session.user.id, key, val).catch(() => {});
+        }
       });
     } catch {}
   }, [val, key]);
@@ -1147,10 +1149,30 @@ useEffect(() => {
   const [haircarePlan, setHaircarePlan] = useLS("anant_v3_haircare_plan", DEFAULT_HAIRCARE);
   const [spiritualPlan, setSpiritualPlan] = useLS("anant_v3_spiritual_plan", DEFAULT_SPIRITUAL);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [lightMode, setLightMode] = useLS("anant_v3_light_mode", false);
-  const [shadowMode, setShadowMode] = useLS("anant_v3_shadow_mode", false);
-  useEffect(() => { window.__shadowMode = shadowMode; }, [shadowMode]);
-  useMemo(() => { // eslint-disable-line
+const [shadowMode, setShadowMode] = useLS("anant_v3_shadow_mode", false);
+const [lightMode, setLightMode] = useLS("anant_v3_light_mode", false);
+const [syncStatus, setSyncStatus] = useState("idle"); // "idle" | "syncing" | "synced" | "error"
+
+useEffect(() => { window.__shadowMode = shadowMode; }, [shadowMode]);
+
+// ─── THEME MUTATION (after all state) ─────────────────────────────────────────
+useMemo(() => { // eslint-disable-line
+  if (shadowMode) {
+    Object.assign(C, {
+      ...THEME_MALE,
+      bg: "#020204", surface: "#080810", border: "#0F0F1A", faint: "#060608",
+      text: "#FF0000", muted: "#4A0000", dim: "#2A0000",
+      accent: "#FF0000", skincare: "#FF0000", workout: "#CC0000",
+    });
+    Object.assign(COLORS, { ...COLORS_MALE, workout: "#CC0000", skincare: "#FF0000", diet: "#AA0000", nofap: "#FF0000" });
+  } else if (lightMode) {
+    Object.assign(C, THEME_LIGHT);
+    Object.assign(COLORS, isFemale ? COLORS_FEMALE : COLORS_MALE);
+  } else {
+    Object.assign(C, activeTheme);
+    Object.assign(COLORS, isFemale ? COLORS_FEMALE : COLORS_MALE);
+  }
+}, [isFemale, shadowMode, lightMode]); // eslint-disable-line
     if (shadowMode) {
       Object.assign(C, {
         ...THEME_MALE,
@@ -1433,8 +1455,13 @@ const [showCheckin, setShowCheckin] = useState(false);
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
   <div style={{ fontSize: 10, letterSpacing: 4, color: C.muted, textTransform: "uppercase" }}>Self System</div>
-  <button onClick={() => setShowAuthModal(true)} style={{ background: "none", border: `1px solid ${supaUser ? "#7EB8A4" : C.border}`, borderRadius: 6, padding: "2px 8px", color: supaUser ? "#7EB8A4" : C.muted, fontSize: 9, fontFamily: "inherit", letterSpacing: 1 }}>
-    {supaUser ? "☁ Synced" : "☁ Sync"}
+  <button onClick={() => setShowAuthModal(true)} style={{ background: "none", border: `1px solid ${supaUser ? "#7EB8A4" : C.border}`, borderRadius: 6, padding: "2px 8px", color: supaUser ? "#7EB8A4" : C.muted, fontSize: 9, fontFamily: "inherit", letterSpacing: 1, display: "flex", alignItems: "center", gap: 4 }}>
+    {supaUser ? (
+      <>
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#7EB8A4", display: "inline-block", animation: syncStatus === "syncing" ? "pulse 1s ease infinite" : "none" }} />
+        {syncStatus === "syncing" ? "Syncing..." : "☁ Synced"}
+      </>
+    ) : "☁ Sync"}
   </button>
 </div>
             <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 30, fontWeight: 700, lineHeight: 1, marginTop: 4 }}>{userProfile?.name || "Anant"}</div>
@@ -1638,7 +1665,11 @@ const [showCheckin, setShowCheckin] = useState(false);
       </div>
 
       {/* Bottom Nav */}
-      <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, width: "100%", background: shadowMode ? "rgba(2,2,4,0.98)" : "rgba(7,7,10,0.97)", backdropFilter: "blur(16px)", borderTop: `1px solid ${shadowMode ? "#FF000030" : C.border}`, display: "flex", padding: "12px 0 env(safe-area-inset-bottom, 16px)", zIndex: 9999 }}>
+      <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, width: "100%",
+        background: shadowMode ? "rgba(2,2,4,0.98)" : "rgba(7,7,10,0.97)",
+        backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+        borderTop: `1px solid ${shadowMode ? "#FF000030" : C.border}`,
+        display: "flex", padding: "10px 0", paddingBottom: "max(10px, env(safe-area-inset-bottom))", zIndex: 9999 }}>
         {[["dashboard","◎","Home"],["habits","◉","Today"],["log","◈","Log"],["routines","◆","Plans"],["stats","★","Rank"]].map(([key, icon, label]) => (
           <button key={key} className="press" onClick={() => setView(key)} style={{ flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, color: view === key ? (shadowMode ? "#FF0000" : C.skincare) : C.muted }}>
             <span style={{ fontSize: 17 }}>{icon}</span>
@@ -4159,6 +4190,16 @@ function CustomPlanEditor({ planId, planList, setPlanList }) {
 function WorkoutPlan({ plan, setPlan }) {
   const [active, setActive] = useState(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
   const [editing, setEditing] = useState(false);
+  const [showImpact, setShowImpact] = useState(false);
+
+  // Show impact warning when user enables editing
+  function handleEditToggle() {
+    if (!editing) {
+      setShowImpact(true);
+      setTimeout(() => setShowImpact(false), 3500);
+    }
+    setEditing(e => !e);
+  }
   const d = plan[active];
   function updateFocus(val)         { setPlan(p => p.map((day, i) => i === active ? { ...day, focus: val } : day)); }
   function updateDayName(val)       { setPlan(p => p.map((day, i) => i === active ? { ...day, day: val } : day)); }
@@ -4171,7 +4212,13 @@ function WorkoutPlan({ plan, setPlan }) {
   function addDay()                 { setPlan(p => [...p, { day: `Day ${p.length + 1}`, focus: "New Day", sections: [] }]); }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <EditHeader title="Workout Plan" editing={editing} setEditing={setEditing} onReset={() => { setPlan(WORKOUT_DAYS); setEditing(false); }} />
+      <EditHeader title="Workout Plan" editing={editing} setEditing={handleEditToggle} onReset={() => { setPlan(WORKOUT_DAYS); setEditing(false); }} />
+      {showImpact && (
+        <div style={{ background: "#C9A96E15", border: "1px solid #C9A96E40", borderRadius: 10,
+          padding: "10px 14px", fontSize: 11, color: "#C9A96E", lineHeight: 1.6, marginBottom: 8 }}>
+          ✦ Changes here update your workout plan only. Habit tracking continues unaffected.
+        </div>
+      )}
       <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 4 }}>
         {plan.map((day, i) => (
           <button key={i} className="press" onClick={() => setActive(i)} style={{ background: active === i ? C.workout : C.surface, border: `1px solid ${active === i ? C.workout : C.border}`, borderRadius: 7, padding: "6px 10px", color: active === i ? "#000" : C.muted, fontSize: 10, whiteSpace: "nowrap", fontFamily: "inherit" }}>
@@ -5086,13 +5133,29 @@ function ResetProgress({ logs, setLogs, workoutLogs, setWorkoutLogs, weightLogs,
         <div style={{ marginTop: 16 }}>
           <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Past Seasons</div>
           {[...seasons].reverse().map((s, i) => (
-            <div key={i} style={{ padding: "8px 0", borderBottom: i < seasons.length - 1 ? `1px solid ${C.border}` : "none" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 12, color: C.skincare }}>Season {s.number}</span>
-                <span style={{ fontSize: 10, color: C.muted }}>{new Date(s.date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+            <div key={i} style={{ background: C.faint, border: `1px solid ${C.skincare}20`,
+              borderRadius: 12, padding: "14px 16px", marginBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: `${C.skincare}20`,
+                    border: `1px solid ${C.skincare}40`, display: "flex", alignItems: "center",
+                    justifyContent: "center", fontSize: 13, color: C.skincare, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>
+                    {s.number}
+                  </div>
+                  <span style={{ fontSize: 13, color: C.skincare, fontFamily: "'Cormorant Garamond',serif", fontWeight: 600 }}>Season {s.number}</span>
+                </div>
+                <span style={{ fontSize: 9, color: C.muted }}>{new Date(s.date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
               </div>
-              <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>{s.reason}</div>
-              <div style={{ fontSize: 10, color: C.dim, marginTop: 3 }}>{s.stats.totalDays}d logged · {s.stats.totalSessions} sessions · {s.stats.bestStreak}d best streak · {s.stats.totalXP?.toLocaleString()} XP</div>
+              {s.reason && <div style={{ fontSize: 11, color: C.muted, fontStyle: "italic", marginBottom: 8 }}>"{s.reason}"</div>}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+                {[["Days", s.stats.totalDays], ["Sessions", s.stats.totalSessions],
+                  ["Best", `${s.stats.bestStreak}d`], ["XP", s.stats.totalXP?.toLocaleString()]].map(([label, val]) => (
+                  <div key={label} style={{ textAlign: "center", background: C.surface, borderRadius: 8, padding: "8px 4px" }}>
+                    <div style={{ fontSize: 14, color: C.skincare, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>{val}</div>
+                    <div style={{ fontSize: 8, color: C.muted, marginTop: 2, textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
