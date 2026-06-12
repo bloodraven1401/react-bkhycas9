@@ -1173,22 +1173,6 @@ useMemo(() => { // eslint-disable-line
     Object.assign(COLORS, isFemale ? COLORS_FEMALE : COLORS_MALE);
   }
 }, [isFemale, shadowMode, lightMode]); // eslint-disable-line
-    if (shadowMode) {
-      Object.assign(C, {
-        ...THEME_MALE,
-        bg: "#020204", surface: "#080810", border: "#0F0F1A", faint: "#060608",
-        text: "#FF0000", muted: "#4A0000", dim: "#2A0000",
-        accent: "#FF0000", skincare: "#FF0000", workout: "#CC0000",
-      });
-      Object.assign(COLORS, { ...COLORS_MALE, workout: "#CC0000", skincare: "#FF0000", diet: "#AA0000", nofap: "#FF0000" });
-    } else if (lightMode) {
-      Object.assign(C, { ...THEME_LIGHT, skincare: THEME_LIGHT.skincare, nofap: THEME_LIGHT.nofap, haircare: THEME_LIGHT.haircare, workout: THEME_LIGHT.workout, diet: THEME_LIGHT.diet });
-      Object.assign(COLORS, isFemale ? COLORS_FEMALE : COLORS_MALE);
-    } else {
-      Object.assign(C, activeTheme);
-      Object.assign(COLORS, isFemale ? COLORS_FEMALE : COLORS_MALE);
-    }
-  }, [isFemale, shadowMode, lightMode]); // eslint-disable-line
   const [checkinLogs, setCheckinLogs] = useLS("anant_v3_checkin", {});
   const [xpToast, setXpToast] = useState(null);
   const [rankUpData, setRankUpData] = useState(null);
