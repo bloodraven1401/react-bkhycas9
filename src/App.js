@@ -1184,6 +1184,7 @@ useMemo(() => { // eslint-disable-line
 const [journalLogs, setJournalLogs] = useLS("anant_v3_journal", {});
 const [aiReviews, setAiReviews] = useLS("anant_v3_ai_reviews", {});
 const [checkinDone, setCheckinDone] = useState(false);
+  const [checkinSkippedDate, setCheckinSkippedDate] = useLS("anant_v3_checkin_skip_date", "");
 
 
   // XP backfill — runs once on mount
@@ -1213,16 +1214,10 @@ const [showCheckin, setShowCheckin] = useState(false);
   const [quests, setQuests] = useLS("anant_v3_quests", {});
 
   useEffect(() => {
-  const checkNewDay = () => {
     const key = todayKey();
-    if (!checkinLogs[key] && !checkinDone) {
+    if (!checkinLogs[key] && checkinSkippedDate !== key) {
       setShowCheckin(true);
     }
-  };
-  checkNewDay();
-  // Check every minute — catches midnight rollover if app stays open
-  const interval = setInterval(checkNewDay, 60000);
- return () => clearInterval(interval);
   }, []); // eslint-disable-line
 
   function toggleHabit(id) {
@@ -1423,9 +1418,10 @@ const [showCheckin, setShowCheckin] = useState(false);
         .sidebar-item{transition:background 0.15s ease,color 0.15s ease}
         .sidebar-item:hover{background:rgba(255,255,255,0.04)}
         .ring-track{transition:stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)}
-        input,textarea{background:#0D0D12;border:1px solid #16161E;color:#E8E4DC;border-radius:7px;padding:8px 10px;font-family:inherit;font-size:13px;outline:none;transition:border 0.2s}
+       input,textarea{background:#0D0D12;border:1px solid #16161E;color:#E8E4DC;border-radius:7px;padding:8px 10px;font-family:inherit;font-size:13px;outline:none;transition:border 0.2s}
         input:focus,textarea:focus{border-color:#2A2A3A}
         button{cursor:pointer;font-family:inherit}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
       `}</style>
 
       {/* Header */}
@@ -1634,7 +1630,7 @@ const [showCheckin, setShowCheckin] = useState(false);
       setShowCheckin(false);
       setCheckinDone(true);
     }}
-    onSkip={() => { setShowCheckin(false); setCheckinDone(true); }}
+    onSkip={() => { setShowCheckin(false); setCheckinDone(true); setCheckinSkippedDate(todayKey()); }}
   />
 )}
 
@@ -3401,6 +3397,27 @@ function SleepFullView({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLo
     </div>
   );
 }
+function BackupFullView({ logs, workoutLogs, foodLogs, weightLogs, xpLogs, achievements, sleepLogs, measurements, checkinLogs, journalLogs, aiReviews, quests, setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setAiReviews, setQuests, onBack }) {
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1 }}>← Back</button>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Data Backup</div>
+      </div>
+      <DataBackupCard
+        logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs}
+        xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs}
+        measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs}
+        aiReviews={aiReviews} nofapHistory={[]} quests={quests}
+        setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs}
+        setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements}
+        setSleepLogs={setSleepLogs} setMeasurements={setMeasurements}
+        setCheckinLogs={setCheckinLogs} setJournalLogs={setJournalLogs}
+        setAiReviews={setAiReviews} setNofapHistory={() => {}} setQuests={setQuests}
+      />
+    </div>
+  );
+}
 // ─── WORKOUT LOGGER ───────────────────────────────────────────────────────────
 function WorkoutLogger({ workoutLogs, setWorkoutLogs, workoutPlan: plan, onBack }) {
   const [selectedWorkoutDate, setSelectedWorkoutDate] = useState(todayKey());
@@ -4864,7 +4881,10 @@ function AIReviewCard({ logs, workoutLogs, foodLogs, checkinLogs, journalLogs, x
     const shadowModeActive = (() => { try { return window.__shadowMode || false; } catch { return false; } })();
     const shadowTone = shadowModeActive ? " SHADOW MODE active — be significantly harsher, address them exclusively as their alter ego." : "";
     const userGoals = (storedProfile?.goals || []).slice(0, 4).join(", ");
+    const rankInfo = getCurrentRank(totalXP);
     return `You are a personal coach reviewing ${period.label.toLowerCase()} data for ${userName}, focused on physique, discipline, and self-improvement.${alterEgo ? " " + alterEgo : ""}${userGoals ? ` Their goals include: ${userGoals}.` : ""}${shadowTone}
+
+PLAYER STATUS: Rank ${rankInfo.rank} — ${rankInfo.title}
 
 DATA (last ${days} days):
 - Overall habit completion: ${habitCompletion}%
@@ -4881,12 +4901,22 @@ DATA (last ${days} days):
 JOURNAL ENTRIES:
 ${journalEntries || "No journal entries this period."}
 
-Write a ${period.label.toLowerCase()} review. Be balanced and motivating but brutally honest. Structure it as:
-1. PERFORMANCE SUMMARY (2-3 sentences, key numbers)
-2. WHAT'S WORKING (specific patterns you noticed)
-3. WHAT NEEDS WORK (specific weak points)
-4. KEY INSIGHT (one powerful observation connecting multiple data points)
-5. NEXT ${period.label.toUpperCase()} FOCUS (2-3 specific actionable targets)
+Write a ${period.label.toLowerCase()} review. Be balanced and motivating but brutally honest. Structure it EXACTLY as:
+
+**PERFORMANCE SUMMARY**
+(2-3 sentences, key numbers)
+
+**WHAT'S WORKING**
+(specific patterns you noticed)
+
+**WHAT NEEDS WORK**
+(specific weak points)
+
+**KEY INSIGHT**
+(one powerful observation connecting multiple data points)
+
+**${period.label.toUpperCase()} TARGETS**
+(2-3 specific actionable targets)
 
 Keep it concise, direct, masculine. No fluff. Talk to him like a coach who believes in him but won't coddle him.`;
   }
