@@ -306,6 +306,15 @@ const DEFAULT_PROFILE = {
   name: "", gender: null, age: "", height: "", weight: "",
   struggles: [], goals: [], alterEgo: { name: "", title: "" },
   onboardingComplete: false,
+  targets: {
+    weightGoal: 65,
+    proteinTarget: 178,
+    calorieTarget: 3030,
+    startWeight: 40,
+    nofapDeadline: "2027-01-14",
+    sleepTime: "23:00",
+    wakeTime: "06:00",
+  },
 };
 const MOOD_LABELS = ["Dead Inside", "Struggling", "Holding On", "Locked In", "Unstoppable"];
 const ENERGY_LABELS = ["Drained", "Low", "Decent", "Charged", "On Fire"];
@@ -718,7 +727,7 @@ const DEFAULT_SPIRITUAL = [
 function OnboardingFlow({ onComplete }) {
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState({ ...DEFAULT_PROFILE });
-  const TOTAL_STEPS = 6;
+  const TOTAL_STEPS = 7;
 
   const isFemale = profile.gender === "female";
   const OC = isFemale ? THEME_FEMALE : THEME_MALE;
@@ -1046,7 +1055,59 @@ function OnboardingFlow({ onComplete }) {
       </div>
     </div>
   );
-
+// ── Step 6: Goals & Targets ──
+  if (step === 6) {
+    const t = profile.targets || DEFAULT_PROFILE.targets;
+    const updateTarget = (key, val) => setProfile(p => ({ ...p, targets: { ...(p.targets || DEFAULT_PROFILE.targets), [key]: val } }));
+    return (
+      <div style={containerStyle}>
+        <div style={{ flex: 1 }} />
+        <div style={sheetStyle}>
+          <ProgressDots />
+          <Heading>Your targets.</Heading>
+          <Sub>Set your personal goals. You can change these anytime in Settings.</Sub>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[
+                { label: "Weight Goal", key: "weightGoal", placeholder: "65", suffix: "kg" },
+                { label: "Start Weight", key: "startWeight", placeholder: "40", suffix: "kg" },
+                { label: "Protein Target", key: "proteinTarget", placeholder: "178", suffix: "g/day" },
+                { label: "Calorie Target", key: "calorieTarget", placeholder: "3030", suffix: "kcal" },
+              ].map(({ label, key, placeholder, suffix }) => (
+                <div key={key}>
+                  <div style={labelStyle}>{label}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, background: OC.faint, border: `1px solid ${OC.border}`, borderRadius: 10, padding: "10px 10px" }}>
+                    <input type="number" style={{ background: "transparent", border: "none", color: OC.text, fontFamily: "inherit", fontSize: 14, outline: "none", width: "100%" }} placeholder={placeholder} value={t[key] || ""} onChange={e => updateTarget(key, parseFloat(e.target.value) || 0)} />
+                    <span style={{ fontSize: 9, color: OC.muted, flexShrink: 0 }}>{suffix}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div>
+              <div style={labelStyle}>NoFap Deadline</div>
+              <input type="date" style={{ ...inputStyle, width: "100%" }} value={t.nofapDeadline || "2027-01-14"} onChange={e => updateTarget("nofapDeadline", e.target.value)} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <div style={labelStyle}>Sleep By</div>
+                <input type="time" style={{ ...inputStyle, width: "100%" }} value={t.sleepTime || "23:00"} onChange={e => updateTarget("sleepTime", e.target.value)} />
+              </div>
+              <div>
+                <div style={labelStyle}>Wake At</div>
+                <input type="time" style={{ ...inputStyle, width: "100%" }} value={t.wakeTime || "06:00"} onChange={e => updateTarget("wakeTime", e.target.value)} />
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={back} style={btnSecondary}>← Back</button>
+           <button onClick={next} style={btnPrimary}>
+            Set Your Targets →
+          </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return null;
 }
 function StorageGuard() {
@@ -2109,18 +2170,24 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
       <div style={{ background: `${SLEEP_COLOR}12`, border: `1px solid ${SLEEP_COLOR}20`, borderRadius: 8, padding: "8px 12px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ fontSize: 11, color: C.muted }}>Target</div>
         <div style={{ display: "flex", gap: 14 }}>
-          {[["11:00 PM","Sleep by"],["6:00 AM","Wake at"],["7h","Duration"]].map(([val, sub]) => (
+          {(() => {
+          const sp = (() => { try { const v = localStorage.getItem("anant_v3_profile"); return v ? JSON.parse(v) : null; } catch { return null; } })();
+          const st = sp?.targets?.sleepTime || "23:00";
+          const wt = sp?.targets?.wakeTime || "06:00";
+          const fmt = (t) => { const [h,m] = t.split(":").map(Number); const ap = h >= 12 ? "PM" : "AM"; const hh = h > 12 ? h-12 : h === 0 ? 12 : h; return `${hh}:${String(m).padStart(2,"0")} ${ap}`; };
+          return [[ fmt(st),"Sleep by"],[fmt(wt),"Wake at"],["7h","Duration"]].map(([val, sub]) => (
             <div key={sub} style={{ textAlign: "center" }}>
               <div style={{ fontSize: 12, color: SLEEP_COLOR }}>{val}</div>
               <div style={{ fontSize: 9, color: C.muted }}>{sub}</div>
             </div>
-          ))}
+          ));
+        })()}
         </div>
       </div>
 
       {/* Checkboxes */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-        {[{ key: "sleptOnTime", val: currentSleptOnTime, label: "Slept by 11:00 PM" }, { key: "wokeOnTime", val: currentWokeOnTime, label: "Woke at 6:00 AM" }].map(({ key, val, label }) => (
+        {[{ key: "sleptOnTime", val: sleptOnTime, label: (() => { try { const p = JSON.parse(localStorage.getItem("anant_v3_profile") || "{}"); const t = p?.targets?.sleepTime || "23:00"; const [h,m] = t.split(":").map(Number); const ap = h>=12?"PM":"AM"; const hh=h>12?h-12:h===0?12:h; return `Slept by ${hh}:${String(m).padStart(2,"0")} ${ap}`; } catch { return "Slept by 11:00 PM"; } })() }, { key: "wokeOnTime", val: wokeOnTime, label: (() => { try { const p = JSON.parse(localStorage.getItem("anant_v3_profile") || "{}"); const t = p?.targets?.wakeTime || "06:00"; const [h,m] = t.split(":").map(Number); const ap = h>=12?"PM":"AM"; const hh=h>12?h-12:h===0?12:h; return `Woke at ${hh}:${String(m).padStart(2,"0")} ${ap}`; } catch { return "Woke at 6:00 AM"; } })() }].map(({ key, val, label }) => (
           <div key={key} onClick={() => updateEntry({ [key]: !val })} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 10, cursor: "pointer", background: val ? `${SLEEP_COLOR}12` : C.faint, border: `1px solid ${val ? SLEEP_COLOR + "40" : C.border}`, transition: "all 0.2s" }}>
             <div style={{ width: 22, height: 22, borderRadius: 6, background: val ? SLEEP_COLOR : "transparent", border: `2px solid ${val ? SLEEP_COLOR : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               {val && <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</span>}
@@ -2746,7 +2813,7 @@ function DataBackupCard({ logs, workoutLogs, foodLogs, weightLogs, xpLogs, achie
        
           
 // ─── LOG HUB ──────────────────────────────────────────────────────────────────
-function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs, setXpLogs, checkinLogs, journalLogs, setJournalLogs, aiReviews, setAiReviews, setAchievements, achievements, sleepLogs, setSleepLogs, measurements, setMeasurements, quests, setQuests, selectedDate }) {
+function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLogs, setWeightLogs, logs, setLogs, foodLogs, setFoodLogs, nofapStreak, setNofapStart, xpLogs, setXpLogs, checkinLogs, journalLogs, setJournalLogs, aiReviews, setAiReviews, setAchievements, achievements, sleepLogs, setSleepLogs, measurements, setMeasurements, quests, setQuests, selectedDate, userProfile }) {
   const today = todayKey();
   const todayW = workoutLogs[today] || {};
   const totalSets = Object.values(todayW).reduce((a, ex) => a + (ex.sets?.length || 0), 0);
@@ -2761,6 +2828,7 @@ function LogHub({ setSubView, todayMacros, workoutLogs, setWorkoutLogs, weightLo
   const days = last7();
   const weekHabitPct = Math.round((days.reduce((a, d) => a + HABITS.filter(h => logs[d]?.[h.id]?.done).length, 0) / (HABITS.length * 7)) * 100);
   const weekProtein = Math.round(days.reduce((a, d) => { const e = foodLogs[d] || []; return Array.isArray(e) ? a + e.reduce((b, x) => b + (x.protein || 0), 0) : a; }, 0) / 7);
+  const targets = userProfile?.targets || DEFAULT_PROFILE.targets;
   const weekWorkouts = days.filter(d => Object.values(workoutLogs[d] || {}).some(ex => ex.sets?.length > 0)).length;
   const weightChange = weights.length >= 2 ? (weights[weights.length - 1][1] - weights[weights.length - 2][1]).toFixed(1) : null;
 
@@ -3140,6 +3208,66 @@ function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode
   );
 }
 
+function GoalsEditor({ userProfile, setUserProfile, accent }) {
+  const t = userProfile.targets || DEFAULT_PROFILE.targets;
+  const [form, setForm] = useState({ ...DEFAULT_PROFILE.targets, ...t });
+  const [saved, setSaved] = useState(false);
+
+  function updateForm(key, val) { setForm(p => ({ ...p, [key]: val })); }
+
+  function save() {
+    setUserProfile(p => ({ ...p, targets: { ...form } }));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  const inputStyle = {
+    background: C.faint, border: `1px solid ${C.border}`,
+    borderRadius: 10, padding: "11px 14px", color: C.text,
+    fontFamily: "inherit", fontSize: 13, outline: "none", width: "100%",
+  };
+  const labelStyle = { fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 };
+
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${accent}20`, borderRadius: 14, padding: 16, marginBottom: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {[
+            { label: "Weight Goal", key: "weightGoal", suffix: "kg", type: "number" },
+            { label: "Start Weight", key: "startWeight", suffix: "kg", type: "number" },
+            { label: "Protein Target", key: "proteinTarget", suffix: "g/day", type: "number" },
+            { label: "Calorie Target", key: "calorieTarget", suffix: "kcal", type: "number" },
+          ].map(({ label, key, suffix, type }) => (
+            <div key={key}>
+              <div style={labelStyle}>{label}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, background: C.faint, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 10px" }}>
+                <input type={type} style={{ background: "transparent", border: "none", color: C.text, fontFamily: "inherit", fontSize: 13, outline: "none", width: "100%" }} value={form[key] || ""} onChange={e => updateForm(key, parseFloat(e.target.value) || 0)} />
+                <span style={{ fontSize: 9, color: C.muted, flexShrink: 0 }}>{suffix}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div>
+          <div style={labelStyle}>NoFap Deadline</div>
+          <input type="date" style={inputStyle} value={form.nofapDeadline || "2027-01-14"} onChange={e => updateForm("nofapDeadline", e.target.value)} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div>
+            <div style={labelStyle}>Sleep By</div>
+            <input type="time" style={inputStyle} value={form.sleepTime || "23:00"} onChange={e => updateForm("sleepTime", e.target.value)} />
+          </div>
+          <div>
+            <div style={labelStyle}>Wake At</div>
+            <input type="time" style={inputStyle} value={form.wakeTime || "06:00"} onChange={e => updateForm("wakeTime", e.target.value)} />
+          </div>
+        </div>
+        <button onClick={save} style={{ background: saved ? "#4CAF50" : accent, border: "none", borderRadius: 10, padding: "12px", color: "#000", fontSize: 12, fontFamily: "inherit", fontWeight: 600, cursor: "pointer" }}>
+          {saved ? "✓ Saved" : "Save Targets"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
 function SettingsPage({ userProfile, setUserProfile, onBack, isFemale, onResetOnboarding }) {
@@ -3170,6 +3298,9 @@ function SettingsPage({ userProfile, setUserProfile, onBack, isFemale, onResetOn
 
       <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", margin: "20px 0 10px", paddingLeft: 4 }}>App</div>
       <Row icon="◈" label="Re-run Onboarding" value="Reset your profile setup" onClick={onResetOnboarding} />
+
+    <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", margin: "20px 0 10px", paddingLeft: 4 }}>Goals & Targets</div>
+      <GoalsEditor userProfile={userProfile} setUserProfile={setUserProfile} accent={accent} />
 
       <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", margin: "20px 0 10px", paddingLeft: 4 }}>Notifications</div>
       <Row icon="☽" label="Daily Check-in Reminder" value="Coming soon" />
@@ -4509,7 +4640,9 @@ function NofapPlan({ nofapStreak, setNofapStart, nofapHistory, setNofapHistory }
   const [selectedTriggers, setSelectedTriggers] = useState([]);
   const [relapseNote, setRelapseNote] = useState("");
   const history = Array.isArray(nofapHistory) ? nofapHistory : [];
-  const deadline = new Date("2027-01-14");
+  const storedProfile = (() => { try { const v = localStorage.getItem("anant_v3_profile"); return v ? JSON.parse(v) : null; } catch { return null; } })();
+  const deadlineStr = storedProfile?.targets?.nofapDeadline || "2027-01-14";
+  const deadline = new Date(deadlineStr);
   const daysToDeadline = Math.ceil((deadline - new Date()) / (1000 * 60 * 60 * 24));
   const longestStreak = history.length ? Math.max(...history.map(h => h.streak), nofapStreak) : nofapStreak;
   const totalCleanDays = history.reduce((a, h) => a + h.streak, 0) + nofapStreak;
