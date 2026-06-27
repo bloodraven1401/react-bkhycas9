@@ -438,20 +438,30 @@ function useLS(key, def) {
 }
 
 // ─── AI FOOD SEARCH ───────────────────────────────────────────────────────────
-async function searchFoodNutrition(query) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+const SUPABASE_AI_URL = "https://xxhmytltastgfgrjrrnf.supabase.co/functions/v1/ai-proxy";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4aG15dGx0YXN0Z2Zncmpycm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NzE4MjgsImV4cCI6MjA5NjM0NzgyOH0.2Qjm0tzIFhIXj3FjCO9Mxy_FdM84huDarSNdy6w5PpA";
+
+async function callAI(messages, max_tokens = 1000) {
+  const res = await fetch(SUPABASE_AI_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+    },
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{
-        role: "user",
-        content: `Give me the nutritional info for: "${query}". Return ONLY a JSON array of 1-4 matching food items (no markdown, no backticks, just raw JSON). Format: [{"name":"Food Name (amount)","calories":0,"protein":0,"carbs":0,"fat":0,"fibre":0,"amount":"100g"}] Use realistic Indian food database values.`
-      }]
-    })
+      max_tokens,
+      messages,
+    }),
   });
-  const data = await res.json();
+  return res.json();
+}
+
+async function searchFoodNutrition(query) {
+  const data = await callAI([{
+    role: "user",
+    content: `Give me the nutritional info for: "${query}". Return ONLY a JSON array of 1-4 matching food items (no markdown, no backticks, just raw JSON). Format: [{"name":"Food Name (amount)","calories":0,"protein":0,"carbs":0,"fat":0,"fibre":0,"amount":"100g"}] Use realistic Indian food database values.`
+  }]);
   const text = data.content?.[0]?.text || "[]";
   try { return JSON.parse(text.replace(/```json|```/g, "").trim()); } catch { return []; }
 }
@@ -4923,16 +4933,7 @@ Keep it concise, direct, masculine. No fluff. Talk to him like a coach who belie
   async function generateReview(period) {
     setLoading(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: buildPrompt(period) }]
-        })
-      });
-      const data = await res.json();
+     const data = await callAI([{ role: "user", content: buildPrompt(period) }], 1000);
       const text = data.content?.[0]?.text || "Could not generate review.";
       const reviewKey = `${period.key}_${todayKey()}`;
       setAiReviews(p => ({ ...p, [reviewKey]: { text, date: todayKey(), period: period.key } }));
