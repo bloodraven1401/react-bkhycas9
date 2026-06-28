@@ -1127,6 +1127,27 @@ function OnboardingFlow({ onComplete }) {
   }
   return null;
 }
+function CrashGuard() {
+  useEffect(() => {
+    window.onerror = (msg, src, line, col, err) => {
+      try {
+        const log = JSON.parse(localStorage.getItem("anant_v3_crash_log") || "[]");
+        log.push({ time: new Date().toISOString(), error: String(msg), src, line });
+        localStorage.setItem("anant_v3_crash_log", JSON.stringify(log.slice(-10)));
+      } catch {}
+    };
+    window.onunhandledrejection = (e) => {
+      try {
+        const log = JSON.parse(localStorage.getItem("anant_v3_crash_log") || "[]");
+        log.push({ time: new Date().toISOString(), error: String(e.reason), type: "promise" });
+        localStorage.setItem("anant_v3_crash_log", JSON.stringify(log.slice(-10)));
+      } catch {}
+    };
+    return () => { window.onerror = null; window.onunhandledrejection = null; };
+  }, []);
+  return null;
+}
+
 function StorageGuard() {
   useEffect(() => {
     const KEYS = [
@@ -1162,16 +1183,33 @@ function StorageGuard() {
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    try {
+      const log = JSON.parse(localStorage.getItem("anant_v3_crash_log") || "[]");
+      log.push({ time: new Date().toISOString(), error: error?.message, stack: error?.stack?.slice(0, 300), component: info?.componentStack?.slice(0, 200) });
+      localStorage.setItem("anant_v3_crash_log", JSON.stringify(log.slice(-10)));
+    } catch {}
   }
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 24, color: "#C9A96E", fontFamily: "'DM Mono',monospace", fontSize: 12 }}>
-          Something went wrong loading this section. Pull to refresh.
+        <div style={{ padding: 24, background: "#07070A", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'DM Mono',monospace" }}>
+          <div style={{ fontSize: 32, marginBottom: 16 }}>⚠</div>
+          <div style={{ fontSize: 14, color: "#C9A96E", marginBottom: 8, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>Something crashed.</div>
+          <div style={{ fontSize: 11, color: "#3A3A48", marginBottom: 24, textAlign: "center", lineHeight: 1.7, maxWidth: 280 }}>
+            {this.props.label ? `The ${this.props.label} section ran into an error.` : "A section ran into an error."} Your data is safe.
+          </div>
+          <button onClick={() => this.setState({ hasError: false, error: null })} style={{ background: "#C9A96E", border: "none", borderRadius: 10, padding: "12px 24px", color: "#000", fontSize: 12, fontFamily: "inherit", cursor: "pointer", marginBottom: 12 }}>
+            Try Again
+          </button>
+          <button onClick={() => window.location.reload()} style={{ background: "none", border: "1px solid #16161E", borderRadius: 10, padding: "10px 24px", color: "#3A3A48", fontSize: 11, fontFamily: "inherit", cursor: "pointer" }}>
+            Reload App
+          </button>
         </div>
       );
     }
@@ -1501,6 +1539,7 @@ if (subView === "backup") return <BackupFullView logs={logs} workoutLogs={workou
     <ThemeContext.Provider value={{ theme: activeTheme, isFemale }}>
     <div style={{ minHeight: "100dvh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", width: "100vw", maxWidth: "100%", margin: "0 auto", paddingBottom: 80, overflowX: "hidden", position: "relative" }}>
       <StorageGuard />
+      <CrashGuard />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:wght@600;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
@@ -1733,11 +1772,21 @@ if (subView === "backup") return <BackupFullView logs={logs} workoutLogs={workou
 
       {/* Views */}
       <div className="fade" key={view} style={{ padding: "20px 20px 0" }}>
-        {view === "dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
-        {view === "habits"    && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
-        {view === "routines"  && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} workoutPlan={workoutPlan} setWorkoutPlan={setWorkoutPlan} skincarePlan={skincarePlan} setSkincarePlan={setSkincarePlan} dietPlan={dietPlan} setDietPlan={setDietPlan} haircarePlan={haircarePlan} setHaircarePlan={setHaircarePlan} spiritualPlan={spiritualPlan} setSpiritualPlan={setSpiritualPlan} />}
-        {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} setJournalLogs={setJournalLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} setAchievements={setAchievements} achievements={achievements} sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} measurements={measurements} setMeasurements={setMeasurements} quests={quests} setQuests={setQuests} selectedDate={selectedDate} />}
-        {view === "stats"     && <StatsView xpLogs={xpLogs} achievements={achievements} logs={logs} getStreak={getStreak} nofapStreak={getNofapStreak()} />}
+        <ErrorBoundary label="Dashboard">
+          {view === "dashboard" && <Dashboard logs={logs} nofapStreak={getNofapStreak()} weeklyPct={getWeeklyPct()} todayPct={getTodayPct()} getStreak={getStreak} setView={setView} setSelectedRoutine={setSelectedRoutine} todayLogs={todayLogs} setSubView={setSubView} todayMacros={getTodayMacros()} />}
+        </ErrorBoundary>
+        <ErrorBoundary label="Today">
+          {view === "habits" && <HabitsView todayLogs={todayLogs} toggleHabit={toggleHabit} setQty={setQty} getStreak={getStreak} />}
+        </ErrorBoundary>
+        <ErrorBoundary label="Plans">
+          {view === "routines" && <RoutinesView selected={selectedRoutine} setSelected={setSelectedRoutine} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} nofapHistory={nofapHistory} setNofapHistory={setNofapHistory} workoutPlan={workoutPlan} setWorkoutPlan={setWorkoutPlan} skincarePlan={skincarePlan} setSkincarePlan={setSkincarePlan} dietPlan={dietPlan} setDietPlan={setDietPlan} haircarePlan={haircarePlan} setHaircarePlan={setHaircarePlan} spiritualPlan={spiritualPlan} setSpiritualPlan={setSpiritualPlan} />}
+        </ErrorBoundary>
+        <ErrorBoundary label="Log">
+          {view === "log" && <LogHub setSubView={setSubView} todayMacros={getTodayMacros()} workoutLogs={workoutLogs} setWorkoutLogs={setWorkoutLogs} weightLogs={weightLogs} setWeightLogs={setWeightLogs} logs={logs} setLogs={setLogs} foodLogs={foodLogs} setFoodLogs={setFoodLogs} nofapStreak={getNofapStreak()} setNofapStart={setNofapStart} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} setJournalLogs={setJournalLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} setAchievements={setAchievements} achievements={achievements} sleepLogs={sleepLogs} setSleepLogs={setSleepLogs} measurements={measurements} setMeasurements={setMeasurements} quests={quests} setQuests={setQuests} selectedDate={selectedDate} userProfile={userProfile} />}
+        </ErrorBoundary>
+        <ErrorBoundary label="Rank">
+          {view === "stats" && <StatsView xpLogs={xpLogs} achievements={achievements} logs={logs} getStreak={getStreak} nofapStreak={getNofapStreak()} />}
+        </ErrorBoundary>
       </div>
 
       {/* Bottom Nav */}
@@ -3447,9 +3496,29 @@ function AboutPage({ onBack }) {
         </div>
       ))}
 
-      <div style={{ marginTop: 32, textAlign: "center" }}>
+     <div style={{ marginTop: 32, textAlign: "center" }}>
         <div style={{ fontSize: 10, color: C.muted }}>Made with discipline.</div>
         <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>v3.0 · 2026</div>
+        {(() => {
+          try {
+            const log = JSON.parse(localStorage.getItem("anant_v3_crash_log") || "[]");
+            if (!log.length) return null;
+            return (
+              <div style={{ marginTop: 20, background: "#FF000008", border: "1px solid #FF000020", borderRadius: 10, padding: 12, textAlign: "left" }}>
+                <div style={{ fontSize: 9, color: "#FF0000", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+                  <span>Crash Log ({log.length})</span>
+                  <button onClick={() => { localStorage.removeItem("anant_v3_crash_log"); window.location.reload(); }} style={{ background: "none", border: "none", color: "#FF000070", fontSize: 9, fontFamily: "inherit", cursor: "pointer" }}>Clear</button>
+                </div>
+                {log.slice(-3).reverse().map((e, i) => (
+                  <div key={i} style={{ fontSize: 9, color: C.muted, marginBottom: 6, lineHeight: 1.5 }}>
+                    <div style={{ color: "#FF000060" }}>{new Date(e.time).toLocaleString()}</div>
+                    <div>{e.error?.slice(0, 100)}</div>
+                  </div>
+                ))}
+              </div>
+            );
+          } catch { return null; }
+        })()}
       </div>
     </div>
   );
