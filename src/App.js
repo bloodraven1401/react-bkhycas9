@@ -132,12 +132,29 @@ function AuthModal({ onClose, onAuthComplete }) {
         <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", background: "#C9A96E", border: "none", borderRadius: 10, padding: "13px", color: "#000", fontSize: 13, fontFamily: "inherit", fontWeight: 600, marginBottom: 12, opacity: loading ? 0.6 : 1 }}>
           {loading ? "..." : mode === "signin" ? "Sign In" : "Create Account"}
         </button>
-        <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); setUsername(""); setEmail(""); setPassword(""); }} style={{ width: "100%", background: "none", border: "1px solid #16161E", borderRadius: 10, padding: "11px", color: "#3A3A48", fontSize: 12, fontFamily: "inherit", marginBottom: 8 }}>
+       <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); setUsername(""); setEmail(""); setPassword(""); }} style={{ width: "100%", background: "none", border: "1px solid #16161E", borderRadius: 10, padding: "11px", color: "#3A3A48", fontSize: 12, fontFamily: "inherit", marginBottom: 8 }}>
           {mode === "signin" ? "No account? Sign up" : "Have an account? Sign in"}
         </button>
-        <button onClick={onClose} style={{ width: "100%", background: "none", border: "none", color: "#3A3A48", fontSize: 11, fontFamily: "inherit" }}>
+        {mode === "signin" && (
+          <button onClick={async () => {
+            if (!email.trim()) { setMsg("Enter your email above first."); return; }
+            setLoading(true);
+            const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+              redirectTo: "https://react-bkhycas9.vercel.app"
+            });
+            setMsg(error ? error.message : "Password reset email sent! Check your inbox.");
+            setLoading(false);
+          }} style={{ width: "100%", background: "none", border: "none", color: "#3A3A48", fontSize: 11, fontFamily: "inherit", marginBottom: 4, cursor: "pointer" }}>
+            Forgot password?
+          </button>
+        )}
+        <button onClick={onClose} style={{ width: "100%", background: "none", border: "none", color: "#3A3A48", fontSize: 11, fontFamily: "inherit", marginBottom: 12 }}>
           Continue as guest →
         </button>
+        <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
+          <button onClick={() => { onClose(); setTimeout(() => window.dispatchEvent(new CustomEvent("navigate", { detail: "privacy" })), 100); }} style={{ background: "none", border: "none", color: "#3A3A48", fontSize: 9, fontFamily: "inherit", cursor: "pointer", textDecoration: "underline" }}>Privacy Policy</button>
+          <button onClick={() => { onClose(); setTimeout(() => window.dispatchEvent(new CustomEvent("navigate", { detail: "terms" })), 100); }} style={{ background: "none", border: "none", color: "#3A3A48", fontSize: 9, fontFamily: "inherit", cursor: "pointer", textDecoration: "underline" }}>Terms of Service</button>
+        </div>
       </div>
     </div>
   );
@@ -1168,6 +1185,11 @@ export default function App() {
   const [supaUser, setSupaUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authGatePassed, setAuthGatePassed] = useLS("anant_v3_auth_gate", false);
+  useEffect(() => {
+  const handler = (e) => setSubView(e.detail);
+  window.addEventListener("navigate", handler);
+  return () => window.removeEventListener("navigate", handler);
+}, []); // eslint-disable-line
 useEffect(() => {
   supabase.auth.getSession().then(({ data: { session } }) => {
     setSupaUser(session?.user ?? null);
@@ -1426,8 +1448,11 @@ const [showCheckin, setShowCheckin] = useState(false);
   selectedDate={selectedDate} 
 />;
  if (subView === "profile") return <ProfilePage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} shadowMode={shadowMode} setShadowMode={setShadowMode} supaUser={supaUser} lightMode={lightMode} setLightMode={setLightMode} />;
-  if (subView === "settings") return <SettingsPage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} onResetOnboarding={() => { setShowOnboarding(true); setSubView(null); }} />;
-  if (subView === "about") return <AboutPage onBack={() => setSubView(null)} />; if (subView === "backup") return <BackupFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={setCheckinLogs} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setQuests={setQuests} onBack={() => setSubView(null)} />;
+  if (subView === "settings") return <SettingsPage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} onResetOnboarding={() => { setShowOnboarding(true); setSubView(null); }} onNavigate={(v) => setSubView(v)} />;
+  if (subView === "about") return <AboutPage onBack={() => setSubView(null)} />;
+  if (subView === "privacy") return <PrivacyPolicyPage onBack={() => setSubView(null)} />;
+  if (subView === "terms") return <TermsPage onBack={() => setSubView(null)} />;
+if (subView === "backup") return <BackupFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} weightLogs={weightLogs} xpLogs={xpLogs} achievements={achievements} sleepLogs={sleepLogs} measurements={measurements} checkinLogs={checkinLogs} journalLogs={journalLogs} aiReviews={aiReviews} quests={quests} setLogs={setLogs} setWorkoutLogs={setWorkoutLogs} setFoodLogs={setFoodLogs} setWeightLogs={setWeightLogs} setXpLogs={setXpLogs} setAchievements={setAchievements} setSleepLogs={setSleepLogs} setMeasurements={setMeasurements} setCheckinLogs={setCheckinLogs} setJournalLogs={setJournalLogs} setAiReviews={setAiReviews} setQuests={setQuests} onBack={() => setSubView(null)} />;
 
   // Auth gate — shown before anything else if user hasn't passed it yet
   if (!authGatePassed) return (
@@ -2998,6 +3023,69 @@ function DemonCard({ demon }) {
   );
 }
 
+function DeleteAccountButton({ supaUser, onBack }) {
+  const [step, setStep] = useState("idle"); // idle | confirm | deleting | done
+  const [deleteData, setDeleteData] = useState(true);
+
+  async function handleDelete() {
+    setStep("deleting");
+    try {
+      if (deleteData) {
+        await supabase.from("user_data").delete().eq("user_id", supaUser.id);
+      }
+      // Call edge function to delete auth user (requires service role)
+      const { error } = await supabase.functions.invoke("delete-user", {
+        body: { user_id: supaUser.id }
+      });
+      if (error) throw error;
+      await supabase.auth.signOut();
+      // Clear all local data
+      Object.keys(localStorage).filter(k => k.startsWith("anant_v3_")).forEach(k => localStorage.removeItem(k));
+      setStep("done");
+      setTimeout(() => { onBack(); window.location.reload(); }, 2000);
+    } catch (e) {
+      console.error(e);
+      setStep("confirm");
+      alert("Could not delete account. Please contact support.");
+    }
+  }
+
+  if (step === "done") return (
+    <div style={{ background: "#FF000010", border: "1px solid #FF000030", borderRadius: 10, padding: "12px 14px", textAlign: "center", fontSize: 12, color: "#FF0000" }}>
+      Account deleted. Goodbye.
+    </div>
+  );
+
+  if (step === "confirm") return (
+    <div style={{ background: "#FF000008", border: "1px solid #FF000025", borderRadius: 12, padding: 14 }}>
+      <div style={{ fontSize: 11, color: "#FF0000", marginBottom: 8, fontWeight: 600 }}>⚠ Delete Account</div>
+      <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.6, marginBottom: 12 }}>
+        This is permanent and cannot be undone.
+      </div>
+      <div onClick={() => setDeleteData(d => !d)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", cursor: "pointer", marginBottom: 12 }}>
+        <div style={{ width: 18, height: 18, borderRadius: 4, background: deleteData ? "#FF0000" : "transparent", border: `2px solid ${deleteData ? "#FF0000" : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          {deleteData && <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>✓</span>}
+        </div>
+        <span style={{ fontSize: 12, color: C.muted }}>Also delete all my data from the server</span>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => setStep("idle")} style={{ flex: 1, background: "none", border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px", color: C.muted, fontSize: 12, fontFamily: "inherit", cursor: "pointer" }}>Cancel</button>
+        <button onClick={handleDelete} style={{ flex: 1, background: "#FF0000", border: "none", borderRadius: 8, padding: "9px", color: "#fff", fontSize: 12, fontFamily: "inherit", cursor: "pointer", fontWeight: 600 }}>Delete Forever</button>
+      </div>
+    </div>
+  );
+
+  if (step === "deleting") return (
+    <div style={{ textAlign: "center", padding: "12px 0", fontSize: 11, color: "#FF0000" }}>Deleting account...</div>
+  );
+
+  return (
+    <button onClick={() => setStep("confirm")} style={{ width: "100%", background: "none", border: `1px solid #FF000030`, borderRadius: 10, padding: "10px", color: "#FF000070", fontSize: 11, fontFamily: "inherit", cursor: "pointer" }}>
+      Delete Account
+    </button>
+  );
+}
+
 // ─── PROFILE PAGE ─────────────────────────────────────────────────────────────
 function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode, setShadowMode, supaUser, lightMode, setLightMode }) {
   const [editing, setEditing] = useState(false);
@@ -3163,9 +3251,10 @@ function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode
         <div style={{ marginBottom: 16, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
           <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>Account</div>
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>{supaUser.email}</div>
-          <button onClick={() => { supabase.auth.signOut(); onBack(); }} style={{ width: "100%", background: "none", border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px", color: C.nofap, fontSize: 12, fontFamily: "inherit", cursor: "pointer" }}>
+          <button onClick={() => { supabase.auth.signOut(); onBack(); }} style={{ width: "100%", background: "none", border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px", color: C.nofap, fontSize: 12, fontFamily: "inherit", cursor: "pointer", marginBottom: 8 }}>
             Sign Out
           </button>
+          <DeleteAccountButton supaUser={supaUser} onBack={onBack} />
         </div>
       )}
 
@@ -3270,7 +3359,7 @@ function GoalsEditor({ userProfile, setUserProfile, accent }) {
 }
 
 // ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
-function SettingsPage({ userProfile, setUserProfile, onBack, isFemale, onResetOnboarding }) {
+function SettingsPage({ userProfile, setUserProfile, onBack, isFemale, onResetOnboarding, onNavigate }) {
   const accent = isFemale ? THEME_FEMALE.accent : THEME_MALE.accent;
 
   const Row = ({ icon, label, value, onClick, danger }) => (
@@ -3315,6 +3404,10 @@ function SettingsPage({ userProfile, setUserProfile, onBack, isFemale, onResetOn
       <div style={{ marginTop: 32, textAlign: "center" }}>
         <div style={{ fontSize: 10, color: C.muted }}>Self System · Built for growth</div>
         <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>v3.0 · Your data stays on your device</div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 12 }}>
+          <button onClick={() => setSubViewRef?.("privacy")} style={{ background: "none", border: "none", color: C.muted, fontSize: 10, fontFamily: "inherit", cursor: "pointer", textDecoration: "underline" }}>Privacy Policy</button>
+          <button onClick={() => setSubViewRef?.("terms")} style={{ background: "none", border: "none", color: C.muted, fontSize: 10, fontFamily: "inherit", cursor: "pointer", textDecoration: "underline" }}>Terms of Service</button>
+        </div>
       </div>
     </div>
   );
@@ -5159,6 +5252,55 @@ Keep it concise, direct, masculine. No fluff. Talk to him like a coach who belie
   );
 }
 
+function PrivacyPolicyPage({ onBack }) {
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1, fontFamily: "inherit", cursor: "pointer" }}>← Back</button>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Privacy Policy</div>
+      </div>
+      <div style={{ fontSize: 10, color: C.muted, marginBottom: 24 }}>Last updated: June 2026</div>
+      {[
+        { title: "What we collect", body: "When you create an account, we store your email address and the data you log in the app (habits, workouts, sleep, journal entries, etc.) in our secure database hosted by Supabase. If you use the app as a guest, all data stays on your device only." },
+        { title: "How we use your data", body: "Your data is used solely to power your personal Self System experience — syncing across devices, generating AI Coach reviews, and tracking your progress. We never sell your data, share it with advertisers, or use it for any purpose other than running your account." },
+        { title: "AI Coach", body: "When you request an AI review, a summary of your habit and wellness data is sent to Anthropic's API to generate your coaching response. No personally identifying information (name, email) is sent. Anthropic's privacy policy applies to this processing." },
+        { title: "Data storage", body: "Your data is stored in Supabase (hosted on AWS). All data is encrypted at rest and in transit. We use Row Level Security to ensure only you can access your data." },
+        { title: "Data deletion", body: "You can delete your account and all associated data at any time from Profile → Delete Account. Guest users can clear their data from Data Backup → Reset." },
+        { title: "Contact", body: "For any privacy concerns, contact us through the app's feedback channels." },
+      ].map((s, i) => (
+        <div key={i} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 18, marginBottom: 10 }}>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, marginBottom: 8, color: C.accent }}>{s.title}</div>
+          <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.8 }}>{s.body}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TermsPage({ onBack }) {
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1, fontFamily: "inherit", cursor: "pointer" }}>← Back</button>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Terms of Service</div>
+      </div>
+      <div style={{ fontSize: 10, color: C.muted, marginBottom: 24 }}>Last updated: June 2026</div>
+      {[
+        { title: "Use of the app", body: "Self System is a personal habit tracking tool. You are responsible for the data you enter. The app is provided as-is for personal use only." },
+        { title: "Accounts", body: "You are responsible for keeping your account credentials secure. We are not liable for any loss resulting from unauthorized access to your account." },
+        { title: "AI Coach", body: "AI-generated coaching responses are for motivational and informational purposes only. They are not medical, psychological, or professional advice. Always consult a qualified professional for health decisions." },
+        { title: "Data", body: "You own your data. We process it only to provide the service. You can export or delete it at any time." },
+        { title: "Availability", body: "We do not guarantee uninterrupted availability of the service. We may update or change features at any time." },
+        { title: "Changes", body: "We may update these terms. Continued use of the app after changes constitutes acceptance of the new terms." },
+      ].map((s, i) => (
+        <div key={i} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 18, marginBottom: 10 }}>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, marginBottom: 8, color: C.accent }}>{s.title}</div>
+          <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.8 }}>{s.body}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
 function Ring({ value, size, color, label, sublabel }) {
