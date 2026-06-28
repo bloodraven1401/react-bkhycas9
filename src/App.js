@@ -1102,7 +1102,7 @@ function OnboardingFlow({ onComplete }) {
             </div>
            <div>
           <div style={labelStyle}>NoFap Deadline</div>
-          <input type="date" style={{ ...inputStyle, width: "auto", minWidth: "100%" }} value={form.nofapDeadline || "2027-01-14"} onChange={e => updateForm("nofapDeadline", e.target.value)} />
+          <input type="date" style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} value={form.nofapDeadline || "2027-01-14"} onChange={e => updateForm("nofapDeadline", e.target.value)} />
         </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
@@ -3343,11 +3343,11 @@ function GoalsEditor({ userProfile, setUserProfile, accent }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <div>
             <div style={labelStyle}>Sleep By</div>
-            <input type="time" style={{ ...inputStyle, width: "auto", minWidth: "100%" }} value={form.sleepTime || "23:00"} onChange={e => updateForm("sleepTime", e.target.value)} />
+            <input type="time" style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} value={form.sleepTime || "23:00"} onChange={e => updateForm("sleepTime", e.target.value)} />
           </div>
           <div>
             <div style={labelStyle}>Wake At</div>
-            <input type="time" style={{ ...inputStyle, width: "auto", minWidth: "100%" }} value={form.wakeTime || "06:00"} onChange={e => updateForm("wakeTime", e.target.value)} />
+            <input type="time" style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} value={form.wakeTime || "06:00"} onChange={e => updateForm("wakeTime", e.target.value)} />
           </div>
         </div>
         <button onClick={save} style={{ background: saved ? "#4CAF50" : accent, border: "none", borderRadius: 10, padding: "12px", color: "#000", fontSize: 12, fontFamily: "inherit", fontWeight: 600, cursor: "pointer" }}>
