@@ -15,7 +15,8 @@ async function pushToCloud(userId, key, value) {
     anant_v3_diet_plan: "diet_plan", anant_v3_haircare_plan: "haircare_plan",
     anant_v3_spiritual_plan: "spiritual_plan", anant_v3_nofap_history: "nofap_history",
     anant_v3_custom_habits: "custom_habits", anant_v3_plan_list: "plan_list",
-    anant_v3_custom_plans: "custom_plans", anant_v3_seasons: "seasons",
+   anant_v3_custom_plans: "custom_plans", anant_v3_seasons: "seasons",
+    anant_v3_ai_reviews: "ai_reviews", anant_v3_nofap_history: "nofap_history",
   }[key];
   if (!col) return;
   await supabase.from("user_data").upsert({ user_id: userId, [col]: value, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
@@ -33,8 +34,9 @@ async function pullFromCloud(userId, setters) {
     workout_plan: setters.setWorkoutPlan, skincare_plan: setters.setSkincarePlan,
     diet_plan: setters.setDietPlan, haircare_plan: setters.setHaircarePlan,
     spiritual_plan: setters.setSpiritualPlan, nofap_history: setters.setNofapHistory,
-    custom_habits: setters.setCustomHabits, plan_list: setters.setPlanList,
-    seasons: setters.setSeasons,
+   custom_habits: setters.setCustomHabits, plan_list: setters.setPlanList,
+    custom_plans: setters.setCustomPlans, seasons: setters.setSeasons,
+    ai_reviews: setters.setAiReviews, nofap_history: setters.setNofapHistory,
   };
   Object.entries(map).forEach(([col, setter]) => { if (data[col] && setter) setter(data[col]); });
 }
@@ -1241,13 +1243,13 @@ export default function App() {
 useEffect(() => {
   supabase.auth.getSession().then(({ data: { session } }) => {
     setSupaUser(session?.user ?? null);
-    if (session?.user) pullFromCloud(session.user.id, { setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setQuests, setUserProfile });
+    if (session?.user) pullFromCloud(session.user.id, { setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setQuests, setUserProfile, setCustomPlans, setAiReviews, setNofapHistory });
     if (session?.user) pushToCloud(session.user.id, "anant_v3_logs", logs);
   });
  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
     setSupaUser(session?.user ?? null);
     if (session?.user) {
-      pullFromCloud(session.user.id, { setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setQuests, setUserProfile });
+      pullFromCloud(session.user.id, { setLogs, setWorkoutLogs, setFoodLogs, setWeightLogs, setXpLogs, setAchievements, setSleepLogs, setMeasurements, setCheckinLogs, setJournalLogs, setQuests, setUserProfile, setCustomPlans, setAiReviews, setNofapHistory });
       const allKeys = [
         ["anant_v3_logs", logs], ["anant_v3_workout", workoutLogs],
         ["anant_v3_food", foodLogs], ["anant_v3_weight", weightLogs],
@@ -1353,6 +1355,7 @@ const [showCheckin, setShowCheckin] = useState(false);
   const [sleepLogs, setSleepLogs] = useLS("anant_v3_sleep", {});
   const [measurements, setMeasurements] = useLS("anant_v3_measurements", {});
   const [quests, setQuests] = useLS("anant_v3_quests", {});
+  const [customPlans, setCustomPlans] = useLS("anant_v3_custom_plans", {});
 
   useEffect(() => {
     const key = todayKey();
