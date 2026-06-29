@@ -5661,7 +5661,7 @@ function ResetProgress({
     );
   }
 
-  // Default return (the button)
+    // Default return (the button)
   return (
     <button 
       onClick={() => setShowConfirm(true)} 
@@ -5685,7 +5685,11 @@ function ResetProgress({
         <div style={{ fontSize: 13, color: "#FF0000" }}>Start New Season</div>
         <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>Reset progress · Archive this season's data</div>
       </div>
-      {seasons.length > 0 && <span style={{ marginLeft: "auto", fontSize: 10, color: C.muted }}>Season {seasons.length + 1}</span>}
+      {seasons.length > 0 && (
+        <span style={{ marginLeft: "auto", fontSize: 10, color: C.muted }}>
+          Season {seasons.length + 1}
+        </span>
+      )}
     </button>
   );
 }
