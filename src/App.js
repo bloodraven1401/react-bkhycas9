@@ -387,6 +387,8 @@ function dateKey(offset = 0) {
 }
 function last7()  { return Array.from({ length: 7  }, (_, i) => dateKey(-(6  - i))); }
 function last30() { return Array.from({ length: 30 }, (_, i) => dateKey(-(29 - i))); }
+const OWNER_ID = "e98c1491-2328-4a5f-b327-cdab54b53533";
+function isOwner(supaUser) { return supaUser?.id === OWNER_ID; }
 function getGoals(profile) {
   const weightGoal = parseFloat(profile?.weightGoal) || 65;
   const proteinGoal = parseFloat(profile?.proteinGoal) || (profile?.weight ? Math.round(parseFloat(profile.weight) * 2.2) : 178);
@@ -532,6 +534,62 @@ function RemoveBtn({ onClick }) {
 }
 
 // ─── DEFAULT PLAN DATA ────────────────────────────────────────────────────────
+const GENERIC_WORKOUT_DAYS = [
+  { day: "Day 1", focus: "Push Day", sections: [] },
+  { day: "Day 2", focus: "Pull Day", sections: [] },
+  { day: "Day 3", focus: "Legs", sections: [] },
+  { day: "Day 4", focus: "Rest", sections: [] },
+  { day: "Day 5", focus: "Upper Body", sections: [] },
+  { day: "Day 6", focus: "Cardio / Active Recovery", sections: [] },
+  { day: "Day 7", focus: "Rest", sections: [] },
+];
+
+const GENERIC_SKINCARE = {
+  morning: [
+    { step: 1, task: "Cleanser", note: "Wash face with lukewarm water." },
+    { step: 2, task: "Moisturizer", note: "Apply while face is slightly damp." },
+    { step: 3, task: "Sunscreen SPF 50+", note: "Every morning, non-negotiable." },
+  ],
+  night: [
+    { step: 1, task: "Cleanser", note: "Remove sunscreen and daily buildup." },
+    { step: 2, task: "Treatment (Niacinamide / Retinol)", note: "Target your skin concerns." },
+    { step: 3, task: "Moisturizer", note: "Seal in hydration overnight." },
+  ],
+  toBuy: [],
+};
+
+const GENERIC_DIET = {
+  target: "Set your calorie and protein targets in Settings",
+  meals: [
+    { time: "8:00 AM",  label: "Meal 1 — Breakfast",    items: ["Add your breakfast items here"], macros: "~0g P · ~0 kcal" },
+    { time: "12:00 PM", label: "Meal 2 — Lunch",         items: ["Add your lunch items here"],    macros: "~0g P · ~0 kcal" },
+    { time: "3:00 PM",  label: "Meal 3 — Snack",         items: ["Add your snack items here"],    macros: "~0g P · ~0 kcal" },
+    { time: "6:00 PM",  label: "Meal 4 — Post Workout",  items: ["Add your post-workout meal"],   macros: "~0g P · ~0 kcal" },
+    { time: "8:00 PM",  label: "Meal 5 — Dinner",        items: ["Add your dinner items here"],   macros: "~0g P · ~0 kcal" },
+    { time: "10:00 PM", label: "Meal 6 — Before Bed",    items: ["Add your bedtime snack"],       macros: "~0g P · ~0 kcal" },
+  ],
+};
+
+const GENERIC_HAIRCARE = {
+  washDay: [
+    { step: 1, task: "Pre-wash oil treatment", note: "Apply oil 1-2 hours before washing." },
+    { step: 2, task: "Shampoo", note: "Focus on scalp, rinse thoroughly." },
+    { step: 3, task: "Conditioner", note: "Mid-lengths to ends, 2-3 minutes." },
+    { step: 4, task: "Dry and style", note: "Air dry where possible." },
+  ],
+  daily: ["Scalp massage 3-5 mins", "Apply serum or oil to ends if needed"],
+  weekly: ["Deep conditioning treatment", "Scalp care routine"],
+};
+
+const GENERIC_SPIRITUAL = [
+  { time: "MORNING", color: "#C9A96E", steps: [
+    { title: "Intention Setting — 2 mins", items: ["Set your intention for the day", "One thing you are grateful for", "One thing you will accomplish today"] },
+  ]},
+  { time: "NIGHT", color: "#5B8DEF", steps: [
+    { title: "Reflection — 2 mins", items: ["What went well today?", "What will you do better tomorrow?", "One thing you are grateful for"] },
+  ]},
+];
+
 const WORKOUT_DAYS = [
   { day: "Day 1", focus: "ARMS — Heavy Hypertrophy", sections: [
     { title: "Triceps", exercises: [
@@ -1286,11 +1344,12 @@ useEffect(() => {
   const [nofapHistory, setNofapHistory] = useLS("anant_v3_nofap_history", []);
   const [xpLogs, setXpLogs] = useLS("anant_v3_xp", {});
   const [achievements, setAchievements] = useLS("anant_v3_achievements", []);
-  const [workoutPlan, setWorkoutPlan] = useLS("anant_v3_workout_plan", WORKOUT_DAYS);
-  const [skincarePlan, setSkincarePlan] = useLS("anant_v3_skincare_plan", DEFAULT_SKINCARE);
-  const [dietPlan, setDietPlan] = useLS("anant_v3_diet_plan", DEFAULT_DIET);
-  const [haircarePlan, setHaircarePlan] = useLS("anant_v3_haircare_plan", DEFAULT_HAIRCARE);
-  const [spiritualPlan, setSpiritualPlan] = useLS("anant_v3_spiritual_plan", DEFAULT_SPIRITUAL);
+ const _isOwner = supaUser?.id === OWNER_ID;
+  const [workoutPlan, setWorkoutPlan] = useLS("anant_v3_workout_plan", _isOwner ? WORKOUT_DAYS : GENERIC_WORKOUT_DAYS);
+  const [skincarePlan, setSkincarePlan] = useLS("anant_v3_skincare_plan", _isOwner ? DEFAULT_SKINCARE : GENERIC_SKINCARE);
+  const [dietPlan, setDietPlan] = useLS("anant_v3_diet_plan", _isOwner ? DEFAULT_DIET : GENERIC_DIET);
+  const [haircarePlan, setHaircarePlan] = useLS("anant_v3_haircare_plan", _isOwner ? DEFAULT_HAIRCARE : GENERIC_HAIRCARE);
+  const [spiritualPlan, setSpiritualPlan] = useLS("anant_v3_spiritual_plan", _isOwner ? DEFAULT_SPIRITUAL : GENERIC_SPIRITUAL);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 const [shadowMode, setShadowMode] = useLS("anant_v3_shadow_mode", false);
 const [lightMode, setLightMode] = useLS("anant_v3_light_mode", false);
@@ -1486,7 +1545,7 @@ const [showCheckin, setShowCheckin] = useState(false);
   if (subView === "measurements") return <MeasurementsView measurements={measurements} setMeasurements={setMeasurements} onBack={() => setSubView(null)} />;
   if (subView === "heatmap") return <HeatmapFullView logs={logs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} onBack={() => setSubView(null)} setSelectedDate={setSelectedDate} setView={setView} />;
   if (subView === "journal") return <JournalFullView journalLogs={journalLogs} setJournalLogs={setJournalLogs} checkinLogs={checkinLogs} logs={logs} workoutLogs={workoutLogs} onBack={() => setSubView(null)} />;
-  if (subView === "aicoach") return <AICoachFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={getNofapStreak()} onBack={() => setSubView(null)} />;
+  if (subView === "aicoach") return <AICoachFullView logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={getNofapStreak()} onBack={() => setSubView(null)} supaUser={supaUser} />;
   if (subView === "quests") return <DailyQuestsFullView quests={quests} setQuests={setQuests} logs={logs} setLogs={setLogs} xpLogs={xpLogs} setXpLogs={setXpLogs} checkinLogs={checkinLogs} sleepLogs={sleepLogs} workoutLogs={workoutLogs} foodLogs={foodLogs} onBack={() => setSubView(null)} />;
   if (subView === "sleep") return <SleepFullView 
   sleepLogs={sleepLogs} 
@@ -1498,8 +1557,8 @@ const [showCheckin, setShowCheckin] = useState(false);
   onBack={() => setSubView(null)} 
   selectedDate={selectedDate} 
 />;
- if (subView === "profile") return <ProfilePage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} shadowMode={shadowMode} setShadowMode={setShadowMode} supaUser={supaUser} lightMode={lightMode} setLightMode={setLightMode} />;
-  if (subView === "settings") return <SettingsPage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} onResetOnboarding={() => { setShowOnboarding(true); setSubView(null); }} onNavigate={(v) => setSubView(v)} />;
+ if (subView === "profile") return <ProfilePage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} shadowMode={shadowMode} setShadowMode={setShadowMode} supaUser={supaUser} lightMode={lightMode} setLightMode={setLightMode} setSubView={setSubView} />;
+  if (subView === "settings") return <SettingsPage userProfile={userProfile} setUserProfile={setUserProfile} onBack={() => setSubView(null)} isFemale={isFemale} onResetOnboarding={() => { setShowOnboarding(true); setSubView(null); }} onNavigate={(v) => { if (v === "__auth") { setSubView(null); setShowAuthModal(true); } else setSubView(v); }} supaUser={supaUser} lightMode={lightMode} setLightMode={setLightMode} shadowMode={shadowMode} setShadowMode={setShadowMode} />;
   if (subView === "about") return <AboutPage onBack={() => setSubView(null)} />;
   if (subView === "privacy") return <PrivacyPolicyPage onBack={() => setSubView(null)} />;
   if (subView === "terms") return <TermsPage onBack={() => setSubView(null)} />;
@@ -2200,20 +2259,20 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
         ) : (
           <div style={{ fontSize: 13, color: C.muted, marginBottom: 10 }}>Not set</div>
         )}
-        <div style={{ display: "flex", gap: 8 }}>
-          <div style={{ flex: 1 }}>
+       <div style={{ display: "flex", gap: 6, overflow: "hidden" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 8, color: C.muted, letterSpacing: 1, marginBottom: 5 }}>HOUR</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-              {HOURS.map(h => (
-                <button key={h} onClick={() => onChange({ ...value, h })} style={{ width: 28, height: 24, borderRadius: 5, background: value.h === h ? SLEEP_COLOR : C.surface, border: `1px solid ${value.h === h ? SLEEP_COLOR : C.border}`, color: value.h === h ? "#fff" : C.muted, fontSize: 10, fontFamily: "inherit", cursor: "pointer" }}>{h}</button>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+             {HOURS.map(h => (
+                <button key={h} onClick={() => onChange({ ...value, h })} style={{ width: 26, height: 22, borderRadius: 4, background: value.h === h ? SLEEP_COLOR : C.surface, border: `1px solid ${value.h === h ? SLEEP_COLOR : C.border}`, color: value.h === h ? "#fff" : C.text, fontSize: 9, fontFamily: "inherit", cursor: "pointer" }}>{h}</button>
               ))}
             </div>
           </div>
-          <div style={{ flex: 1 }}>
+         <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 8, color: C.muted, letterSpacing: 1, marginBottom: 5 }}>MIN</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
               {MINS.map(m => (
-                <button key={m} onClick={() => onChange({ ...value, m })} style={{ width: 28, height: 24, borderRadius: 5, background: value.m === m ? SLEEP_COLOR : C.surface, border: `1px solid ${value.m === m ? SLEEP_COLOR : C.border}`, color: value.m === m ? "#fff" : C.muted, fontSize: 10, fontFamily: "inherit", cursor: "pointer" }}>{m}</button>
+                <button key={m} onClick={() => onChange({ ...value, m })} style={{ width: 26, height: 22, borderRadius: 4, background: value.m === m ? SLEEP_COLOR : C.surface, border: `1px solid ${value.m === m ? SLEEP_COLOR : C.border}`, color: value.m === m ? "#fff" : C.text, fontSize: 9, fontFamily: "inherit", cursor: "pointer" }}>{m}</button>
               ))}
             </div>
           </div>
@@ -2221,7 +2280,7 @@ function SleepCard({ sleepLogs, setSleepLogs, logs, setLogs, xpLogs, setXpLogs }
             <div style={{ fontSize: 8, color: C.muted, letterSpacing: 1, marginBottom: 5 }}>AM/PM</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
               {["AM","PM"].map(ap => (
-                <button key={ap} onClick={() => onChange({ ...value, ampm: ap })} style={{ width: 36, height: 24, borderRadius: 5, background: value.ampm === ap ? SLEEP_COLOR : C.surface, border: `1px solid ${value.ampm === ap ? SLEEP_COLOR : C.border}`, color: value.ampm === ap ? "#fff" : C.muted, fontSize: 10, fontFamily: "inherit", cursor: "pointer" }}>{ap}</button>
+                <button key={ap} onClick={() => onChange({ ...value, ampm: ap })} style={{ width: 34, height: 22, borderRadius: 4, background: value.ampm === ap ? SLEEP_COLOR : C.surface, border: `1px solid ${value.ampm === ap ? SLEEP_COLOR : C.border}`, color: value.ampm === ap ? "#fff" : C.text, fontSize: 9, fontFamily: "inherit", cursor: "pointer" }}>{ap}</button>
               ))}
             </div>
           </div>
@@ -3150,7 +3209,7 @@ function DeleteAccountButton({ supaUser, onBack }) {
 }
 
 // ─── PROFILE PAGE ─────────────────────────────────────────────────────────────
-function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode, setShadowMode, supaUser, lightMode, setLightMode }) {
+function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode, setShadowMode, supaUser, lightMode, setLightMode, setSubView }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...userProfile });
   const theme = isFemale ? THEME_FEMALE : THEME_MALE;
@@ -3313,48 +3372,21 @@ function ProfilePage({ userProfile, setUserProfile, onBack, isFemale, shadowMode
       {supaUser && (
         <div style={{ marginBottom: 16, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
           <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>Account</div>
-          <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>{supaUser.email}</div>
-          <button onClick={() => { supabase.auth.signOut(); onBack(); }} style={{ width: "100%", background: "none", border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px", color: C.nofap, fontSize: 12, fontFamily: "inherit", cursor: "pointer", marginBottom: 8 }}>
-            Sign Out
-          </button>
-          <DeleteAccountButton supaUser={supaUser} onBack={onBack} />
+          <div style={{ fontSize: 12, color: C.text, marginBottom: 4 }}>{supaUser.email}</div>
+          <div style={{ fontSize: 10, color: C.muted }}>☁ Synced to cloud</div>
         </div>
       )}
-
-      {/* Shadow Mode */}
-      <div style={{ marginTop: 16, background: shadowMode ? "#020204" : C.surface, border: `2px solid ${shadowMode ? "#FF0000" : C.border}`, borderRadius: 16, padding: 20 }}>
-        <div style={{ fontSize: 9, color: shadowMode ? "#FF0000" : C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>
-          {shadowMode ? "⚠ SHADOW MODE ACTIVE" : "Shadow Mode"}
+      {!supaUser && (
+        <div style={{ marginBottom: 16, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
+          <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>Account</div>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Guest mode — data stored locally only.</div>
+          <button onClick={() => { onBack(); }} style={{ width: "100%", background: C.accent, border: "none", borderRadius: 10, padding: "11px", color: "#000", fontSize: 12, fontFamily: "inherit", cursor: "pointer" }}>Sign In to Sync →</button>
         </div>
-        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.7, marginBottom: 14 }}>
-          {shadowMode
-            ? "The shadow self has taken over. All systems operating at maximum intensity."
-            : ("Activate your alter ego. " + (userProfile.alterEgo?.name ? ("Become " + userProfile.alterEgo.name + ".") : "Become who you were meant to be.") + " Dark UI, intense voice, no mercy.")}
-        </div>
-       <button onClick={() => setShadowMode(s => !s)} style={{ width: "100%", background: shadowMode ? "#FF0000" : "none", border: `2px solid ${shadowMode ? "#FF0000" : C.border}`, borderRadius: 10, padding: "13px", color: shadowMode ? "#000" : C.muted, fontSize: 12, fontFamily: "inherit", fontWeight: 700, cursor: "pointer", letterSpacing: 1, textTransform: "uppercase" }}>
-          {shadowMode ? "◆ Deactivate Shadow Mode" : "◆ Activate Shadow Mode"}
-        </button>
-      </div>
-
-      {/* Appearance */}
-      <div style={{ marginTop: 16, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
-        <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 14 }}>Appearance</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[
-            { label: "Dark Mode", desc: "Deep blacks, gold accents", active: !lightMode && !shadowMode, action: () => { setLightMode(false); setShadowMode(false); } },
-            { label: "Light Mode", desc: "Clean whites, warm tones", active: lightMode && !shadowMode, action: () => { setLightMode(true); setShadowMode(false); } },
-          ].map(opt => (
-            <div key={opt.label} onClick={opt.action} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 10, cursor: "pointer", background: opt.active ? `${C.accent}15` : C.faint, border: `1px solid ${opt.active ? C.accent : C.border}`, transition: "all 0.2s" }}>
-              <div>
-                <div style={{ fontSize: 13, color: opt.active ? C.accent : C.text }}>{opt.label}</div>
-                <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{opt.desc}</div>
-              </div>
-              <div style={{ width: 20, height: 20, borderRadius: "50%", background: opt.active ? C.accent : "transparent", border: `2px solid ${opt.active ? C.accent : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {opt.active && <div style={{ width: 8, height: 8, borderRadius: "50%", background: isFemale ? "#050507" : "#000" }} />}
-              </div>
-            </div>
-          ))}
-        </div>
+      )}
+      {/* Goals & Targets */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 10, paddingLeft: 4 }}>Goals & Targets</div>
+        <GoalsEditor userProfile={userProfile} setUserProfile={setUserProfile} accent={accent} />
       </div>
     </div>
   );
@@ -3422,7 +3454,7 @@ function GoalsEditor({ userProfile, setUserProfile, accent }) {
 }
 
 // ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
-function SettingsPage({ userProfile, setUserProfile, onBack, isFemale, onResetOnboarding, onNavigate }) {
+function SettingsPage({ userProfile, setUserProfile, onBack, isFemale, onResetOnboarding, onNavigate, supaUser, lightMode, setLightMode, shadowMode, setShadowMode }) {
   const accent = isFemale ? THEME_FEMALE.accent : THEME_MALE.accent;
 
   const Row = ({ icon, label, value, onClick, danger }) => (
@@ -3443,20 +3475,44 @@ function SettingsPage({ userProfile, setUserProfile, onBack, isFemale, onResetOn
         <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>Settings</div>
       </div>
 
-      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 10, paddingLeft: 4 }}>Account</div>
-      <Row icon="◎" label="Name" value={userProfile.name || "Not set"} />
-      <Row icon={isFemale ? "✦" : "◆"} label="Theme" value={isFemale ? "Moonlit Empress (Female)" : "Iron Dark (Male)"} />
-      <Row icon="⚡" label="Alter Ego" value={userProfile.alterEgo?.name || "Not set"} />
-
-      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", margin: "20px 0 10px", paddingLeft: 4 }}>App</div>
+      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 10, paddingLeft: 4 }}>App</div>
       <Row icon="◈" label="Re-run Onboarding" value="Reset your profile setup" onClick={onResetOnboarding} />
 
-    <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", margin: "20px 0 10px", paddingLeft: 4 }}>Goals & Targets</div>
-      <GoalsEditor userProfile={userProfile} setUserProfile={setUserProfile} accent={accent} />
+      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", margin: "20px 0 10px", paddingLeft: 4 }}>Appearance</div>
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16, marginBottom: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[
+            { label: "Dark Mode", desc: "Deep blacks, gold accents", active: !lightMode && !shadowMode, action: () => { setLightMode(false); setShadowMode(false); } },
+            { label: "Light Mode", desc: "Clean whites, warm tones", active: lightMode && !shadowMode, action: () => { setLightMode(true); setShadowMode(false); } },
+            { label: "Shadow Mode", desc: "Alter ego activated. No mercy.", active: shadowMode, action: () => { setShadowMode(s => !s); setLightMode(false); } },
+          ].map(opt => (
+            <div key={opt.label} onClick={opt.action} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 10, cursor: "pointer", background: opt.active ? `${C.accent}15` : C.faint, border: `1px solid ${opt.active ? C.accent : C.border}`, transition: "all 0.2s" }}>
+              <div>
+                <div style={{ fontSize: 13, color: opt.active ? C.accent : C.text }}>{opt.label}</div>
+                <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{opt.desc}</div>
+              </div>
+              <div style={{ width: 20, height: 20, borderRadius: "50%", background: opt.active ? C.accent : "transparent", border: `2px solid ${opt.active ? C.accent : C.muted}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {opt.active && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#000" }} />}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", margin: "20px 0 10px", paddingLeft: 4 }}>Notifications</div>
       <Row icon="☽" label="Daily Check-in Reminder" value="Coming soon" />
       <Row icon="◉" label="Habit Reminders" value="Coming soon" />
+
+      <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", margin: "20px 0 10px", paddingLeft: 4 }}>Account</div>
+      {supaUser ? (
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>{supaUser.email}</div>
+          <button onClick={() => { supabase.auth.signOut(); onBack(); }} style={{ width: "100%", background: "none", border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px", color: C.nofap, fontSize: 12, fontFamily: "inherit", cursor: "pointer", marginBottom: 8 }}>Sign Out</button>
+          <DeleteAccountButton supaUser={supaUser} onBack={onBack} />
+        </div>
+      ) : (
+        <Row icon="◎" label="Sign In" value="Sync your data across devices" onClick={() => onNavigate("__auth")} />
+      )}
 
       <div style={{ fontSize: 9, color: C.muted, letterSpacing: 3, textTransform: "uppercase", margin: "20px 0 10px", paddingLeft: 4 }}>Data</div>
       <div style={{ background: `${C.nofap}10`, border: `1px solid ${C.nofap}25`, borderRadius: 12, padding: "14px 16px", marginBottom: 8 }}>
@@ -3468,14 +3524,12 @@ function SettingsPage({ userProfile, setUserProfile, onBack, isFemale, onResetOn
         <div style={{ fontSize: 10, color: C.muted }}>Self System · Built for growth</div>
         <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>v3.0 · Your data stays on your device</div>
         <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 12 }}>
-          <button onClick={() => setSubViewRef?.("privacy")} style={{ background: "none", border: "none", color: C.muted, fontSize: 10, fontFamily: "inherit", cursor: "pointer", textDecoration: "underline" }}>Privacy Policy</button>
-          <button onClick={() => setSubViewRef?.("terms")} style={{ background: "none", border: "none", color: C.muted, fontSize: 10, fontFamily: "inherit", cursor: "pointer", textDecoration: "underline" }}>Terms of Service</button>
+          <button onClick={() => onNavigate("privacy")} style={{ background: "none", border: "none", color: C.muted, fontSize: 10, fontFamily: "inherit", cursor: "pointer", textDecoration: "underline" }}>Privacy Policy</button>
+          <button onClick={() => onNavigate("terms")} style={{ background: "none", border: "none", color: C.muted, fontSize: 10, fontFamily: "inherit", cursor: "pointer", textDecoration: "underline" }}>Terms of Service</button>
         </div>
       </div>
     </div>
   );
-}
-
 // ─── ABOUT PAGE ───────────────────────────────────────────────────────────────
 function AboutPage({ onBack }) {
   const sections = [
@@ -3568,14 +3622,22 @@ function JournalFullView({ journalLogs, setJournalLogs, checkinLogs, logs, worko
   );
 }
 
-function AICoachFullView({ logs, workoutLogs, foodLogs, checkinLogs, journalLogs, xpLogs, aiReviews, setAiReviews, nofapStreak, onBack }) {
+function AICoachFullView({ logs, workoutLogs, foodLogs, checkinLogs, journalLogs, xpLogs, aiReviews, setAiReviews, nofapStreak, onBack, supaUser }) {
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", maxWidth: 480, margin: "0 auto", padding: "60px 20px 100px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
         <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, letterSpacing: 1 }}>← Back</button>
         <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700 }}>AI Coach</div>
       </div>
-      <AIReviewCard logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={nofapStreak} />
+      {!isOwner(supaUser) ? (
+        <div style={{ background: C.surface, border: `1px solid #A07EE025`, borderRadius: 14, padding: 24, textAlign: "center" }}>
+          <div style={{ fontSize: 22, marginBottom: 12 }}>◉</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, marginBottom: 8 }}>AI Coach</div>
+          <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.7 }}>AI coaching is coming soon for all users. Stay consistent — it's tracking your progress.</div>
+        </div>
+      ) : (
+        <AIReviewCard logs={logs} workoutLogs={workoutLogs} foodLogs={foodLogs} checkinLogs={checkinLogs} journalLogs={journalLogs} xpLogs={xpLogs} aiReviews={aiReviews} setAiReviews={setAiReviews} nofapStreak={nofapStreak} />
+      )}
     </div>
   );
 }
@@ -5292,6 +5354,7 @@ Keep it concise, direct, masculine. No fluff. Talk to him like a coach who belie
       </div>
       {expanded && (
         <div style={{ padding: "0 16px 16px" }}>
+          {(() => { try { const s = JSON.parse(localStorage.getItem("anant_v3_supauser") || "null"); if (s && s !== OWNER_ID) return <div style={{ background: C.faint, borderRadius: 10, padding: 16, textAlign: "center", fontSize: 12, color: C.muted }}>AI Coach coming soon.</div>; } catch {} return null; })()}
           <div style={{ display: "flex", gap: 5, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
             {PERIODS.map(p => {
               const days = getDaysWithData(p.days);
