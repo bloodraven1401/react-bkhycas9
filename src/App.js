@@ -1127,6 +1127,16 @@ function OnboardingFlow({ onComplete }) {
   }
   return null;
 }
+function PWAInstaller() {
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
+  }, []);
+  return null;
+}
 function CrashGuard() {
   useEffect(() => {
     window.onerror = (msg, src, line, col, err) => {
@@ -1540,6 +1550,7 @@ if (subView === "backup") return <BackupFullView logs={logs} workoutLogs={workou
     <div style={{ minHeight: "100dvh", background: C.bg, color: C.text, fontFamily: "'DM Mono',monospace", width: "100vw", maxWidth: "100%", margin: "0 auto", paddingBottom: 80, overflowX: "hidden", position: "relative" }}>
       <StorageGuard />
       <CrashGuard />
+    <PWAInstaller />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:wght@600;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
