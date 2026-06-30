@@ -1160,10 +1160,10 @@ function OnboardingFlow({ onComplete }) {
                 </div>
               ))}
             </div>
-           <div>
-          <div style={labelStyle}>NoFap Deadline</div>
-          <input type="text" placeholder="YYYY-MM-DD" style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} value={form.nofapDeadline || "2027-01-14"} onChange={e => updateForm("nofapDeadline", e.target.value)} />
-        </div>
+          <div>
+              <div style={labelStyle}>NoFap Deadline</div>
+              <input type="text" placeholder="YYYY-MM-DD" style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} value={t.nofapDeadline || "2027-01-14"} onChange={e => updateTarget("nofapDeadline", e.target.value)} />
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
                 <div style={labelStyle}>Sleep By</div>
@@ -3530,6 +3530,7 @@ function SettingsPage({ userProfile, setUserProfile, onBack, isFemale, onResetOn
       </div>
     </div>
   );
+}
 // ─── ABOUT PAGE ───────────────────────────────────────────────────────────────
 function AboutPage({ onBack }) {
   const sections = [
